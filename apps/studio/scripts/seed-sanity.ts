@@ -4,67 +4,48 @@
  * Usage:
  *   pnpm --filter studio seed:sanity
  *
- * Imports the canonical Roboto seed dataset — 47 documents and ~95 images —
- * from turbo-start-sanity, then adds the two singletons our fork has that the
- * upstream export does not: `collectionsIndex` and `promoBanner`.
+ * Mirrors the reference dataset behind https://turbo-start-shopify-web.vercel.app
+ * — project `ztcucp3r`, dataset `production` — into whatever project and dataset
+ * `apps/studio/.env` points at. The result is an exact copy: 134 documents and 22
+ * images, no merge, no top-ups. Every string the homepage renders comes from the
+ * reference, so a local run and the deployed reference render the same page.
  *
- * The export is a 23 MB tarball. It is fetched at runtime and cached in the OS
- * temp directory, never inside the repo — this repo's history was rebuilt
- * specifically to drop inherited binaries and must stay that way.
+ * The export is fetched at runtime with the Sanity CLI and cached in the OS temp
+ * directory, never inside the repo — this repo's history was rebuilt specifically
+ * to drop inherited binaries and must stay that way. That means the seed needs a
+ * CLI login with read access to `ztcucp3r` (`npx sanity login`, Roboto Studio
+ * org); without it the export step fails and the seed stops before touching the
+ * target dataset.
  *
- * Idempotent: every run wipes the content types the seed owns before importing,
- * so the tenth run leaves the same dataset as the first. Commerce types
- * (product, collection, productVariant, colorTheme) are never touched —
- * BigCommerce owns those. Image assets are not deleted either, so the importer
- * can match them by hash and skip re-uploading 95 files on every run.
+ * Destructive and idempotent: every run deletes every document in the target
+ * dataset — including commerce types and image assets — before importing. A
+ * BigCommerce catalogue synced by `pnpm --filter studio sync:bigcommerce` does
+ * not survive a seed; re-run the sync afterwards.
  */
 
 import { execFileSync } from "node:child_process";
-import { createWriteStream } from "node:fs";
-import { rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
-import type { ReadableStream } from "node:stream/web";
 import { fileURLToPath } from "node:url";
 
 import "dotenv/config";
-import {
-  createClient,
-  type IdentifiedSanityDocumentStub,
-} from "@sanity/client";
+import { createClient } from "@sanity/client";
 import { Logger } from "@workspace/logger";
 
 const log = new Logger("seed-sanity");
 
-const SEED_URL =
-  "https://raw.githubusercontent.com/robotostudio/turbo-start-sanity/main/apps/studio/seed-data.tar.gz";
+/** The dataset that powers turbo-start-shopify-web.vercel.app. */
+const REFERENCE_PROJECT_ID = "ztcucp3r";
+const REFERENCE_DATASET = "production";
 
 /** Deliberately outside the repo. Nothing binary may land in git. */
-const CACHE_PATH = join(tmpdir(), "turbo-start-sanity-seed-data.tar.gz");
+const CACHE_PATH = join(
+  tmpdir(),
+  `${REFERENCE_PROJECT_ID}-${REFERENCE_DATASET}.tar.gz`
+);
 
 /** `apps/studio` — where the CLI finds sanity.cli.ts and the local binary. */
 const STUDIO_DIR = dirname(dirname(fileURLToPath(import.meta.url)));
-
-/**
- * The types this seed owns. Commerce types are absent on purpose so a seed run
- * can never delete BigCommerce-synced catalogue data.
- */
-const SEEDED_TYPES = [
-  "author",
-  "blog",
-  "blogIndex",
-  "category",
-  "collectionsIndex",
-  "faq",
-  "footer",
-  "homePage",
-  "navbar",
-  "page",
-  "promoBanner",
-  "settings",
-];
 
 /**
  * Fails loudly rather than half-seeding. Returns `string` so the value stays
@@ -98,14 +79,12 @@ const client = createClient({
   apiVersion: process.env.SANITY_STUDIO_API_VERSION ?? "2025-05-08",
   token,
   useCdn: false,
-  perspective: "published",
+  perspective: "raw",
 });
 
 // ---------------------------------------------------------------------------
-// Seed data
+// Export
 // ---------------------------------------------------------------------------
-
-const mb = (bytes: number) => (bytes / 1_000_000).toFixed(1);
 
 /**
  * The download check that matters. gzip is read sequentially, so a truncated or
@@ -122,53 +101,57 @@ function isIntactTarball(path: string): boolean {
   }
 }
 
-async function ensureSeedData(): Promise<string> {
+/**
+ * `sanity.cli.ts` reads the project from the environment and `dotenv` does not
+ * override an already-set variable, so an inline override wins and the same CLI
+ * config can point at a project that is not ours. Deliberately no
+ * SANITY_AUTH_TOKEN: the project token from `.env` is scoped to the *target*
+ * project and would 403 here. The export runs as whoever `sanity login` logged
+ * in as, which is the only credential that can read the reference.
+ */
+function ensureExport(): string {
   if (isIntactTarball(CACHE_PATH)) {
-    log.info(`Using cached seed data at ${CACHE_PATH}`);
+    log.info(`Using cached export at ${CACHE_PATH}`);
     return CACHE_PATH;
   }
 
-  log.info(`Downloading seed data from ${SEED_URL}`);
-  const response = await fetch(SEED_URL);
-  if (!(response.ok && response.body)) {
-    throw new Error(`Download failed: HTTP ${response.status}`);
-  }
-
-  const expected = Number(response.headers.get("content-length"));
-  const partial = `${CACHE_PATH}.part`;
-  let received = 0;
-  let lastShown = -1;
-
-  const source = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
-  source.on("data", (chunk: Buffer) => {
-    received += chunk.length;
-    // Every 5%: smooth enough on a terminal, 20 lines in a piped log.
-    const percent = expected ? Math.floor((received / expected) * 20) * 5 : 0;
-    if (percent !== lastShown) {
-      lastShown = percent;
-      process.stderr.write(
-        `\r  ${percent}% — ${mb(received)} / ${mb(expected)} MB`
-      );
-    }
-  });
-  await pipeline(source, createWriteStream(partial));
-  process.stderr.write("\n");
-
-  if (expected && received !== expected) {
-    await rm(partial, { force: true });
-    throw new Error(
-      `Download truncated: received ${received} bytes, expected ${expected}`
+  log.info(
+    `Exporting ${REFERENCE_PROJECT_ID}/${REFERENCE_DATASET} to ${CACHE_PATH}`
+  );
+  try {
+    execFileSync(
+      "npx",
+      [
+        "sanity",
+        "dataset",
+        "export",
+        REFERENCE_DATASET,
+        CACHE_PATH,
+        "--overwrite",
+      ],
+      {
+        cwd: STUDIO_DIR,
+        env: {
+          ...process.env,
+          SANITY_STUDIO_PROJECT_ID: REFERENCE_PROJECT_ID,
+          SANITY_STUDIO_DATASET: REFERENCE_DATASET,
+        },
+        stdio: "inherit",
+      }
     );
-  }
-  if (!isIntactTarball(partial)) {
-    await rm(partial, { force: true });
-    throw new Error(
-      "Downloaded file is not a readable gzipped export — the URL may no longer serve the tarball"
+  } catch {
+    log.error(
+      `Could not export the reference dataset ${REFERENCE_PROJECT_ID}/${REFERENCE_DATASET}.`
     );
+    log.error(
+      "It lives in the Roboto Studio Sanity org and is not public. Run `npx sanity login` as a member of that org, confirm `npx sanity projects list` shows ztcucp3r, then re-run this seed."
+    );
+    log.error(
+      `If you are not in that org, ask someone who is for a tarball from \`sanity dataset export\` and drop it at ${CACHE_PATH} — the seed picks up a cached file from there.`
+    );
+    process.exit(1);
   }
 
-  await rename(partial, CACHE_PATH);
-  log.info(`Cached seed data at ${CACHE_PATH}`);
   return CACHE_PATH;
 }
 
@@ -177,26 +160,27 @@ async function ensureSeedData(): Promise<string> {
 // ---------------------------------------------------------------------------
 
 /**
- * One delete-by-query rather than a loop: the seeded documents reference each
- * other (blog → author, navbar → page, faqAccordion → faq), and only a single
- * mutation can drop a reference graph without tripping integrity checks. The
- * query matches drafts too, since a draft is just a document with a prefix.
+ * One delete-by-query rather than a loop: the documents reference each other
+ * (blog → author, navbar → page, product → image asset), and only a single
+ * mutation can drop a reference graph without tripping integrity checks. Drafts
+ * are included — a draft is just a document with a prefix. `_.**` is Sanity's
+ * own system space (groups, retention, schema) and is not ours to delete.
  */
-async function wipeSeededContent() {
+async function wipe() {
   const { results } = await client.delete(
-    { query: "*[_type in $types]", params: { types: SEEDED_TYPES } },
+    { query: '*[!(_id in path("_.**"))]' },
     { returnDocuments: false }
   );
-  log.info(`Removed ${results.length} existing content documents`);
+  log.info(`Deleted ${results.length} existing documents`);
 }
 
 /**
  * The Sanity CLI is already a dependency of this workspace and is the supported
- * import path — it streams the ndjson, uploads the images and reuses any asset
- * whose hash already exists. `dotenv` filled this process's env, not the
- * child's, so the token is passed through explicitly as SANITY_AUTH_TOKEN.
+ * import path — it streams the ndjson and uploads the images. `dotenv` filled
+ * this process's env, not the child's, so the token is passed through
+ * explicitly as SANITY_AUTH_TOKEN.
  */
-function importSeedData(tarball: string) {
+function importExport(tarball: string) {
   execFileSync(
     "npx",
     ["sanity", "dataset", "import", tarball, dataset, "--replace"],
@@ -206,89 +190,6 @@ function importSeedData(tarball: string) {
       stdio: "inherit",
     }
   );
-}
-
-// ---------------------------------------------------------------------------
-// Top-up
-// ---------------------------------------------------------------------------
-
-function url(external: string) {
-  return {
-    _type: "customUrl",
-    type: "external",
-    external,
-    openInNewTab: false,
-  };
-}
-
-/**
- * Documents our schema pins as singletons but the upstream export predates.
- * `_id`s match the ones structure.ts opens, so the Studio finds them.
- */
-function extraDocuments(
-  heroAsset: string | null
-): IdentifiedSanityDocumentStub[] {
-  return [
-    {
-      _id: "collectionsIndex",
-      _type: "collectionsIndex",
-      title: "Collections",
-      subtitle:
-        "Every collection in the store, grouped the way people shop rather than the way a warehouse files things.",
-      heroTitle: "Shop the full range",
-      ...(heroAsset && {
-        heroImage: {
-          _type: "image",
-          asset: { _type: "reference", _ref: heroAsset },
-          alt: "Products from across the store",
-        },
-      }),
-      buttons: [
-        {
-          _type: "button",
-          _key: "b1",
-          text: "Browse collections",
-          variant: "default",
-          url: url("/collections"),
-        },
-      ],
-      slug: { _type: "slug", current: "/collections" },
-    },
-    {
-      _id: "promoBanner",
-      _type: "promoBanner",
-      enabled: true,
-      text: "Free shipping on orders over $50",
-      link: url("/collections"),
-    },
-  ];
-}
-
-async function topUp() {
-  // The export has no collections hero, so borrow the largest image it did
-  // bring in rather than uploading bytes of our own.
-  const heroAsset = await client.fetch<string | null>(
-    '*[_type == "sanity.imageAsset"] | order(metadata.dimensions.width desc)[0]._id'
-  );
-
-  const transaction = client.transaction();
-  const documents = extraDocuments(heroAsset);
-  for (const document of documents) {
-    transaction.createOrReplace(document);
-  }
-  await transaction.commit();
-  log.info(`Wrote ${documents.length} documents the export does not carry`);
-
-  // The export ships three preview secrets belonging to the upstream Studio.
-  // They are scoped to a project that is not ours; the presentation tool mints
-  // its own on demand.
-  const { results } = await client.delete(
-    { query: '*[_type == "sanity.previewUrlSecret"]' },
-    { returnDocuments: false }
-  );
-  if (results.length) {
-    log.info(`Dropped ${results.length} imported preview secrets`);
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -307,15 +208,14 @@ async function report() {
   for (const [type, count] of [...counts].sort()) {
     log.info(`  ${type}: ${count}`);
   }
-  log.info(`Dataset total: ${types.length} documents`);
+  log.info(`Dataset total: ${types.length} published documents`);
 }
 
 async function main() {
-  log.info(`Seeding ${projectId}/${dataset}`);
-  const tarball = await ensureSeedData();
-  await wipeSeededContent();
-  importSeedData(tarball);
-  await topUp();
+  log.info(`Seeding ${projectId}/${dataset} from ${REFERENCE_PROJECT_ID}`);
+  const tarball = ensureExport();
+  await wipe();
+  importExport(tarball);
   await report();
 }
 
