@@ -1,0 +1,173 @@
+{
+  "query": "query GetCart($entityId: String!) {\n  site {\n    cart(entityId: $entityId) {\n      ...CartDetail\n    }\n  }\n}\n\nfragment CartDetail on Cart {\n  entityId\n  currencyCode\n  isTaxIncluded\n  baseAmount {\n    value\n    currencyCode\n  }\n  discountedAmount {\n    value\n    currencyCode\n  }\n  amount {\n    value\n    currencyCode\n  }\n  discounts {\n    entityId\n    discountedAmount {\n      value\n      currencyCode\n    }\n  }\n  createdAt {\n    utc\n  }\n  updatedAt {\n    utc\n  }\n  locale\n  version\n  lineItems {\n    totalQuantity\n    physicalItems {\n      entityId\n      parentEntityId\n      productEntityId\n      variantEntityId\n      sku\n      name\n      path\n      brand\n      quantity\n      isTaxable\n      isMutable\n      isShippingRequired\n      image {\n        url(width: 320)\n        altText\n      }\n      selectedOptions {\n        __typename\n        entityId\n        name\n        ... on CartSelectedMultipleChoiceOption {\n          value\n          valueEntityId\n        }\n      }\n      listPrice {\n        value\n        currencyCode\n      }\n      originalPrice {\n        value\n        currencyCode\n      }\n      salePrice {\n        value\n        currencyCode\n      }\n      extendedListPrice {\n        value\n        currencyCode\n      }\n      extendedSalePrice {\n        value\n        currencyCode\n      }\n      discountedAmount {\n        value\n        currencyCode\n      }\n      couponAmount {\n        value\n        currencyCode\n      }\n      discounts {\n        entityId\n        discountedAmount {\n          value\n          currencyCode\n        }\n      }\n    }\n    digitalItems {\n      entityId\n      parentEntityId\n      productEntityId\n      variantEntityId\n      sku\n      name\n      path\n      brand\n      quantity\n      isTaxable\n      isMutable\n      image {\n        url(width: 320)\n        altText\n      }\n      selectedOptions {\n        __typename\n        entityId\n        name\n      }\n      listPrice {\n        value\n        currencyCode\n      }\n      originalPrice {\n        value\n        currencyCode\n      }\n      salePrice {\n        value\n        currencyCode\n      }\n      extendedListPrice {\n        value\n        currencyCode\n      }\n      extendedSalePrice {\n        value\n        currencyCode\n      }\n      discountedAmount {\n        value\n        currencyCode\n      }\n      couponAmount {\n        value\n        currencyCode\n      }\n    }\n    giftCertificates {\n      entityId\n      name\n      amount {\n        value\n        currencyCode\n      }\n    }\n    customItems {\n      entityId\n      sku\n      name\n      quantity\n      listPrice {\n        value\n        currencyCode\n      }\n    }\n  }\n}",
+  "variables": {
+    "entityId": "31dbe829-aa41-4be4-a861-b35f84494e95"
+  },
+  "status": 200,
+  "note": "Both lists populated on one cart. lineItems.totalQuantity counts across both, so it is not derivable from either list alone.",
+  "response": {
+    "data": {
+      "site": {
+        "cart": {
+          "entityId": "31dbe829-aa41-4be4-a861-b35f84494e95",
+          "currencyCode": "GBP",
+          "isTaxIncluded": false,
+          "baseAmount": {
+            "value": 96,
+            "currencyCode": "GBP"
+          },
+          "discountedAmount": {
+            "value": 0,
+            "currencyCode": "GBP"
+          },
+          "amount": {
+            "value": 96,
+            "currencyCode": "GBP"
+          },
+          "discounts": [
+            {
+              "entityId": "4898356e-b3b0-4a28-af65-41aa4682ead9",
+              "discountedAmount": {
+                "value": 0,
+                "currencyCode": "GBP"
+              }
+            },
+            {
+              "entityId": "8ec971bd-a046-4fcd-a524-eecebe7ae1a7",
+              "discountedAmount": {
+                "value": 0,
+                "currencyCode": "GBP"
+              }
+            }
+          ],
+          "createdAt": {
+            "utc": "2026-08-07T17:18:30Z"
+          },
+          "updatedAt": {
+            "utc": "2026-08-07T17:18:32Z"
+          },
+          "locale": "en",
+          "version": 2,
+          "lineItems": {
+            "totalQuantity": 3,
+            "physicalItems": [
+              {
+                "entityId": "8ec971bd-a046-4fcd-a524-eecebe7ae1a7",
+                "parentEntityId": null,
+                "productEntityId": 191,
+                "variantEntityId": 235,
+                "sku": "TS-P5-WAS-ONESIZE",
+                "name": "Wren Washed Cap",
+                "path": "/products/wren-washed-cap/",
+                "brand": null,
+                "quantity": 2,
+                "isTaxable": true,
+                "isMutable": true,
+                "isShippingRequired": true,
+                "image": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/attribute_rule_images/78_thumb_1786120781.png",
+                  "altText": "Wren Washed Cap"
+                },
+                "selectedOptions": [
+                  {
+                    "__typename": "CartSelectedMultipleChoiceOption",
+                    "entityId": 140,
+                    "name": "Size",
+                    "value": "One Size",
+                    "valueEntityId": 180
+                  },
+                  {
+                    "__typename": "CartSelectedMultipleChoiceOption",
+                    "entityId": 141,
+                    "name": "Color",
+                    "value": "Washed Black",
+                    "valueEntityId": 181
+                  }
+                ],
+                "listPrice": {
+                  "value": 42,
+                  "currencyCode": "GBP"
+                },
+                "originalPrice": {
+                  "value": 42,
+                  "currencyCode": "GBP"
+                },
+                "salePrice": {
+                  "value": 42,
+                  "currencyCode": "GBP"
+                },
+                "extendedListPrice": {
+                  "value": 84,
+                  "currencyCode": "GBP"
+                },
+                "extendedSalePrice": {
+                  "value": 84,
+                  "currencyCode": "GBP"
+                },
+                "discountedAmount": {
+                  "value": 0,
+                  "currencyCode": "GBP"
+                },
+                "couponAmount": {
+                  "value": 0,
+                  "currencyCode": "GBP"
+                },
+                "discounts": []
+              }
+            ],
+            "digitalItems": [
+              {
+                "entityId": "4898356e-b3b0-4a28-af65-41aa4682ead9",
+                "parentEntityId": null,
+                "productEntityId": 193,
+                "variantEntityId": 237,
+                "sku": "TS-FIXTURE-DIGITAL",
+                "name": "Turbo Start Care Guide (Digital)",
+                "path": "/turbo-start-care-guide-digital/",
+                "brand": null,
+                "quantity": 1,
+                "isTaxable": true,
+                "isMutable": true,
+                "image": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/stencil/037b87e0-68a3-013f-b5ef-5a6b6f1bdebd/img/ProductDefault.gif",
+                  "altText": "Turbo Start Care Guide (Digital)"
+                },
+                "selectedOptions": [],
+                "listPrice": {
+                  "value": 12,
+                  "currencyCode": "GBP"
+                },
+                "originalPrice": {
+                  "value": 12,
+                  "currencyCode": "GBP"
+                },
+                "salePrice": {
+                  "value": 12,
+                  "currencyCode": "GBP"
+                },
+                "extendedListPrice": {
+                  "value": 12,
+                  "currencyCode": "GBP"
+                },
+                "extendedSalePrice": {
+                  "value": 12,
+                  "currencyCode": "GBP"
+                },
+                "discountedAmount": {
+                  "value": 0,
+                  "currencyCode": "GBP"
+                },
+                "couponAmount": {
+                  "value": 0,
+                  "currencyCode": "GBP"
+                }
+              }
+            ],
+            "giftCertificates": [],
+            "customItems": []
+          }
+        }
+      }
+    }
+  }
+}

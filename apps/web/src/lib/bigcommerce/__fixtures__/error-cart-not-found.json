@@ -1,0 +1,41 @@
+{
+  "query": "mutation AddCartLineItems($input: AddCartLineItemsInput!) {\n  cart {\n    addCartLineItems(input: $input) {\n      cart {\n        ...CartDetail\n      }\n    }\n  }\n}\n\nfragment CartDetail on Cart {\n  entityId\n  currencyCode\n  isTaxIncluded\n  baseAmount {\n    value\n    currencyCode\n  }\n  discountedAmount {\n    value\n    currencyCode\n  }\n  amount {\n    value\n    currencyCode\n  }\n  discounts {\n    entityId\n    discountedAmount {\n      value\n      currencyCode\n    }\n  }\n  createdAt {\n    utc\n  }\n  updatedAt {\n    utc\n  }\n  locale\n  version\n  lineItems {\n    totalQuantity\n    physicalItems {\n      entityId\n      parentEntityId\n      productEntityId\n      variantEntityId\n      sku\n      name\n      path\n      brand\n      quantity\n      isTaxable\n      isMutable\n      isShippingRequired\n      image {\n        url(width: 320)\n        altText\n      }\n      selectedOptions {\n        __typename\n        entityId\n        name\n        ... on CartSelectedMultipleChoiceOption {\n          value\n          valueEntityId\n        }\n      }\n      listPrice {\n        value\n        currencyCode\n      }\n      originalPrice {\n        value\n        currencyCode\n      }\n      salePrice {\n        value\n        currencyCode\n      }\n      extendedListPrice {\n        value\n        currencyCode\n      }\n      extendedSalePrice {\n        value\n        currencyCode\n      }\n      discountedAmount {\n        value\n        currencyCode\n      }\n      couponAmount {\n        value\n        currencyCode\n      }\n      discounts {\n        entityId\n        discountedAmount {\n          value\n          currencyCode\n        }\n      }\n    }\n    digitalItems {\n      entityId\n      parentEntityId\n      productEntityId\n      variantEntityId\n      sku\n      name\n      path\n      brand\n      quantity\n      isTaxable\n      isMutable\n      image {\n        url(width: 320)\n        altText\n      }\n      selectedOptions {\n        __typename\n        entityId\n        name\n      }\n      listPrice {\n        value\n        currencyCode\n      }\n      originalPrice {\n        value\n        currencyCode\n      }\n      salePrice {\n        value\n        currencyCode\n      }\n      extendedListPrice {\n        value\n        currencyCode\n      }\n      extendedSalePrice {\n        value\n        currencyCode\n      }\n      discountedAmount {\n        value\n        currencyCode\n      }\n      couponAmount {\n        value\n        currencyCode\n      }\n    }\n    giftCertificates {\n      entityId\n      name\n      amount {\n        value\n        currencyCode\n      }\n    }\n    customItems {\n      entityId\n      sku\n      name\n      quantity\n      listPrice {\n        value\n        currencyCode\n      }\n    }\n  }\n}",
+  "variables": {
+    "input": {
+      "cartEntityId": "00000000-0000-0000-0000-000000000000",
+      "data": {
+        "lineItems": [
+          {
+            "productEntityId": 191,
+            "variantEntityId": 235,
+            "quantity": 2
+          }
+        ]
+      }
+    }
+  },
+  "status": 200,
+  "note": "A well-formed cart id that does not exist. Same `Not Found: ` prefix as a missing product, distinguishable only by the rest of the message — which is why the taxonomy cannot be built from the prefix alone.",
+  "response": {
+    "data": {
+      "cart": {
+        "addCartLineItems": null
+      }
+    },
+    "errors": [
+      {
+        "message": "Not Found: Cart does not exist",
+        "path": [
+          "cart",
+          "addCartLineItems"
+        ],
+        "locations": [
+          {
+            "line": 3,
+            "column": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,583 @@
+{
+  "query": "query VariantImages($multiColour: Int!, $singleVariant: Int!) {\n  site {\n    multiColour: product(entityId: $multiColour) {\n      entityId\n      name\n      defaultImage {\n        url(width: 640)\n        urlOriginal\n        altText\n        isDefault\n      }\n      images(first: 25) {\n        edges {\n          node {\n            url(width: 640)\n            urlOriginal\n            altText\n            isDefault\n          }\n        }\n      }\n      variants(first: 50) {\n        edges {\n          node {\n            entityId\n            sku\n            defaultImage {\n              url(width: 640)\n              urlOriginal\n              altText\n              isDefault\n            }\n            options(first: 10) {\n              edges {\n                node {\n                  displayName\n                  values(first: 10) {\n                    edges {\n                      node {\n                        label\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n    singleVariant: product(entityId: $singleVariant) {\n      entityId\n      name\n      defaultImage {\n        url(width: 640)\n        urlOriginal\n        altText\n        isDefault\n      }\n      images(first: 25) {\n        edges {\n          node {\n            url(width: 640)\n            urlOriginal\n            altText\n            isDefault\n          }\n        }\n      }\n      variants(first: 10) {\n        edges {\n          node {\n            entityId\n            sku\n            defaultImage {\n              url(width: 640)\n              urlOriginal\n              altText\n              isDefault\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+  "variables": {
+    "multiColour": 183,
+    "singleVariant": 191
+  },
+  "status": 200,
+  "note": "Every variant.defaultImage.url points at attribute_rule_images/, a namespace that appears nowhere in the product's own images connection, and carries altText: \"\". The fork base finds a variant's image by matching it against the product image list; that match can never succeed here. singleVariant (Wren, one variant, one option value) shows the same override, so 'only multi-colourway products override' is also wrong.",
+  "response": {
+    "data": {
+      "site": {
+        "multiColour": {
+          "entityId": 183,
+          "name": "Aster Denim Coach Jacket",
+          "defaultImage": {
+            "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/183/456/aster-denim-coach-jacket-indigo-rinse-01__76653.1786120739.png",
+            "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/183/456/aster-denim-coach-jacket-indigo-rinse-01__76653.1786120739.png",
+            "altText": "Aster Denim Coach Jacket in Indigo Rinse",
+            "isDefault": true
+          },
+          "images": {
+            "edges": [
+              {
+                "node": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/183/456/aster-denim-coach-jacket-indigo-rinse-01__76653.1786120739.png",
+                  "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/183/456/aster-denim-coach-jacket-indigo-rinse-01__76653.1786120739.png",
+                  "altText": "Aster Denim Coach Jacket in Indigo Rinse",
+                  "isDefault": true
+                }
+              },
+              {
+                "node": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/183/462/aster-denim-coach-jacket-indigo-rinse-02__88229.1786120742.png",
+                  "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/183/462/aster-denim-coach-jacket-indigo-rinse-02__88229.1786120742.png",
+                  "altText": "Aster Denim Coach Jacket in Indigo Rinse",
+                  "isDefault": false
+                }
+              },
+              {
+                "node": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/183/464/aster-denim-coach-jacket-indigo-rinse-03__37023.1786120745.png",
+                  "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/183/464/aster-denim-coach-jacket-indigo-rinse-03__37023.1786120745.png",
+                  "altText": "Aster Denim Coach Jacket in Indigo Rinse",
+                  "isDefault": false
+                }
+              },
+              {
+                "node": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/183/465/aster-denim-coach-jacket-indigo-rinse-04__78982.1786120747.png",
+                  "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/183/465/aster-denim-coach-jacket-indigo-rinse-04__78982.1786120747.png",
+                  "altText": "Aster Denim Coach Jacket in Indigo Rinse",
+                  "isDefault": false
+                }
+              },
+              {
+                "node": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/183/466/aster-denim-coach-jacket-warm-stone-01__65457.1786120747.png",
+                  "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/183/466/aster-denim-coach-jacket-warm-stone-01__65457.1786120747.png",
+                  "altText": "Aster Denim Coach Jacket in Warm Stone",
+                  "isDefault": false
+                }
+              },
+              {
+                "node": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/183/467/aster-denim-coach-jacket-warm-stone-02__26037.1786120750.png",
+                  "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/183/467/aster-denim-coach-jacket-warm-stone-02__26037.1786120750.png",
+                  "altText": "Aster Denim Coach Jacket in Warm Stone",
+                  "isDefault": false
+                }
+              },
+              {
+                "node": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/183/468/aster-denim-coach-jacket-warm-stone-03__06997.1786120753.png",
+                  "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/183/468/aster-denim-coach-jacket-warm-stone-03__06997.1786120753.png",
+                  "altText": "Aster Denim Coach Jacket in Warm Stone",
+                  "isDefault": false
+                }
+              }
+            ]
+          },
+          "variants": {
+            "edges": [
+              {
+                "node": {
+                  "entityId": 170,
+                  "sku": "TS-P1-IND-XS",
+                  "defaultImage": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/attribute_rule_images/21_source_1786120725.png",
+                    "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/attribute_rule_images/21_source_1786120725.png",
+                    "altText": "",
+                    "isDefault": true
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "XS"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "Indigo Rinse"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 171,
+                  "sku": "TS-P1-IND-S",
+                  "defaultImage": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/attribute_rule_images/22_source_1786120727.png",
+                    "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/attribute_rule_images/22_source_1786120727.png",
+                    "altText": "",
+                    "isDefault": true
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "S"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "Indigo Rinse"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 175,
+                  "sku": "TS-P1-IND-M",
+                  "defaultImage": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/attribute_rule_images/26_source_1786120728.png",
+                    "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/attribute_rule_images/26_source_1786120728.png",
+                    "altText": "",
+                    "isDefault": true
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "M"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "Indigo Rinse"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 179,
+                  "sku": "TS-P1-IND-L",
+                  "defaultImage": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/attribute_rule_images/30_source_1786120729.png",
+                    "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/attribute_rule_images/30_source_1786120729.png",
+                    "altText": "",
+                    "isDefault": true
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "L"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "Indigo Rinse"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 183,
+                  "sku": "TS-P1-IND-XL",
+                  "defaultImage": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/attribute_rule_images/34_source_1786120731.png",
+                    "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/attribute_rule_images/34_source_1786120731.png",
+                    "altText": "",
+                    "isDefault": true
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "XL"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "Indigo Rinse"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 186,
+                  "sku": "TS-P1-WAR-XS",
+                  "defaultImage": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/attribute_rule_images/37_source_1786120732.png",
+                    "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/attribute_rule_images/37_source_1786120732.png",
+                    "altText": "",
+                    "isDefault": true
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "XS"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "Warm Stone"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 188,
+                  "sku": "TS-P1-WAR-S",
+                  "defaultImage": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/attribute_rule_images/39_source_1786120734.png",
+                    "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/attribute_rule_images/39_source_1786120734.png",
+                    "altText": "",
+                    "isDefault": true
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "S"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "Warm Stone"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 189,
+                  "sku": "TS-P1-WAR-M",
+                  "defaultImage": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/attribute_rule_images/40_source_1786120735.png",
+                    "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/attribute_rule_images/40_source_1786120735.png",
+                    "altText": "",
+                    "isDefault": true
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "M"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "Warm Stone"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 190,
+                  "sku": "TS-P1-WAR-L",
+                  "defaultImage": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/attribute_rule_images/41_source_1786120736.png",
+                    "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/attribute_rule_images/41_source_1786120736.png",
+                    "altText": "",
+                    "isDefault": true
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "L"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "Warm Stone"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 191,
+                  "sku": "TS-P1-WAR-XL",
+                  "defaultImage": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/attribute_rule_images/42_source_1786120738.png",
+                    "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/attribute_rule_images/42_source_1786120738.png",
+                    "altText": "",
+                    "isDefault": true
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "XL"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "label": "Warm Stone"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "singleVariant": {
+          "entityId": 191,
+          "name": "Wren Washed Cap",
+          "defaultImage": {
+            "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/191/497/wren-washed-cap-washed-black-01__34144.1786120784.png",
+            "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/191/497/wren-washed-cap-washed-black-01__34144.1786120784.png",
+            "altText": "Wren Washed Cap in Washed Black",
+            "isDefault": true
+          },
+          "images": {
+            "edges": [
+              {
+                "node": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/191/497/wren-washed-cap-washed-black-01__34144.1786120784.png",
+                  "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/191/497/wren-washed-cap-washed-black-01__34144.1786120784.png",
+                  "altText": "Wren Washed Cap in Washed Black",
+                  "isDefault": true
+                }
+              },
+              {
+                "node": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/191/501/wren-washed-cap-washed-black-02__19812.1786120786.png",
+                  "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/191/501/wren-washed-cap-washed-black-02__19812.1786120786.png",
+                  "altText": "Wren Washed Cap in Washed Black",
+                  "isDefault": false
+                }
+              },
+              {
+                "node": {
+                  "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/191/504/wren-washed-cap-washed-black-03__34644.1786120789.png",
+                  "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/products/191/504/wren-washed-cap-washed-black-03__34644.1786120789.png",
+                  "altText": "Wren Washed Cap in Washed Black",
+                  "isDefault": false
+                }
+              }
+            ]
+          },
+          "variants": {
+            "edges": [
+              {
+                "node": {
+                  "entityId": 235,
+                  "sku": "TS-P5-WAS-ONESIZE",
+                  "defaultImage": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/attribute_rule_images/78_source_1786120781.png",
+                    "urlOriginal": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/original/attribute_rule_images/78_source_1786120781.png",
+                    "altText": "",
+                    "isDefault": true
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

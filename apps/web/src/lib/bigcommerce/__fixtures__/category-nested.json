@@ -1,0 +1,84 @@
+{
+  "query": "query CategoryByPath($path: String!) {\n  site {\n    route(path: $path) {\n      redirect {\n        toUrl\n      }\n      node {\n        __typename\n        ... on Category {\n          entityId\n          name\n          path\n          description\n          defaultImage {\n            url(width: 640)\n            altText\n          }\n          breadcrumbs(depth: 5) {\n            edges {\n              node {\n                entityId\n                name\n                path\n              }\n            }\n          }\n          seo {\n            pageTitle\n            metaDescription\n            metaKeywords\n          }\n          products(first: 10) {\n            collectionInfo {\n              totalItems\n            }\n            pageInfo {\n              hasNextPage\n              endCursor\n            }\n            edges {\n              node {\n                entityId\n                name\n                path\n                defaultImage {\n                  url(width: 320)\n                  altText\n                }\n                prices {\n                  price {\n                    value\n                    currencyCode\n                  }\n                  basePrice {\n                    value\n                    currencyCode\n                  }\n                  salePrice {\n                    value\n                    currencyCode\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+  "variables": {
+    "path": "/collections/jackets/leather/"
+  },
+  "status": 200,
+  "note": "Multi-segment path, captured against a throwaway category created for ROB-2531 and deleted afterwards, because pnpm seed:bigcommerce keeps the tree deliberately flat. Recreate before recapturing: POST /v3/catalog/trees/categories [{tree_id:1, parent_id:<Jackets>, name:\"Leather\", url:{path:\"/collections/jackets/leather/\", is_customized:true}, is_visible:true}], then PUT /v3/catalog/products/category-assignments [{product_id:<Rye>, category_id:<new>}].",
+  "response": {
+    "data": {
+      "site": {
+        "route": {
+          "redirect": null,
+          "node": {
+            "__typename": "Category",
+            "entityId": 42,
+            "name": "Leather",
+            "path": "/collections/jackets/leather/",
+            "description": "<p>Throwaway nested category for ROB-2531 fixture capture.</p>",
+            "defaultImage": null,
+            "breadcrumbs": {
+              "edges": [
+                {
+                  "node": {
+                    "entityId": 36,
+                    "name": "Jackets",
+                    "path": "/collections/jackets/"
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 42,
+                    "name": "Leather",
+                    "path": "/collections/jackets/leather/"
+                  }
+                }
+              ]
+            },
+            "seo": {
+              "pageTitle": "",
+              "metaDescription": "",
+              "metaKeywords": ""
+            },
+            "products": {
+              "collectionInfo": {
+                "totalItems": 1
+              },
+              "pageInfo": {
+                "hasNextPage": false,
+                "endCursor": "eyJpZCI6MTg5fQ=="
+              },
+              "edges": [
+                {
+                  "node": {
+                    "entityId": 189,
+                    "name": "Rye Leather Moto Jacket",
+                    "path": "/products/rye-leather-moto-jacket/",
+                    "defaultImage": {
+                      "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/products/189/493/rye-leather-moto-jacket-black-01__40100.1786120781.png",
+                      "altText": "Rye Leather Moto Jacket in Black"
+                    },
+                    "prices": {
+                      "price": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 495,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

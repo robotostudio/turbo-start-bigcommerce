@@ -1,0 +1,166 @@
+{
+  "query": "query SearchProducts($filters: SearchProductsFiltersInput!) {\n  site {\n    search {\n      searchProducts(filters: $filters) {\n        products(first: 10) {\n          collectionInfo {\n            totalItems\n          }\n          pageInfo {\n            hasNextPage\n            endCursor\n          }\n          edges {\n            node {\n              entityId\n              name\n              path\n              brand {\n                entityId\n                name\n              }\n              defaultImage {\n                url(width: 320)\n                altText\n              }\n              prices {\n                price {\n                  value\n                  currencyCode\n                }\n                basePrice {\n                  value\n                  currencyCode\n                }\n                salePrice {\n                  value\n                  currencyCode\n                }\n              }\n            }\n          }\n        }\n        filters(first: 25) {\n          pageInfo {\n            hasNextPage\n            endCursor\n          }\n          edges {\n            node {\n              __typename\n              displayName\n              isCollapsedByDefault\n              ... on BrandSearchFilter {\n                displayProductCount\n                brands(first: 50) {\n                  edges {\n                    node {\n                      entityId\n                      name\n                      isSelected\n                      productCount\n                    }\n                  }\n                }\n              }\n              ... on CategorySearchFilter {\n                displayProductCount\n                categories(first: 50) {\n                  edges {\n                    node {\n                      entityId\n                      name\n                      isSelected\n                      productCount\n                    }\n                  }\n                }\n              }\n              ... on ProductAttributeSearchFilter {\n                filterKey\n                displayProductCount\n                attributes(first: 50) {\n                  edges {\n                    node {\n                      value\n                      isSelected\n                      productCount\n                    }\n                  }\n                }\n              }\n              ... on RatingSearchFilter {\n                ratings(first: 10) {\n                  edges {\n                    node {\n                      value\n                      isSelected\n                      productCount\n                    }\n                  }\n                }\n              }\n              ... on PriceSearchFilter {\n                selected {\n                  minPrice\n                  maxPrice\n                }\n              }\n            }\n          }\n        }\n        suggestions {\n          sourceField\n          results {\n            text\n          }\n        }\n      }\n    }\n  }\n}",
+  "variables": {
+    "filters": {
+      "searchTerm": "jacket"
+    }
+  },
+  "status": 200,
+  "note": "The plan-gated faceted-search case, verbatim. Products load normally and filters.edges is [] with hasNextPage: false, endCursor: null, HTTP 200 and no errors array. This store is a Partner Sandbox, where product filtering is not on the plan. An empty filter list therefore means 'filtering unavailable', never 'no filters matched' — nothing in the payload distinguishes the two, which is why the storefront must render an explicit unavailable state rather than an empty sidebar.",
+  "response": {
+    "data": {
+      "site": {
+        "search": {
+          "searchProducts": {
+            "products": {
+              "collectionInfo": {
+                "totalItems": 5
+              },
+              "pageInfo": {
+                "hasNextPage": false,
+                "endCursor": "WzUuMTc5Mzc2NiwxODVd"
+              },
+              "edges": [
+                {
+                  "node": {
+                    "entityId": 189,
+                    "name": "Rye Leather Moto Jacket",
+                    "path": "/products/rye-leather-moto-jacket/",
+                    "brand": null,
+                    "defaultImage": {
+                      "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/products/189/493/rye-leather-moto-jacket-black-01__40100.1786120781.png",
+                      "altText": "Rye Leather Moto Jacket in Black"
+                    },
+                    "prices": {
+                      "price": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 495,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      }
+                    }
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 183,
+                    "name": "Aster Denim Coach Jacket",
+                    "path": "/products/aster-denim-coach-jacket/",
+                    "brand": null,
+                    "defaultImage": {
+                      "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/products/183/456/aster-denim-coach-jacket-indigo-rinse-01__76653.1786120739.png",
+                      "altText": "Aster Denim Coach Jacket in Indigo Rinse"
+                    },
+                    "prices": {
+                      "price": {
+                        "value": 133,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 133,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": null
+                    }
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 184,
+                    "name": "Halden Waffle Henley",
+                    "path": "/products/halden-waffle-henley/",
+                    "brand": null,
+                    "defaultImage": {
+                      "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/products/184/470/halden-waffle-henley-chalk-white-01__66533.1786120755.png",
+                      "altText": "Halden Waffle Henley in Chalk White"
+                    },
+                    "prices": {
+                      "price": {
+                        "value": 76,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 76,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": null
+                    }
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 188,
+                    "name": "Pennant Jacquard Vest",
+                    "path": "/products/pennant-jacquard-vest/",
+                    "brand": null,
+                    "defaultImage": {
+                      "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/products/188/490/pennant-jacquard-vest-ecru-multi-01__54081.1786120779.png",
+                      "altText": "Pennant Jacquard Vest in Ecru Multi"
+                    },
+                    "prices": {
+                      "price": {
+                        "value": 112,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 112,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": null
+                    }
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 185,
+                    "name": "Foundry Cotton Overshirt",
+                    "path": "/products/foundry-cotton-overshirt/",
+                    "brand": null,
+                    "defaultImage": {
+                      "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/products/185/469/foundry-cotton-overshirt-olive-drab-01__59010.1786120755.png",
+                      "altText": "Foundry Cotton Overshirt in Olive Drab"
+                    },
+                    "prices": {
+                      "price": {
+                        "value": 118,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 118,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": null
+                    }
+                  }
+                }
+              ]
+            },
+            "filters": {
+              "pageInfo": {
+                "hasNextPage": false,
+                "endCursor": null
+              },
+              "edges": []
+            },
+            "suggestions": [
+              {
+                "sourceField": "product_name",
+                "results": []
+              },
+              {
+                "sourceField": "product_desc",
+                "results": []
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

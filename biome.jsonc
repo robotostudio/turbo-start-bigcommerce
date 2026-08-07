@@ -95,7 +95,13 @@
         // reformatted them, every refresh would leave CI red until someone
         // ran `pnpm format`.
         "**/bigcommerce/graphql-env.d.ts",
-        "**/bigcommerce/schema.graphql"
+        "**/bigcommerce/schema.graphql",
+        // Storefront API responses captured verbatim by
+        // `scripts/bigcommerce-fixtures.ts`. Same reason, plus a stronger one:
+        // reformatting a fixture is editing it, and a fixture that has been
+        // edited to fit a formatter is no longer evidence of what the API
+        // actually returned.
+        "**/bigcommerce/__fixtures__/**"
       ],
       "linter": {
         "enabled": false

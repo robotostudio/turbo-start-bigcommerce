@@ -1,0 +1,37 @@
+{
+  "query": "mutation CreateCart($input: CreateCartInput!) {\n  cart {\n    createCart(input: $input) {\n      cart {\n        ...CartDetail\n      }\n    }\n  }\n}\n\nfragment CartDetail on Cart {\n  entityId\n  currencyCode\n  isTaxIncluded\n  baseAmount {\n    value\n    currencyCode\n  }\n  discountedAmount {\n    value\n    currencyCode\n  }\n  amount {\n    value\n    currencyCode\n  }\n  discounts {\n    entityId\n    discountedAmount {\n      value\n      currencyCode\n    }\n  }\n  createdAt {\n    utc\n  }\n  updatedAt {\n    utc\n  }\n  locale\n  version\n  lineItems {\n    totalQuantity\n    physicalItems {\n      entityId\n      parentEntityId\n      productEntityId\n      variantEntityId\n      sku\n      name\n      path\n      brand\n      quantity\n      isTaxable\n      isMutable\n      isShippingRequired\n      image {\n        url(width: 320)\n        altText\n      }\n      selectedOptions {\n        __typename\n        entityId\n        name\n        ... on CartSelectedMultipleChoiceOption {\n          value\n          valueEntityId\n        }\n      }\n      listPrice {\n        value\n        currencyCode\n      }\n      originalPrice {\n        value\n        currencyCode\n      }\n      salePrice {\n        value\n        currencyCode\n      }\n      extendedListPrice {\n        value\n        currencyCode\n      }\n      extendedSalePrice {\n        value\n        currencyCode\n      }\n      discountedAmount {\n        value\n        currencyCode\n      }\n      couponAmount {\n        value\n        currencyCode\n      }\n      discounts {\n        entityId\n        discountedAmount {\n          value\n          currencyCode\n        }\n      }\n    }\n    digitalItems {\n      entityId\n      parentEntityId\n      productEntityId\n      variantEntityId\n      sku\n      name\n      path\n      brand\n      quantity\n      isTaxable\n      isMutable\n      image {\n        url(width: 320)\n        altText\n      }\n      selectedOptions {\n        __typename\n        entityId\n        name\n      }\n      listPrice {\n        value\n        currencyCode\n      }\n      originalPrice {\n        value\n        currencyCode\n      }\n      salePrice {\n        value\n        currencyCode\n      }\n      extendedListPrice {\n        value\n        currencyCode\n      }\n      extendedSalePrice {\n        value\n        currencyCode\n      }\n      discountedAmount {\n        value\n        currencyCode\n      }\n      couponAmount {\n        value\n        currencyCode\n      }\n    }\n    giftCertificates {\n      entityId\n      name\n      amount {\n        value\n        currencyCode\n      }\n    }\n    customItems {\n      entityId\n      sku\n      name\n      quantity\n      listPrice {\n        value\n        currencyCode\n      }\n    }\n  }\n}",
+  "variables": {
+    "input": {
+      "lineItems": [
+        {
+          "productEntityId": 189,
+          "quantity": 1
+        }
+      ]
+    }
+  },
+  "status": 200,
+  "note": "Rye has Size and Color marked isRequired, so adding it by productEntityId alone fails. The storefront must send variantEntityId or selectedOptions. This message carries no prefix at all, unlike the Not Found and Missing required fields cases.",
+  "response": {
+    "data": {
+      "cart": {
+        "createCart": null
+      }
+    },
+    "errors": [
+      {
+        "message": "This product has options, variant ID is required: Product \"Rye Leather Moto Jacket\" has options, variant ID is required",
+        "path": [
+          "cart",
+          "createCart"
+        ],
+        "locations": [
+          {
+            "line": 3,
+            "column": 5
+          }
+        ]
+      }
+    ]
+  }
+}

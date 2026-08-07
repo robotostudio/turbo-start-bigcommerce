@@ -1,0 +1,19 @@
+{
+  "query": "query Invalid { site { noSuchField } }",
+  "variables": null,
+  "status": 400,
+  "note": "The branch that never reaches a resolver. This is the only capture that is not HTTP 200: it is a 400, there is no data key at all rather than a null one, and the error carries locations but no path. Still no extensions.",
+  "response": {
+    "errors": [
+      {
+        "message": "Cannot query field 'noSuchField' on type 'Site'.",
+        "locations": [
+          {
+            "line": 1,
+            "column": 24
+          }
+        ]
+      }
+    ]
+  }
+}

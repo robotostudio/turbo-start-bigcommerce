@@ -1,0 +1,57 @@
+{
+  "query": "query Metafields($entityId: Int!, $namespace: String!) {\n  site {\n    product(entityId: $entityId) {\n      entityId\n      name\n      metafields(namespace: $namespace, first: 25) {\n        pageInfo {\n          hasNextPage\n          endCursor\n        }\n        edges {\n          node {\n            id\n            entityId\n            key\n            value\n            description\n          }\n        }\n      }\n      variants(first: 3) {\n        edges {\n          node {\n            entityId\n            sku\n            metafields(namespace: $namespace, first: 25) {\n              edges {\n                node {\n                  entityId\n                  key\n                  value\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+  "variables": {
+    "entityId": 189,
+    "namespace": "does_not_exist"
+  },
+  "status": 200,
+  "note": "An absent namespace returns edges: [] at HTTP 200 with no errors. Byte-for-byte the same shape as a metafield whose permission_set is wrong, so a reader cannot tell 'no metafields here' from 'metafields exist but are admin-only' — compare against metafields-turbo-start.json.",
+  "response": {
+    "data": {
+      "site": {
+        "product": {
+          "entityId": 189,
+          "name": "Rye Leather Moto Jacket",
+          "metafields": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "edges": []
+          },
+          "variants": {
+            "edges": [
+              {
+                "node": {
+                  "entityId": 220,
+                  "sku": "TS-P10-BLA-XS",
+                  "metafields": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 226,
+                  "sku": "TS-P10-BLA-S",
+                  "metafields": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 229,
+                  "sku": "TS-P10-BLA-M",
+                  "metafields": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

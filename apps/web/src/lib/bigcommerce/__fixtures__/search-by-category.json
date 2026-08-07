@@ -1,0 +1,88 @@
+{
+  "query": "query SearchProducts($filters: SearchProductsFiltersInput!) {\n  site {\n    search {\n      searchProducts(filters: $filters) {\n        products(first: 10) {\n          collectionInfo {\n            totalItems\n          }\n          pageInfo {\n            hasNextPage\n            endCursor\n          }\n          edges {\n            node {\n              entityId\n              name\n              path\n              brand {\n                entityId\n                name\n              }\n              defaultImage {\n                url(width: 320)\n                altText\n              }\n              prices {\n                price {\n                  value\n                  currencyCode\n                }\n                basePrice {\n                  value\n                  currencyCode\n                }\n                salePrice {\n                  value\n                  currencyCode\n                }\n              }\n            }\n          }\n        }\n        filters(first: 25) {\n          pageInfo {\n            hasNextPage\n            endCursor\n          }\n          edges {\n            node {\n              __typename\n              displayName\n              isCollapsedByDefault\n              ... on BrandSearchFilter {\n                displayProductCount\n                brands(first: 50) {\n                  edges {\n                    node {\n                      entityId\n                      name\n                      isSelected\n                      productCount\n                    }\n                  }\n                }\n              }\n              ... on CategorySearchFilter {\n                displayProductCount\n                categories(first: 50) {\n                  edges {\n                    node {\n                      entityId\n                      name\n                      isSelected\n                      productCount\n                    }\n                  }\n                }\n              }\n              ... on ProductAttributeSearchFilter {\n                filterKey\n                displayProductCount\n                attributes(first: 50) {\n                  edges {\n                    node {\n                      value\n                      isSelected\n                      productCount\n                    }\n                  }\n                }\n              }\n              ... on RatingSearchFilter {\n                ratings(first: 10) {\n                  edges {\n                    node {\n                      value\n                      isSelected\n                      productCount\n                    }\n                  }\n                }\n              }\n              ... on PriceSearchFilter {\n                selected {\n                  minPrice\n                  maxPrice\n                }\n              }\n            }\n          }\n        }\n        suggestions {\n          sourceField\n          results {\n            text\n          }\n        }\n      }\n    }\n  }\n}",
+  "variables": {
+    "filters": {
+      "categoryEntityId": 36
+    }
+  },
+  "status": 200,
+  "note": "The category PLP read — same searchProducts field the search page uses, scoped by categoryEntityId. filters.edges is empty here for the same plan-gating reason as search-filters-unavailable.json; this is the payload the category filter sidebar would be built from.",
+  "response": {
+    "data": {
+      "site": {
+        "search": {
+          "searchProducts": {
+            "products": {
+              "collectionInfo": {
+                "totalItems": 2
+              },
+              "pageInfo": {
+                "hasNextPage": false,
+                "endCursor": "WzEwMDAwMDAwMC4wLDAsMTgzXQ=="
+              },
+              "edges": [
+                {
+                  "node": {
+                    "entityId": 189,
+                    "name": "Rye Leather Moto Jacket",
+                    "path": "/products/rye-leather-moto-jacket/",
+                    "brand": null,
+                    "defaultImage": {
+                      "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/products/189/493/rye-leather-moto-jacket-black-01__40100.1786120781.png",
+                      "altText": "Rye Leather Moto Jacket in Black"
+                    },
+                    "prices": {
+                      "price": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 495,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      }
+                    }
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 183,
+                    "name": "Aster Denim Coach Jacket",
+                    "path": "/products/aster-denim-coach-jacket/",
+                    "brand": null,
+                    "defaultImage": {
+                      "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/products/183/456/aster-denim-coach-jacket-indigo-rinse-01__76653.1786120739.png",
+                      "altText": "Aster Denim Coach Jacket in Indigo Rinse"
+                    },
+                    "prices": {
+                      "price": {
+                        "value": 133,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 133,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": null
+                    }
+                  }
+                }
+              ]
+            },
+            "filters": {
+              "pageInfo": {
+                "hasNextPage": false,
+                "endCursor": null
+              },
+              "edges": []
+            },
+            "suggestions": []
+          }
+        }
+      }
+    }
+  }
+}

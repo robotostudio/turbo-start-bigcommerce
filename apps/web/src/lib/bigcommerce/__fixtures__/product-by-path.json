@@ -1,0 +1,507 @@
+{
+  "query": "query ProductByPath($path: String!) {\n  site {\n    route(path: $path) {\n      redirect {\n        toUrl\n      }\n      node {\n        __typename\n        ...ProductDetail\n        ... on Product {\n          variants(first: 25) {\n            edges {\n              node {\n                ...VariantDetail\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n\nfragment ProductDetail on Product {\n  entityId\n  sku\n  path\n  name\n  description\n  plainTextDescription(characterLimit: 200)\n  type\n  condition\n  availabilityV2 {\n    __typename\n    status\n    description\n  }\n  inventory {\n    isInStock\n    isStockTracked\n    hasVariantInventory\n    aggregated {\n      availableToSell\n      warningLevel\n    }\n  }\n  prices {\n    price {\n      value\n      currencyCode\n    }\n    basePrice {\n      value\n      currencyCode\n    }\n    salePrice {\n      value\n      currencyCode\n    }\n    retailPrice {\n      value\n      currencyCode\n    }\n    saved {\n      value\n      currencyCode\n    }\n    priceRange {\n      min {\n        value\n        currencyCode\n      }\n      max {\n        value\n        currencyCode\n      }\n    }\n  }\n  brand {\n    entityId\n    name\n    path\n  }\n  categories(first: 10) {\n    edges {\n      node {\n        entityId\n        name\n        path\n      }\n    }\n  }\n  defaultImage {\n    url(width: 640)\n    urlOriginal\n    altText\n    isDefault\n  }\n  images(first: 20) {\n    edges {\n      node {\n        url(width: 640)\n        altText\n        isDefault\n      }\n    }\n  }\n  productOptions(first: 10) {\n    edges {\n      node {\n        __typename\n        entityId\n        displayName\n        isRequired\n        isVariantOption\n        ... on MultipleChoiceOption {\n          displayStyle\n          values(first: 25) {\n            edges {\n              node {\n                __typename\n                entityId\n                label\n                isDefault\n                ... on SwatchOptionValue {\n                  hexColors\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n  metafields(namespace: \"turbo_start\", first: 25) {\n    edges {\n      node {\n        entityId\n        key\n        value\n      }\n    }\n  }\n  seo {\n    pageTitle\n    metaDescription\n    metaKeywords\n  }\n}\n\nfragment VariantDetail on Variant {\n  entityId\n  sku\n  isPurchasable\n  upc\n  mpn\n  gtin\n  prices {\n    price {\n      value\n      currencyCode\n    }\n    basePrice {\n      value\n      currencyCode\n    }\n    salePrice {\n      value\n      currencyCode\n    }\n    retailPrice {\n      value\n      currencyCode\n    }\n  }\n  inventory {\n    isInStock\n    aggregated {\n      availableToSell\n      warningLevel\n    }\n  }\n  options(first: 10) {\n    edges {\n      node {\n        entityId\n        displayName\n        values(first: 10) {\n          edges {\n            node {\n              entityId\n              label\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+  "variables": {
+    "path": "/products/rye-leather-moto-jacket/"
+  },
+  "status": 200,
+  "note": "Also the sale / compare-at, colour-swatch and metafield payload: prices.basePrice 495 is the was-price, prices.salePrice 396 the now-price, the Color option is a SwatchOptionValue with hexColors, and metafields carries the turbo_start namespace. Envelope is site.route.node with a __typename discriminator, which is not the shape site.product returns — compare against product-by-id.json.",
+  "response": {
+    "data": {
+      "site": {
+        "route": {
+          "redirect": null,
+          "node": {
+            "__typename": "Product",
+            "entityId": 189,
+            "sku": "",
+            "path": "/products/rye-leather-moto-jacket/",
+            "name": "Rye Leather Moto Jacket",
+            "description": "",
+            "plainTextDescription": "",
+            "type": "Physical",
+            "condition": null,
+            "availabilityV2": {
+              "__typename": "ProductAvailable",
+              "status": "Available",
+              "description": ""
+            },
+            "inventory": {
+              "isInStock": false,
+              "isStockTracked": true,
+              "hasVariantInventory": true,
+              "aggregated": null
+            },
+            "prices": {
+              "price": {
+                "value": 396,
+                "currencyCode": "GBP"
+              },
+              "basePrice": {
+                "value": 495,
+                "currencyCode": "GBP"
+              },
+              "salePrice": {
+                "value": 396,
+                "currencyCode": "GBP"
+              },
+              "retailPrice": null,
+              "saved": null,
+              "priceRange": {
+                "min": {
+                  "value": 396,
+                  "currencyCode": "GBP"
+                },
+                "max": {
+                  "value": 396,
+                  "currencyCode": "GBP"
+                }
+              }
+            },
+            "brand": null,
+            "categories": {
+              "edges": [
+                {
+                  "node": {
+                    "entityId": 33,
+                    "name": "All Products",
+                    "path": "/collections/all-products/"
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 36,
+                    "name": "Jackets",
+                    "path": "/collections/jackets/"
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 38,
+                    "name": "New Arrivals",
+                    "path": "/collections/new-arrivals/"
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 39,
+                    "name": "Sale",
+                    "path": "/collections/sale/"
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 42,
+                    "name": "Leather",
+                    "path": "/collections/jackets/leather/"
+                  }
+                }
+              ]
+            },
+            "defaultImage": null,
+            "images": {
+              "edges": [
+                {
+                  "node": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/189/493/rye-leather-moto-jacket-black-01__40100.1786120781.png",
+                    "altText": "Rye Leather Moto Jacket in Black",
+                    "isDefault": true
+                  }
+                },
+                {
+                  "node": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/189/496/rye-leather-moto-jacket-black-02__07504.1786120784.png",
+                    "altText": "Rye Leather Moto Jacket in Black",
+                    "isDefault": false
+                  }
+                },
+                {
+                  "node": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/189/500/rye-leather-moto-jacket-black-03__48706.1786120786.png",
+                    "altText": "Rye Leather Moto Jacket in Black",
+                    "isDefault": false
+                  }
+                },
+                {
+                  "node": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/189/503/rye-leather-moto-jacket-black-04__72025.1786120789.png",
+                    "altText": "Rye Leather Moto Jacket in Black",
+                    "isDefault": false
+                  }
+                },
+                {
+                  "node": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/189/506/rye-leather-moto-jacket-black-05__22040.1786120792.png",
+                    "altText": "Rye Leather Moto Jacket in Black",
+                    "isDefault": false
+                  }
+                },
+                {
+                  "node": {
+                    "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/products/189/507/rye-leather-moto-jacket-black-06__10622.1786120794.png",
+                    "altText": "Rye Leather Moto Jacket in Black",
+                    "isDefault": false
+                  }
+                }
+              ]
+            },
+            "productOptions": {
+              "edges": []
+            },
+            "metafields": {
+              "edges": [
+                {
+                  "node": {
+                    "entityId": 33,
+                    "key": "product_type",
+                    "value": "Jacket"
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 34,
+                    "key": "tags",
+                    "value": "jacket, leather, moto, new, outerwear, premium"
+                  }
+                }
+              ]
+            },
+            "seo": {
+              "pageTitle": "",
+              "metaDescription": "",
+              "metaKeywords": ""
+            },
+            "variants": {
+              "edges": [
+                {
+                  "node": {
+                    "entityId": 220,
+                    "sku": "TS-P10-BLA-XS",
+                    "isPurchasable": true,
+                    "upc": null,
+                    "mpn": null,
+                    "gtin": null,
+                    "prices": {
+                      "price": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 495,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "retailPrice": null
+                    },
+                    "inventory": {
+                      "isInStock": true,
+                      "aggregated": null
+                    },
+                    "options": {
+                      "edges": [
+                        {
+                          "node": {
+                            "entityId": 136,
+                            "displayName": "Size",
+                            "values": {
+                              "edges": [
+                                {
+                                  "node": {
+                                    "entityId": 168,
+                                    "label": "XS"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "node": {
+                            "entityId": 138,
+                            "displayName": "Color",
+                            "values": {
+                              "edges": [
+                                {
+                                  "node": {
+                                    "entityId": 178,
+                                    "label": "Black"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 226,
+                    "sku": "TS-P10-BLA-S",
+                    "isPurchasable": true,
+                    "upc": null,
+                    "mpn": null,
+                    "gtin": null,
+                    "prices": {
+                      "price": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 495,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "retailPrice": null
+                    },
+                    "inventory": {
+                      "isInStock": true,
+                      "aggregated": null
+                    },
+                    "options": {
+                      "edges": [
+                        {
+                          "node": {
+                            "entityId": 136,
+                            "displayName": "Size",
+                            "values": {
+                              "edges": [
+                                {
+                                  "node": {
+                                    "entityId": 169,
+                                    "label": "S"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "node": {
+                            "entityId": 138,
+                            "displayName": "Color",
+                            "values": {
+                              "edges": [
+                                {
+                                  "node": {
+                                    "entityId": 178,
+                                    "label": "Black"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 229,
+                    "sku": "TS-P10-BLA-M",
+                    "isPurchasable": true,
+                    "upc": null,
+                    "mpn": null,
+                    "gtin": null,
+                    "prices": {
+                      "price": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 495,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "retailPrice": null
+                    },
+                    "inventory": {
+                      "isInStock": true,
+                      "aggregated": null
+                    },
+                    "options": {
+                      "edges": [
+                        {
+                          "node": {
+                            "entityId": 136,
+                            "displayName": "Size",
+                            "values": {
+                              "edges": [
+                                {
+                                  "node": {
+                                    "entityId": 170,
+                                    "label": "M"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "node": {
+                            "entityId": 138,
+                            "displayName": "Color",
+                            "values": {
+                              "edges": [
+                                {
+                                  "node": {
+                                    "entityId": 178,
+                                    "label": "Black"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 232,
+                    "sku": "TS-P10-BLA-L",
+                    "isPurchasable": true,
+                    "upc": null,
+                    "mpn": null,
+                    "gtin": null,
+                    "prices": {
+                      "price": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 495,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "retailPrice": null
+                    },
+                    "inventory": {
+                      "isInStock": true,
+                      "aggregated": null
+                    },
+                    "options": {
+                      "edges": [
+                        {
+                          "node": {
+                            "entityId": 136,
+                            "displayName": "Size",
+                            "values": {
+                              "edges": [
+                                {
+                                  "node": {
+                                    "entityId": 171,
+                                    "label": "L"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "node": {
+                            "entityId": 138,
+                            "displayName": "Color",
+                            "values": {
+                              "edges": [
+                                {
+                                  "node": {
+                                    "entityId": 178,
+                                    "label": "Black"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "node": {
+                    "entityId": 234,
+                    "sku": "TS-P10-BLA-XL",
+                    "isPurchasable": true,
+                    "upc": null,
+                    "mpn": null,
+                    "gtin": null,
+                    "prices": {
+                      "price": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "basePrice": {
+                        "value": 495,
+                        "currencyCode": "GBP"
+                      },
+                      "salePrice": {
+                        "value": 396,
+                        "currencyCode": "GBP"
+                      },
+                      "retailPrice": null
+                    },
+                    "inventory": {
+                      "isInStock": true,
+                      "aggregated": null
+                    },
+                    "options": {
+                      "edges": [
+                        {
+                          "node": {
+                            "entityId": 136,
+                            "displayName": "Size",
+                            "values": {
+                              "edges": [
+                                {
+                                  "node": {
+                                    "entityId": 172,
+                                    "label": "XL"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "node": {
+                            "entityId": 138,
+                            "displayName": "Color",
+                            "values": {
+                              "edges": [
+                                {
+                                  "node": {
+                                    "entityId": 178,
+                                    "label": "Black"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

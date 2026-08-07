@@ -1,0 +1,153 @@
+{
+  "query": "query CategoryTree {\n  site {\n    categoryTree {\n      entityId\n      name\n      path\n      description\n      productCount\n      hasChildren\n      image {\n        url(width: 320)\n        altText\n      }\n      children {\n        entityId\n        name\n        path\n        productCount\n        hasChildren\n        children {\n          entityId\n          name\n          path\n          productCount\n          hasChildren\n        }\n      }\n    }\n  }\n}",
+  "variables": null,
+  "status": 200,
+  "note": "Captured while the throwaway nested category from category-nested.json existed, so Jackets carries hasChildren: true and a populated children array. A recapture against the seeded store alone returns a wholly flat tree and silently loses that coverage — recreate the nested category first.",
+  "response": {
+    "data": {
+      "site": {
+        "categoryTree": [
+          {
+            "entityId": 32,
+            "name": "Accessories",
+            "path": "/collections/accessories/",
+            "description": "<p>Hats and accessories.</p>",
+            "productCount": 1,
+            "hasChildren": false,
+            "image": {
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/l/41760__41760.original.png",
+              "altText": "Accessories"
+            },
+            "children": []
+          },
+          {
+            "entityId": 33,
+            "name": "All Products",
+            "path": "/collections/all-products/",
+            "description": "<p>Browse the complete collection.</p>",
+            "productCount": 12,
+            "hasChildren": false,
+            "image": {
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/p/93451__93451.original.png",
+              "altText": "All Products"
+            },
+            "children": []
+          },
+          {
+            "entityId": 34,
+            "name": "Bottoms",
+            "path": "/collections/bottoms/",
+            "description": "<p>Trousers and shorts.</p>",
+            "productCount": 2,
+            "hasChildren": false,
+            "image": {
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/u/10644__10644.original.png",
+              "altText": "Bottoms"
+            },
+            "children": []
+          },
+          {
+            "entityId": 35,
+            "name": "Dresses",
+            "path": "/collections/dresses/",
+            "description": "<p>Dresses.</p>",
+            "productCount": 1,
+            "hasChildren": false,
+            "image": {
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/r/95711__95711.original.png",
+              "altText": "Dresses"
+            },
+            "children": []
+          },
+          {
+            "entityId": 36,
+            "name": "Jackets",
+            "path": "/collections/jackets/",
+            "description": "<p>Outerwear and jackets.</p>",
+            "productCount": 2,
+            "hasChildren": true,
+            "image": {
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/h/71370__71370.original.png",
+              "altText": "Jackets"
+            },
+            "children": [
+              {
+                "entityId": 42,
+                "name": "Leather",
+                "path": "/collections/jackets/leather/",
+                "productCount": 1,
+                "hasChildren": false,
+                "children": []
+              }
+            ]
+          },
+          {
+            "entityId": 37,
+            "name": "Knitwear",
+            "path": "/collections/knitwear/",
+            "description": "<p>Sweaters and knits.</p>",
+            "productCount": 2,
+            "hasChildren": false,
+            "image": {
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/b/79607__79607.original.png",
+              "altText": "Knitwear"
+            },
+            "children": []
+          },
+          {
+            "entityId": 38,
+            "name": "New Arrivals",
+            "path": "/collections/new-arrivals/",
+            "description": "<p>The latest additions, Spring Summer 2026.</p>",
+            "productCount": 12,
+            "hasChildren": false,
+            "image": {
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/a/69288__69288.original.png",
+              "altText": "New Arrivals"
+            },
+            "children": []
+          },
+          {
+            "entityId": 39,
+            "name": "Sale",
+            "path": "/collections/sale/",
+            "description": "<p>Reduced-price styles.</p>",
+            "productCount": 4,
+            "hasChildren": false,
+            "image": {
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/s/67731__67731.original.png",
+              "altText": "Sale"
+            },
+            "children": []
+          },
+          {
+            "entityId": 40,
+            "name": "Shirts",
+            "path": "/collections/shirts/",
+            "description": "<p>Shirts and overshirts.</p>",
+            "productCount": 3,
+            "hasChildren": false,
+            "image": {
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/k/23378__23378.original.png",
+              "altText": "Shirts"
+            },
+            "children": []
+          },
+          {
+            "entityId": 41,
+            "name": "Tops",
+            "path": "/collections/tops/",
+            "description": "<p>Tees, henleys and tops.</p>",
+            "productCount": 1,
+            "hasChildren": false,
+            "image": {
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/u/58825__58825.original.png",
+              "altText": "Tops"
+            },
+            "children": []
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "query": "query Metafields($entityId: Int!, $namespace: String!) {\n  site {\n    product(entityId: $entityId) {\n      entityId\n      name\n      metafields(namespace: $namespace, first: 25) {\n        pageInfo {\n          hasNextPage\n          endCursor\n        }\n        edges {\n          node {\n            id\n            entityId\n            key\n            value\n            description\n          }\n        }\n      }\n      variants(first: 3) {\n        edges {\n          node {\n            entityId\n            sku\n            metafields(namespace: $namespace, first: 25) {\n              edges {\n                node {\n                  entityId\n                  key\n                  value\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+  "variables": {
+    "entityId": 189,
+    "namespace": "turbo_start"
+  },
+  "status": 200,
+  "note": "The populated namespace. These exist on the storefront only because the seed sets permission_set: \"read_and_sf_access\" — a metafield written with plain \"read\" returns the same empty connection as metafields-unknown-namespace.json, with no error. Variant metafields are empty because the seed writes none.",
+  "response": {
+    "data": {
+      "site": {
+        "product": {
+          "entityId": 189,
+          "name": "Rye Leather Moto Jacket",
+          "metafields": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "YXJyYXljb25uZWN0aW9uOjE="
+            },
+            "edges": [
+              {
+                "node": {
+                  "id": "TWV0YWZpZWxkczozMw==",
+                  "entityId": 33,
+                  "key": "product_type",
+                  "value": "Jacket",
+                  "description": ""
+                }
+              },
+              {
+                "node": {
+                  "id": "TWV0YWZpZWxkczozNA==",
+                  "entityId": 34,
+                  "key": "tags",
+                  "value": "jacket, leather, moto, new, outerwear, premium",
+                  "description": ""
+                }
+              }
+            ]
+          },
+          "variants": {
+            "edges": [
+              {
+                "node": {
+                  "entityId": 220,
+                  "sku": "TS-P10-BLA-XS",
+                  "metafields": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 226,
+                  "sku": "TS-P10-BLA-S",
+                  "metafields": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 229,
+                  "sku": "TS-P10-BLA-M",
+                  "metafields": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,741 @@
+{
+  "query": "query ProductVariantsAndOptions($entityId: Int!) {\n  site {\n    product(entityId: $entityId) {\n      entityId\n      name\n      path\n      productOptions(first: 10) {\n        edges {\n          node {\n            __typename\n            entityId\n            displayName\n            isRequired\n            isVariantOption\n            ... on MultipleChoiceOption {\n              displayStyle\n              values(first: 25) {\n                edges {\n                  node {\n                    __typename\n                    entityId\n                    label\n                    isDefault\n                    ... on SwatchOptionValue {\n                      hexColors\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n      variants(first: 50) {\n        pageInfo {\n          hasNextPage\n          endCursor\n        }\n        edges {\n          node {\n            ...VariantDetail\n          }\n        }\n      }\n    }\n  }\n}\n\nfragment VariantDetail on Variant {\n  entityId\n  sku\n  isPurchasable\n  upc\n  mpn\n  gtin\n  prices {\n    price {\n      value\n      currencyCode\n    }\n    basePrice {\n      value\n      currencyCode\n    }\n    salePrice {\n      value\n      currencyCode\n    }\n    retailPrice {\n      value\n      currencyCode\n    }\n  }\n  inventory {\n    isInStock\n    aggregated {\n      availableToSell\n      warningLevel\n    }\n  }\n  options(first: 10) {\n    edges {\n      node {\n        entityId\n        displayName\n        values(first: 10) {\n          edges {\n            node {\n              entityId\n              label\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+  "variables": {
+    "entityId": 183
+  },
+  "status": 200,
+  "note": "Two variant options (Size x Color) crossed into 10 variants. Every variant.inventory.aggregated is null, so availableToSell and warningLevel read undefined — that is this store's 'show stock level' setting, not missing data, and isInStock is still authoritative.",
+  "response": {
+    "data": {
+      "site": {
+        "product": {
+          "entityId": 183,
+          "name": "Aster Denim Coach Jacket",
+          "path": "/products/aster-denim-coach-jacket/",
+          "productOptions": {
+            "edges": [
+              {
+                "node": {
+                  "__typename": "MultipleChoiceOption",
+                  "entityId": 120,
+                  "displayName": "Size",
+                  "isRequired": true,
+                  "isVariantOption": true,
+                  "displayStyle": "RectangleBoxes",
+                  "values": {
+                    "edges": [
+                      {
+                        "node": {
+                          "__typename": "MultipleChoiceOptionValue",
+                          "entityId": 123,
+                          "label": "XS",
+                          "isDefault": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "__typename": "MultipleChoiceOptionValue",
+                          "entityId": 124,
+                          "label": "S",
+                          "isDefault": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "__typename": "MultipleChoiceOptionValue",
+                          "entityId": 125,
+                          "label": "M",
+                          "isDefault": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "__typename": "MultipleChoiceOptionValue",
+                          "entityId": 126,
+                          "label": "L",
+                          "isDefault": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "__typename": "MultipleChoiceOptionValue",
+                          "entityId": 127,
+                          "label": "XL",
+                          "isDefault": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "__typename": "MultipleChoiceOption",
+                  "entityId": 124,
+                  "displayName": "Color",
+                  "isRequired": true,
+                  "isVariantOption": true,
+                  "displayStyle": "Swatch",
+                  "values": {
+                    "edges": [
+                      {
+                        "node": {
+                          "__typename": "SwatchOptionValue",
+                          "entityId": 135,
+                          "label": "Indigo Rinse",
+                          "isDefault": false,
+                          "hexColors": [
+                            "#2C3E5D"
+                          ]
+                        }
+                      },
+                      {
+                        "node": {
+                          "__typename": "SwatchOptionValue",
+                          "entityId": 136,
+                          "label": "Warm Stone",
+                          "isDefault": false,
+                          "hexColors": [
+                            "#8CA6C4"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          "variants": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "YXJyYXljb25uZWN0aW9uOjk="
+            },
+            "edges": [
+              {
+                "node": {
+                  "entityId": 170,
+                  "sku": "TS-P1-IND-XS",
+                  "isPurchasable": true,
+                  "upc": null,
+                  "mpn": null,
+                  "gtin": null,
+                  "prices": {
+                    "price": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "basePrice": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "salePrice": null,
+                    "retailPrice": null
+                  },
+                  "inventory": {
+                    "isInStock": true,
+                    "aggregated": null
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "entityId": 120,
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 123,
+                                  "label": "XS"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "entityId": 124,
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 135,
+                                  "label": "Indigo Rinse"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 171,
+                  "sku": "TS-P1-IND-S",
+                  "isPurchasable": true,
+                  "upc": null,
+                  "mpn": null,
+                  "gtin": null,
+                  "prices": {
+                    "price": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "basePrice": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "salePrice": null,
+                    "retailPrice": null
+                  },
+                  "inventory": {
+                    "isInStock": true,
+                    "aggregated": null
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "entityId": 120,
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 124,
+                                  "label": "S"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "entityId": 124,
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 135,
+                                  "label": "Indigo Rinse"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 175,
+                  "sku": "TS-P1-IND-M",
+                  "isPurchasable": true,
+                  "upc": null,
+                  "mpn": null,
+                  "gtin": null,
+                  "prices": {
+                    "price": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "basePrice": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "salePrice": null,
+                    "retailPrice": null
+                  },
+                  "inventory": {
+                    "isInStock": true,
+                    "aggregated": null
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "entityId": 120,
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 125,
+                                  "label": "M"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "entityId": 124,
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 135,
+                                  "label": "Indigo Rinse"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 179,
+                  "sku": "TS-P1-IND-L",
+                  "isPurchasable": true,
+                  "upc": null,
+                  "mpn": null,
+                  "gtin": null,
+                  "prices": {
+                    "price": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "basePrice": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "salePrice": null,
+                    "retailPrice": null
+                  },
+                  "inventory": {
+                    "isInStock": true,
+                    "aggregated": null
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "entityId": 120,
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 126,
+                                  "label": "L"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "entityId": 124,
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 135,
+                                  "label": "Indigo Rinse"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 183,
+                  "sku": "TS-P1-IND-XL",
+                  "isPurchasable": true,
+                  "upc": null,
+                  "mpn": null,
+                  "gtin": null,
+                  "prices": {
+                    "price": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "basePrice": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "salePrice": null,
+                    "retailPrice": null
+                  },
+                  "inventory": {
+                    "isInStock": true,
+                    "aggregated": null
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "entityId": 120,
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 127,
+                                  "label": "XL"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "entityId": 124,
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 135,
+                                  "label": "Indigo Rinse"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 186,
+                  "sku": "TS-P1-WAR-XS",
+                  "isPurchasable": true,
+                  "upc": null,
+                  "mpn": null,
+                  "gtin": null,
+                  "prices": {
+                    "price": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "basePrice": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "salePrice": null,
+                    "retailPrice": null
+                  },
+                  "inventory": {
+                    "isInStock": true,
+                    "aggregated": null
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "entityId": 120,
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 123,
+                                  "label": "XS"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "entityId": 124,
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 136,
+                                  "label": "Warm Stone"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 188,
+                  "sku": "TS-P1-WAR-S",
+                  "isPurchasable": true,
+                  "upc": null,
+                  "mpn": null,
+                  "gtin": null,
+                  "prices": {
+                    "price": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "basePrice": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "salePrice": null,
+                    "retailPrice": null
+                  },
+                  "inventory": {
+                    "isInStock": true,
+                    "aggregated": null
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "entityId": 120,
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 124,
+                                  "label": "S"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "entityId": 124,
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 136,
+                                  "label": "Warm Stone"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 189,
+                  "sku": "TS-P1-WAR-M",
+                  "isPurchasable": true,
+                  "upc": null,
+                  "mpn": null,
+                  "gtin": null,
+                  "prices": {
+                    "price": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "basePrice": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "salePrice": null,
+                    "retailPrice": null
+                  },
+                  "inventory": {
+                    "isInStock": true,
+                    "aggregated": null
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "entityId": 120,
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 125,
+                                  "label": "M"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "entityId": 124,
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 136,
+                                  "label": "Warm Stone"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 190,
+                  "sku": "TS-P1-WAR-L",
+                  "isPurchasable": true,
+                  "upc": null,
+                  "mpn": null,
+                  "gtin": null,
+                  "prices": {
+                    "price": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "basePrice": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "salePrice": null,
+                    "retailPrice": null
+                  },
+                  "inventory": {
+                    "isInStock": true,
+                    "aggregated": null
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "entityId": 120,
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 126,
+                                  "label": "L"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "entityId": 124,
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 136,
+                                  "label": "Warm Stone"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "entityId": 191,
+                  "sku": "TS-P1-WAR-XL",
+                  "isPurchasable": true,
+                  "upc": null,
+                  "mpn": null,
+                  "gtin": null,
+                  "prices": {
+                    "price": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "basePrice": {
+                      "value": 133,
+                      "currencyCode": "GBP"
+                    },
+                    "salePrice": null,
+                    "retailPrice": null
+                  },
+                  "inventory": {
+                    "isInStock": true,
+                    "aggregated": null
+                  },
+                  "options": {
+                    "edges": [
+                      {
+                        "node": {
+                          "entityId": 120,
+                          "displayName": "Size",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 127,
+                                  "label": "XL"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "node": {
+                          "entityId": 124,
+                          "displayName": "Color",
+                          "values": {
+                            "edges": [
+                              {
+                                "node": {
+                                  "entityId": 136,
+                                  "label": "Warm Stone"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
