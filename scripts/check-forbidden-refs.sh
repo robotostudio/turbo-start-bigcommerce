@@ -24,8 +24,23 @@ myshopify.com
 robotostudio/turbo-start-shopify'
 
 # B. Identifiers belonging to a live system. ALWAYS FAIL.
+#
+#    The rule this enforces is narrower than "the string never appears": no live
+#    system may be reachable as a WRITE TARGET, and no script may default to one
+#    when a contributor's env is half-configured. A read of a public URL is not
+#    that, which is why list B has one exclusion -- see LIVE_EXCLUDE below.
 LIVE_TERMS='ztcucp3r
+roboto-merch
 roboto-shopify'
+
+#    apps/studio/seed/reference-dataset.ndjson is seed content. Its image
+#    references are `_sanityAsset` URLs on Sanity's public image CDN, which the
+#    importer downloads and re-uploads into whatever project the contributor
+#    owns. The literal names the source of a public read; nothing in the file can
+#    address a write. Excluding it is what lets the seed ship 155 KB of content
+#    instead of 30 MB of photography. Keep this list to exactly one entry -- a
+#    second one means the rule above has stopped being true.
+LIVE_EXCLUDE=':(exclude)apps/studio/seed/reference-dataset.ndjson'
 
 # ----------------------------------------------------------------------------
 
@@ -49,9 +64,11 @@ trap 'rm -rf "$work"' EXIT
 search() {
   git grep -I -F -f "$work/terms" "$@" -- . \
     ':(exclude)pnpm-lock.yaml' \
-    ':(exclude)scripts/check-forbidden-refs.sh' || true
+    ':(exclude)scripts/check-forbidden-refs.sh' \
+    ${extra:+"$extra"} || true
 }
 
+# `extra` adds one more pathspec, used only by list B. Unset for list A.
 scan() {
   printf '%s\n' "$1" >"$work/terms"
   search -n >"$work/lines"
@@ -66,6 +83,7 @@ fail=0
 
 # --- A. Shopify references (warn) -------------------------------------------
 
+extra=''
 scan "$SHOPIFY_TERMS"
 a_lines=$(count "$work/lines")
 a_files=$(count "$work/paths")
@@ -93,13 +111,16 @@ echo
 
 # --- B. Live-system identifiers (fail) --------------------------------------
 
+extra="$LIVE_EXCLUDE"
 scan "$LIVE_TERMS"
 b_lines=$(count "$work/lines")
 
 if [ "$b_lines" -gt 0 ]; then
   printf 'Live-system identifiers: %s matches\n' "$b_lines"
+  # Truncated: a match can land in minified data where the line is kilobytes
+  # long, and a wall of JSON buries the file:line that actually needs fixing.
   while IFS= read -r hit; do
-    printf '  %s\n' "$hit"
+    printf '  %.160s\n' "$hit"
   done <"$work/lines"
   printf '::error title=Live-system identifier::No identifier belonging to a live system may appear as a literal in this starter, and no script may fall back to one -- a half-configured contributor env must throw, never silently read or delete production data it does not own.\n'
   fail=1
