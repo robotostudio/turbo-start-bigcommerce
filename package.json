@@ -19,6 +19,7 @@
     "bigcommerce:smoke": "pnpm --filter web bigcommerce:smoke",
     "seed:sanity": "pnpm --filter studio seed:sanity",
     "seed:bigcommerce": "pnpm --filter studio seed:bigcommerce",
+    "sync:bigcommerce": "pnpm --filter studio sync:bigcommerce",
     "seed:shopify": "pnpm --filter studio seed:shopify",
     "verify:shopify": "pnpm --filter studio verify:shopify"
   },

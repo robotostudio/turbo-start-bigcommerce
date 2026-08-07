@@ -35,6 +35,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "cdn.shopify.com",
       },
+      {
+        // Hostname only, so the store hash stays out of committed config.
+        protocol: "https",
+        hostname: "cdn11.bigcommerce.com",
+      },
     ],
   },
   // Not shared with `src/lib/build-guard.ts`: this file is evaluated by Next's

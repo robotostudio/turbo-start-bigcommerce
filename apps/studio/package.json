@@ -18,6 +18,7 @@
     "type": "sanity schema extract --enforce-required-fields && sanity typegen generate",
     "seed:sanity": "tsx scripts/seed-sanity.ts",
     "seed:bigcommerce": "tsx scripts/seed-bigcommerce/index.ts",
+    "sync:bigcommerce": "tsx --conditions react-server --env-file-if-exists=.env --env-file-if-exists=../web/.env.local scripts/sync-bigcommerce-sanity.ts",
     "seed:shopify": "tsx scripts/seed-shopify/index.ts",
     "verify:shopify": "tsx scripts/verify-shopify.ts"
   },
