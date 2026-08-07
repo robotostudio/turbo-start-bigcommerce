@@ -17,6 +17,8 @@
     "check-refs": "./scripts/check-forbidden-refs.sh",
     "bigcommerce:schema": "pnpm --filter web bigcommerce:schema",
     "bigcommerce:smoke": "pnpm --filter web bigcommerce:smoke",
+    "seed:sanity": "pnpm --filter studio seed:sanity",
+    "seed:bigcommerce": "pnpm --filter studio seed:bigcommerce",
     "seed:shopify": "pnpm --filter studio seed:shopify",
     "verify:shopify": "pnpm --filter studio verify:shopify"
   },
