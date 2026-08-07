@@ -10,6 +10,15 @@
       {
         "name": "next",
       },
+      // Editor-only: typed `graphql()` documents come from the committed
+      // introspection type, so `tsc --noEmit` never needs this plugin, the
+      // schema file, or a live store. `pnpm bigcommerce:schema` regenerates
+      // both files below; both are committed.
+      {
+        "name": "@0no-co/graphqlsp",
+        "schema": "./src/lib/bigcommerce/schema.graphql",
+        "tadaOutputLocation": "./src/lib/bigcommerce/graphql-env.d.ts",
+      },
     ],
   },
   "include": [

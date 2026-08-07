@@ -106,6 +106,8 @@ Until the BigCommerce flip lands, this is a Shopify step:
 
 For BigCommerce, `BIGCOMMERCE_STOREFRONT_TOKEN` takes a **private** storefront token. Vanilla tokens are not supported: server-to-server use of them sunsets on 2027-03-31, and their CORS allowlist caps at two origins, which is one short of localhost plus production plus preview.
 
+The BigCommerce GraphQL schema is committed at `apps/web/src/lib/bigcommerce/schema.graphql`, so a fresh clone typechecks with no store and no credentials. Once you have a store of your own, `pnpm bigcommerce:schema` introspects it and rewrites that file plus the generated `graphql-env.d.ts` beside it. Nothing runs it for you: it is not wired into `dev` or `build`, so run it when the store changes shape and commit what it writes. `pnpm bigcommerce:smoke` prints your store's name, which is the quickest way to find out whether the token works.
+
 ### 5. Start developing
 
 ```bash
@@ -129,8 +131,8 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 | `SHOPIFY_STORE_DOMAIN` | Yes | Store domain, e.g. `your-store.myshopify.com`. Dies at the flip |
 | `SHOPIFY_STOREFRONT_ACCESS_TOKEN` | Yes | Storefront API token. Dies at the flip |
 | `SHOPIFY_API_VERSION` | No | Defaults to `2025-01` |
-| `BIGCOMMERCE_STORE_HASH` | Yes | Store hash from the API path. Read by nothing yet |
-| `BIGCOMMERCE_STOREFRONT_TOKEN` | Yes | Private storefront token. Read by nothing yet |
+| `BIGCOMMERCE_STORE_HASH` | Yes | Store hash from the API path. So far only the schema and smoke scripts read it |
+| `BIGCOMMERCE_STOREFRONT_TOKEN` | Yes | Private storefront token. So far only the schema and smoke scripts read it |
 | `BIGCOMMERCE_CHANNEL_ID` | No | Storefront channel, defaults to `1` |
 | `BIGCOMMERCE_API_URL` | No | Endpoint override. Derived from the hash if unset |
 | `NEXT_PUBLIC_STORE_CURRENCY` | No | ISO 4217 code, defaults to `GBP` |
@@ -164,6 +166,8 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 | `pnpm check-refs` | Scan for Shopify leftovers and live-system identifiers |
 | `pnpm seed:shopify` | Seed a Shopify store with test products |
 | `pnpm verify:shopify` | Print a Shopify store health report |
+| `pnpm bigcommerce:schema` | Re-introspect your own store and rewrite the committed GraphQL schema |
+| `pnpm bigcommerce:smoke` | Print the connected BigCommerce store's name |
 
 ## CI
 

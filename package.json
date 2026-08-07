@@ -15,6 +15,8 @@
     "check-types": "turbo run check-types",
     "test": "turbo run test",
     "check-refs": "./scripts/check-forbidden-refs.sh",
+    "bigcommerce:schema": "pnpm --filter web bigcommerce:schema",
+    "bigcommerce:smoke": "pnpm --filter web bigcommerce:smoke",
     "seed:shopify": "pnpm --filter studio seed:shopify",
     "verify:shopify": "pnpm --filter studio verify:shopify"
   },
