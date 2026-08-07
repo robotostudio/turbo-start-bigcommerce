@@ -1,108 +1,132 @@
 # BigCommerce seed script
 
-Fills your own BigCommerce sandbox with enough catalog to build against. Run it
-as often as you like. It updates in place and never duplicates.
+Mirrors the reference Shopify catalog into your own BigCommerce sandbox, so you
+have the same products the demo site is built against. Run it as often as you
+like: it updates in place and never duplicates.
+
+**This script deletes.** Anything in the BigCommerce catalog that Shopify does
+not have — including the sample products a new store ships with — is removed.
+That is what makes re-running converge instead of piling up, but point it at a
+sandbox, not at a store you care about.
 
 ## Setup
 
-Add Admin API credentials to `apps/studio/.env`:
+Both stores are read from `apps/studio/.env`:
 
 ```env
+SHOPIFY_STORE_DOMAIN=your-store.myshopify.com
+SHOPIFY_ADMIN_ACCESS_TOKEN=...
+
 BIGCOMMERCE_STORE_HASH=abc123
 BIGCOMMERCE_ADMIN_TOKEN=...
+BIGCOMMERCE_CHANNEL_ID=1   # optional, defaults to 1
 ```
 
-Create them under Settings > API accounts in the control panel, with the
-Products scope set to modify. These are store-level Admin credentials and have
-nothing to do with `BIGCOMMERCE_STOREFRONT_TOKEN`, which the web app reads and
-which cannot write catalog at all. If either variable is missing the script says
-so and exits. It will not quietly fall back to another store.
+Shopify is read-only and needs `read_products`. The BigCommerce credentials are
+created under Settings > API accounts with the Products scope set to modify.
+They are store-level Admin credentials and have nothing to do with
+`BIGCOMMERCE_STOREFRONT_TOKEN`, which the web app reads and which cannot write
+catalog at all. If any of them is missing the script says so and exits. It will
+not quietly fall back to another store.
 
 ## Usage
 
 ```bash
-pnpm --filter studio seed:bigcommerce
-pnpm --filter studio seed:bigcommerce -- --verbose
+pnpm seed:bigcommerce
+pnpm seed:bigcommerce -- --verbose
 ```
 
-The first run takes about 70 seconds. Later runs take about 35, since the images
-and variants are already there.
+The first run takes a few minutes, most of it BigCommerce pulling images off
+Shopify's CDN. Later runs are much faster, since the images and variants are
+already there.
 
-There is no `--batch` flag. SKUs are the idempotency keys, which makes the
-catalog a fixed set of rows instead of a count you pick.
+## What it mirrors
 
-## What it creates
+| Shopify              | BigCommerce                                        |
+|----------------------|----------------------------------------------------|
+| collection           | category at `/collections/{handle}/`               |
+| product              | product at `/products/{handle}/`                   |
+| `compareAtPrice`     | `price` — the was-price                            |
+| `price`              | `sale_price` when there is a compare-at            |
+| option `Color`       | swatch option, hex from `SWATCH_HEX`               |
+| every other option   | rectangle option                                   |
+| variant              | variant, keyed on SKU, with its own price and stock |
+| media                | product images, resized on the way out             |
+| `productType`, `tags`| `turbo_start` metafields                           |
 
-Seven categories, three levels deep:
+Both URLs are set explicitly. BigCommerce otherwise derives a category path
+from its position in the tree and a product path from its name, and neither
+matches the `/collections/{handle}` and `/products/{handle}` links the
+storefront generates. The categories are deliberately flat for the same reason:
+nesting them would put the parent segments back into the path.
 
-```
-/shop/  →  /shop/mens/     →  /shop/mens/jackets/
-                            →  /shop/mens/tees/
-        →  /shop/womens/   →  /shop/womens/dresses/
-        →  /shop/accessories/
-```
-
-Sixty-four products. BigCommerce's REST list returns 50 per page by default, so
-the catalog fills page one and leaves 14 on page two. An off-by-one in paging
-then shows up as a wrong count, not as an empty second page.
-
-Four products are written by hand, because other work derives behaviour from
-them:
-
-| SKU              | Exercises                                                  |
-|------------------|------------------------------------------------------------|
-| `TSB-JACKET-001` | Colour swatch x Size, sale + MSRP, 9 variants, 3 metafields |
-| `TSB-TEE-001`    | Non-swatch options only, no sale, no variant images         |
-| `TSB-DRESS-001`  | Swatch where every variant overrides the image              |
-| `TSB-TOTE-001`   | No options at all, so the single-variant path               |
-
-`TSB-JACKET-001` splits its variants on purpose. The six Sand and Moss variants
-carry their own image; the three Midnight ones fall back to the product default.
-You need both states on one product to derive a variant-image fallback against.
-
-The other 60 are `TSB-FILL-001` through `TSB-FILL-060`: one image each, every
-fourth on sale. Faker writes the display copy from a fixed seed, but SKUs come
-from the index, so bumping faker changes a few names and duplicates nothing.
+Shopify has nowhere to store a swatch hex, so `SWATCH_HEX` in `shopify.ts` maps
+colour name to hex. It is the only display data this script invents. A colour
+that is not in the map still renders — as neutral grey, with a warning naming
+it.
 
 ## Idempotency
 
-Everything is looked up before it is written, keyed on something this script
+Everything is looked up before it is written, keyed on something Shopify
 controls instead of on an id BigCommerce hands back:
 
-| Resource   | Key             |
-|------------|-----------------|
-| Category   | full URL path   |
-| Product    | SKU             |
-| Option     | display name    |
-| Variant    | SKU             |
-| Image      | alt text        |
-| Metafield  | `namespace:key` |
+| Resource   | Key                   |
+|------------|-----------------------|
+| Category   | `/collections/{handle}/` |
+| Product    | `/products/{handle}/` |
+| Option     | display name          |
+| Variant    | SKU                   |
+| Image      | source filename       |
+| Metafield  | `namespace:key`       |
+
+Images are keyed on the source filename rather than on alt text, which repeats
+across every shot of one colourway. BigCommerce keeps the filename inside the
+stored `image_file`, so it survives the upload and stays comparable.
 
 `validateCatalog()` checks those keys are unique and mutually consistent before
-the first API call, so bad seed data fails up front and never leaves half a
-store behind.
+the first BigCommerce call, so bad upstream data fails up front and never
+leaves half a store behind. The run ends by re-reading every URL, because a
+collision is the one failure BigCommerce hides: it appends `-2` and returns
+200.
 
-## Two things BigCommerce does quietly
+## Four things BigCommerce does quietly
 
-Both of these accept the write, return a 200, and then read back as null on the
-storefront. Worth knowing before you trust either field.
+All four accept the write, return a success, and then read back wrong on the
+storefront.
 
-Metafields need `permission_set: "read_and_sf_access"`. Plain `read` is
+**Metafields need `permission_set: "read_and_sf_access"`.** Plain `read` is
 admin-only, and the Storefront API answers with an empty `metafields`
 connection and no error.
 
-A variant's own price cancels the product's sale price. Once a variant carries
-`price`, the product-level `sale_price` stops applying and the storefront
-reports `salePrice: null`. Any discounted variant has to repeat the sale price
-on itself.
+**A variant's own price cancels the product's sale price.** Once a variant
+carries `price`, the product-level `sale_price` stops applying and the
+storefront reports `salePrice: null`. Every discounted variant repeats the sale
+price on itself.
+
+**A new product is not assigned to any channel.** It exists, the Admin API
+returns it, and the Storefront API cannot see it. `assignToChannel` binds every
+product to the storefront channel after it is written.
+
+**A slow bulk create still succeeds.** BigCommerce answers a bulk category
+create with 504 after doing the work, so the client does not retry 5xx on
+POST — a retry would turn one timeout into a duplicate, or into a 422 that
+hides the original success.
+
+## Also worth knowing
+
+Uploads are capped at 8 MB and the source images are bigger than that, so every
+image URL goes out through Shopify's CDN resizer.
+
+Weights are converted into whatever unit the target store is set to, read off
+the store record rather than assumed.
 
 ## Layout
 
 ```
 scripts/seed-bigcommerce/
-  index.ts     CLI entry: store guard, orchestration, summary
+  index.ts     CLI entry: store guard, orchestration, URL check, summary
   client.ts    REST client, credential loading, retry, concurrency pool
-  catalog.ts   The catalog as pure data, plus its self-check
-  seed.ts      Upsert logic for every resource
+  shopify.ts   Admin API reader, mapping to the definitions below, self-check
+  seed.ts      Upsert and prune logic for every resource
   types.ts     Shared interfaces
 ```

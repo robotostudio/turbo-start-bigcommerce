@@ -1,89 +1,133 @@
 /**
  * BigCommerce seed script — CLI entry point.
  *
+ * Mirrors the live Shopify catalog into the BigCommerce sandbox: same
+ * products, variants, prices, images, options and collections, under the same
+ * slugs. Shopify is read-only here; BigCommerce is rewritten to match it,
+ * including deleting anything Shopify no longer has.
+ *
  * Usage:
  *   pnpm --filter studio seed:bigcommerce
  *   pnpm --filter studio seed:bigcommerce -- --verbose
- *
- * The catalog is a fixed set, not a batch size: SKUs are the idempotency keys,
- * so "how many" is a property of the data, not a flag.
  */
 
+import { getStore, log, pool } from "./client.js";
 import {
-  CATEGORIES,
-  DEEP_CATEGORY_PATH,
-  PRODUCTS,
-  SKU_PREFIX,
-  validateCatalog,
-} from "./catalog.js";
-import { bc, getStore, log, pool } from "./client.js";
-import { upsertCategories, upsertProduct } from "./seed.js";
-import type { RunStats } from "./types.js";
+  assignToChannel,
+  categoryPath,
+  listCategories,
+  listProducts,
+  productPath,
+  pruneCatalog,
+  upsertCategories,
+  upsertProduct,
+} from "./seed.js";
+import { fetchCatalog, validateCatalog } from "./shopify.js";
+import type { Catalog, RunStats } from "./types.js";
 
 /**
  * Products run in parallel; everything within one product stays ordered,
  * because variant creation needs the option ids the option calls return.
  */
 const CONCURRENCY = 4;
-const PAGE_MAX = 250;
 
-/** Counts seeded rows separately from whatever else lives in the store. */
-async function countProducts(): Promise<{ seeded: number; total: number }> {
-  let page = 1;
-  let seeded = 0;
-  let total = 0;
+async function counts(): Promise<{ products: number; categories: number }> {
+  const [products, categories] = await Promise.all([
+    listProducts(),
+    listCategories(),
+  ]);
+  return { products: products.length, categories: categories.length };
+}
 
-  for (;;) {
-    const rows = await bc<Array<{ sku: string }>>(
-      "GET",
-      `/v3/catalog/products?limit=${PAGE_MAX}&page=${page}&include_fields=sku`
-    );
+/**
+ * The slugs are the contract with the storefront, and the one thing that fails
+ * silently: BigCommerce answers 200 and quietly appends `-2` when a URL is
+ * already taken. Checking them costs two list calls.
+ */
+async function urlProblems(catalog: Catalog): Promise<string[]> {
+  const [products, categories] = await Promise.all([
+    listProducts(),
+    listCategories(),
+  ]);
 
-    total += rows.length;
-    seeded += rows.filter((r) => r.sku?.startsWith(SKU_PREFIX)).length;
+  const productUrls = new Set(products.map((p) => p.custom_url?.url));
+  const categoryUrls = new Set(categories.map((c) => c.url?.path));
 
-    if (rows.length < PAGE_MAX) return { seeded, total };
-    page++;
-  }
+  return [
+    ...catalog.products
+      .filter((p) => !productUrls.has(productPath(p.slug)))
+      .map((p) => `product ${productPath(p.slug)} is missing or renamed`),
+    ...catalog.categories
+      .filter((c) => !categoryUrls.has(categoryPath(c.slug)))
+      .map((c) => `category ${categoryPath(c.slug)} is missing or renamed`),
+  ];
 }
 
 async function main(): Promise<void> {
   const verbose =
     process.argv.includes("--verbose") || process.argv.includes("-v");
 
-  validateCatalog();
-
   const store = await getStore();
   log.info(
-    `Store: ${store.name} — ${store.domain} (${store.hash}) [${store.status}]`
+    `Store: ${store.name} — ${store.domain} (${store.hash}) ` +
+      `[${store.status}, ${store.currency}, ${store.weightUnits}]`
   );
 
-  const stats: RunStats = { created: 0, updated: 0, failed: 0 };
+  const catalog = await fetchCatalog(store.weightUnits);
+  validateCatalog(catalog);
 
-  const categoryIds = await upsertCategories(stats, verbose);
+  const variantCount = catalog.products.reduce(
+    (n, p) => n + p.variants.length,
+    0
+  );
+  log.info(
+    `Shopify: ${catalog.products.length} products, ${variantCount} variants, ` +
+      `${catalog.categories.length} collections`
+  );
 
-  log.info(`Seeding ${PRODUCTS.length} products…`);
-  await pool(PRODUCTS, CONCURRENCY, async (def) => {
+  const before = await counts();
+  log.info(
+    `BigCommerce before: ${before.products} products, ${before.categories} categories`
+  );
+
+  const stats: RunStats = { created: 0, updated: 0, deleted: 0, failed: 0 };
+
+  await pruneCatalog(catalog, stats);
+
+  const categoryIds = await upsertCategories(catalog.categories, stats);
+
+  const existing = new Map(
+    (await listProducts()).map((p) => [p.custom_url?.url, p.id])
+  );
+
+  const seededIds: number[] = [];
+  await pool(catalog.products, CONCURRENCY, async (def) => {
     try {
-      await upsertProduct(def, categoryIds, stats, verbose);
+      seededIds.push(
+        await upsertProduct(def, categoryIds, existing, stats, verbose)
+      );
     } catch (err) {
       stats.failed++;
-      log.error(`${def.sku} — ${(err as Error).message}`);
+      log.error(`${def.slug} — ${(err as Error).message}`);
     }
   });
 
-  const { seeded, total } = await countProducts();
+  await assignToChannel(seededIds, store.channelId);
+
+  const after = await counts();
+  const problems = await urlProblems(catalog);
 
   log.info(
     `Done — created:${stats.created} updated:${stats.updated} ` +
-      `failed:${stats.failed}`
+      `deleted:${stats.deleted} failed:${stats.failed}`
   );
   log.info(
-    `Catalog: ${seeded} seeded products (${total} in store), ` +
-      `${CATEGORIES.length} seeded categories, deepest ${DEEP_CATEGORY_PATH}`
+    `BigCommerce after: ${after.products} products, ${after.categories} categories`
   );
 
-  if (stats.failed > 0) process.exit(1);
+  for (const problem of problems) log.error(`URL check: ${problem}`);
+
+  if (stats.failed > 0 || problems.length > 0) process.exit(1);
 }
 
 main().catch((err: Error) => {

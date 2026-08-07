@@ -58,10 +58,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * Milliseconds to wait before retrying, or null when the response is final.
  * BigCommerce reports its own rate-limit window; exponential backoff is only
  * the fallback for 5xx, which carries no such header.
+ *
+ * A 5xx is only retried for methods that can be repeated safely. BigCommerce
+ * answers a slow bulk create with 504 *after* doing the work, so retrying a
+ * POST turns one timeout into a duplicate — or, if a unique key stops that,
+ * into a 422 that hides the original success.
  */
-function retryDelay(res: Response, attempt: number): number | null {
+function retryDelay(
+  res: Response,
+  attempt: number,
+  method: string
+): number | null {
   const retryable =
-    res.status === TOO_MANY_REQUESTS || res.status >= SERVER_ERROR;
+    res.status === TOO_MANY_REQUESTS ||
+    (res.status >= SERVER_ERROR && method !== "POST");
   if (!retryable || attempt >= MAX_RETRIES) return null;
 
   const reset = Number(res.headers.get("X-Rate-Limit-Time-Reset-Ms"));
@@ -93,7 +103,7 @@ export async function bc<T>(
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
 
-    const wait = retryDelay(res, attempt);
+    const wait = retryDelay(res, attempt, method);
     if (wait !== null) {
       log.warn(`HTTP ${res.status} on ${path} — retrying in ${wait}ms`);
       await sleep(wait);
@@ -130,18 +140,34 @@ export async function pool<T>(
   await Promise.all(workers);
 }
 
-/** Fetches the store record — the guard that proves which store we hit. */
+/** Storefront channel to publish to. Single-storefront stores are always 1. */
+const DEFAULT_CHANNEL_ID = 1;
+
+/**
+ * Fetches the store record — the guard that proves which store we hit, and the
+ * source of the weight unit and currency the mirrored catalog has to be in.
+ */
 export async function getStore(): Promise<{
   name: string;
   domain: string;
   status: string;
   hash: string;
+  currency: string;
+  weightUnits: string;
+  channelId: number;
 }> {
   const store = await bc<{
     name: string;
     domain: string;
     status: string;
+    currency: string;
+    weight_units: string;
   }>("GET", "/v2/store");
 
-  return { ...store, hash: credentials().hash };
+  return {
+    ...store,
+    hash: credentials().hash,
+    weightUnits: store.weight_units,
+    channelId: Number(process.env.BIGCOMMERCE_CHANNEL_ID ?? DEFAULT_CHANNEL_ID),
+  };
 }
