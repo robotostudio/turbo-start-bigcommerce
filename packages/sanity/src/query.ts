@@ -20,29 +20,46 @@ const imageFields = /* groq */ `
     right,
     top
   }
-`;
+` as const;
 // Base fragments for reusable query parts
 const imageFragment = /* groq */ `
   image {
     ${imageFields}
   }
-`;
+` as const;
+
+// The one href projection every link shape shares. `at` is the path to the link
+// object -- "url.", "link.", or "" inside a `...customLink{}` spread. `fallback`
+// is the expression used when no link type matches. Both are required: giving
+// `fallback` a default would need an `as F` assertion, which Sanity's typegen
+// cannot statically resolve.
+//
+// Why every fragment below carries `as const`: `sanityFetch` picks a result type
+// by looking the query's string-literal type up in the generated `SanityQueries`
+// map. A template literal holding a value returned from a function only keeps
+// that literal type under `as const`, and it does not propagate -- each level of
+// nesting needs its own. Drop one and the queries built from it widen to
+// `string`, miss the lookup and silently resolve to an untyped result; typegen
+// and lint both still pass, and the only symptom is an `any` far away at the
+// call site.
+const hrefFragment = <A extends string, F extends string>(at: A, fallback: F) =>
+  /* groq */ `"href": select(
+      ${at}type == "internal" => coalesce(
+        ${at}internal->slug.current,
+        "/collections/" + ${at}internal->store.slug.current
+      ),
+      ${at}type == "external" => ${at}external,
+      ${at}type == "email" => "mailto:" + ${at}email,
+      ${at}type == "product" => "/products/" + ${at}product->store.slug.current,
+      ${fallback}
+    )` as const;
 
 const customLinkFragment = /* groq */ `
   ...customLink{
     openInNewTab,
-    "href": select(
-      type == "internal" => coalesce(
-        internal->slug.current,
-        "/collections/" + internal->store.slug.current
-      ),
-      type == "external" => external,
-      type == "email" => "mailto:" + email,
-      type == "product" => "/products/" + product->store.slug.current,
-      "#"
-    ),
+    ${hrefFragment("", '"#"')},
   }
-`;
+` as const;
 
 const markDefsFragment = /* groq */ `
   markDefs[]{
@@ -59,7 +76,7 @@ const markDefsFragment = /* groq */ `
       "href": "mailto:" + email,
     },
   }
-`;
+` as const;
 
 const richTextFragment = /* groq */ `
   richText[]{
@@ -73,7 +90,7 @@ const richTextFragment = /* groq */ `
       "caption": caption
     }
   }
-`;
+` as const;
 
 const blogAuthorFragment = /* groq */ `
   authors[0]->{
@@ -82,7 +99,7 @@ const blogAuthorFragment = /* groq */ `
     position,
     ${imageFragment}
   }
-`;
+` as const;
 
 const blogCardFragment = /* groq */ `
   _type,
@@ -95,7 +112,7 @@ const blogCardFragment = /* groq */ `
   publishedAt,
   "category": category->{ _id, title, "slug": slug.current },
   ${blogAuthorFragment}
-`;
+` as const;
 
 const buttonsFragment = /* groq */ `
   buttons[]{
@@ -104,18 +121,9 @@ const buttonsFragment = /* groq */ `
     _key,
     _type,
     "openInNewTab": url.openInNewTab,
-    "href": select(
-      url.type == "internal" => coalesce(
-        url.internal->slug.current,
-        "/collections/" + url.internal->store.slug.current
-      ),
-      url.type == "external" => url.external,
-      url.type == "email" => "mailto:" + url.email,
-      url.type == "product" => "/products/" + url.product->store.slug.current,
-      url.href
-    ),
+    ${hrefFragment("url.", "url.href")},
   }
-`;
+` as const;
 
 // Page builder block fragments
 const collectionBannerBlock = /* groq */ `
@@ -124,7 +132,7 @@ const collectionBannerBlock = /* groq */ `
     ${imageFragment},
     ${buttonsFragment}
   }
-`;
+` as const;
 
 const ctaBlock = /* groq */ `
   _type == "cta" => {
@@ -132,7 +140,7 @@ const ctaBlock = /* groq */ `
     ${richTextFragment},
     ${buttonsFragment},
   }
-`;
+` as const;
 const imageLinkCardsBlock = /* groq */ `
   _type == "imageLinkCards" => {
     ...,
@@ -141,20 +149,11 @@ const imageLinkCardsBlock = /* groq */ `
     "cards": array::compact(cards[]{
       ...,
       "openInNewTab": url.openInNewTab,
-      "href": select(
-        url.type == "internal" => coalesce(
-          url.internal->slug.current,
-          "/collections/" + url.internal->store.slug.current
-        ),
-        url.type == "external" => url.external,
-        url.type == "email" => "mailto:" + url.email,
-        url.type == "product" => "/products/" + url.product->store.slug.current,
-        url.href
-      ),
+      ${hrefFragment("url.", "url.href")},
       ${imageFragment},
     })
   }
-`;
+` as const;
 
 const heroBlock = /* groq */ `
   _type == "hero" => {
@@ -163,7 +162,7 @@ const heroBlock = /* groq */ `
     ${buttonsFragment},
     ${richTextFragment}
   }
-`;
+` as const;
 
 const faqFragment = /* groq */ `
   "faqs": array::compact(faqs[]->{
@@ -172,7 +171,7 @@ const faqFragment = /* groq */ `
     _type,
     ${richTextFragment}
   })
-`;
+` as const;
 
 const faqAccordionBlock = /* groq */ `
   _type == "faqAccordion" => {
@@ -181,19 +180,10 @@ const faqAccordionBlock = /* groq */ `
     link{
       ...,
       "openInNewTab": url.openInNewTab,
-      "href": select(
-        url.type == "internal" => coalesce(
-          url.internal->slug.current,
-          "/collections/" + url.internal->store.slug.current
-        ),
-        url.type == "external" => url.external,
-        url.type == "email" => "mailto:" + url.email,
-        url.type == "product" => "/products/" + url.product->store.slug.current,
-        url.href
-      )
+      ${hrefFragment("url.", "url.href")}
     }
   }
-`;
+` as const;
 
 const faqCategoriesBlock = /* groq */ `
   _type == "faqCategories" => {
@@ -204,7 +194,7 @@ const faqCategoriesBlock = /* groq */ `
       ${faqFragment}
     }
   }
-`;
+` as const;
 
 const subscribeNewsletterBlock = /* groq */ `
   _type == "subscribeNewsletter" => {
@@ -219,7 +209,7 @@ const subscribeNewsletterBlock = /* groq */ `
     },
     ${imageFragment}
   }
-`;
+` as const;
 
 const exploreCategoriesBlock = /* groq */ `
   _type == "exploreCategories" => {
@@ -232,7 +222,7 @@ const exploreCategoriesBlock = /* groq */ `
       "imageUrl": store.imageUrl,
     }
   }
-`;
+` as const;
 
 const featureCardsIconBlock = /* groq */ `
   _type == "featureCardsIcon" => {
@@ -243,7 +233,7 @@ const featureCardsIconBlock = /* groq */ `
       ${richTextFragment},
     })
   }
-`;
+` as const;
 
 const editorialTwoUpBlock = /* groq */ `
   _type == "editorialTwoUp" => {
@@ -259,7 +249,7 @@ const editorialTwoUpBlock = /* groq */ `
       ),
     })
   }
-`;
+` as const;
 
 const layersShowcaseBlock = /* groq */ `
   _type == "layersShowcase" => {
@@ -269,7 +259,7 @@ const layersShowcaseBlock = /* groq */ `
     "productHandle": product->store.slug.current,
     "productTitle": product->store.title,
   }
-`;
+` as const;
 
 const featuredProductsBlock = /* groq */ `
   _type == "featuredProducts" => {
@@ -277,7 +267,7 @@ const featuredProductsBlock = /* groq */ `
     heading,
     "productHandles": array::compact(products[]->store.slug.current)
   }
-`;
+` as const;
 
 const pageBuilderFragment = /* groq */ `
   pageBuilder[]{
@@ -296,7 +286,7 @@ const pageBuilderFragment = /* groq */ `
     ${subscribeNewsletterBlock},
     ${imageLinkCardsBlock}
   }
-`;
+` as const;
 
 /**
  * Query to extract a single image from a page document
@@ -404,7 +394,7 @@ const ogFieldsFragment = /* groq */ `
   "logo": *[_type == "settings"][0].logo.asset->url + "?w=80&h=40&dpr=3&fit=max&q=100",
   "siteTitle": *[_type == "settings"][0].siteTitle,
   "date": coalesce(date, _createdAt)
-`;
+` as const;
 
 export const queryHomePageOGData = defineQuery(`
   *[_type == "homePage" && _id == $id][0]{
@@ -491,16 +481,7 @@ export const queryPromoBannerData = defineQuery(`
     enabled,
     text,
     "openInNewTab": link.openInNewTab,
-    "href": select(
-      link.type == "internal" => coalesce(
-        link.internal->slug.current,
-        "/collections/" + link.internal->store.slug.current
-      ),
-      link.type == "external" => link.external,
-      link.type == "email" => "mailto:" + link.email,
-      link.type == "product" => "/products/" + link.product->store.slug.current,
-      link.href
-    ),
+    ${hrefFragment("link.", "link.href")},
   }
 `);
 
@@ -518,16 +499,7 @@ export const queryFooterData = defineQuery(`
         _key,
         name,
         "openInNewTab": url.openInNewTab,
-        "href": select(
-          url.type == "internal" => coalesce(
-            url.internal->slug.current,
-            "/collections/" + url.internal->store.slug.current
-          ),
-          url.type == "external" => url.external,
-          url.type == "email" => "mailto:" + url.email,
-          url.type == "product" => "/products/" + url.product->store.slug.current,
-          url.href
-        ),
+        ${hrefFragment("url.", "url.href")},
       }
     }
   }
@@ -547,16 +519,7 @@ export const queryNavbarData = defineQuery(`
           icon,
           description,
           "openInNewTab": url.openInNewTab,
-          "href": select(
-            url.type == "internal" => coalesce(
-              url.internal->slug.current,
-              "/collections/" + url.internal->store.slug.current
-            ),
-            url.type == "external" => url.external,
-            url.type == "email" => "mailto:" + url.email,
-            url.type == "product" => "/products/" + url.product->store.slug.current,
-            url.href
-          )
+          ${hrefFragment("url.", "url.href")}
         }
       },
       _type == "navbarLink" => {
@@ -564,16 +527,7 @@ export const queryNavbarData = defineQuery(`
         name,
         description,
         "openInNewTab": url.openInNewTab,
-        "href": select(
-          url.type == "internal" => coalesce(
-            url.internal->slug.current,
-            "/collections/" + url.internal->store.slug.current
-          ),
-          url.type == "external" => url.external,
-          url.type == "email" => "mailto:" + url.email,
-          url.type == "product" => "/products/" + url.product->store.slug.current,
-          url.href
-        )
+        ${hrefFragment("url.", "url.href")}
       },
       _type == "collectionGroup" => {
         "type": "collectionGroup",
@@ -684,7 +638,7 @@ const productWithVariantFragment = /* groq */ `
       }
     }
   }
-`;
+` as const;
 
 const productHotspotsFragment = /* groq */ `
   productHotspots[]{
@@ -693,7 +647,7 @@ const productHotspotsFragment = /* groq */ `
     y,
     ${productWithVariantFragment}
   }
-`;
+` as const;
 
 const productBodyFragment = /* groq */ `
   body[]{
@@ -733,7 +687,7 @@ const productBodyFragment = /* groq */ `
       text
     }
   }
-`;
+` as const;
 
 export const queryProductByHandle = defineQuery(`
   *[_type == "product" && store.slug.current == $handle && store.status == "active"][0]{
@@ -781,7 +735,7 @@ const collectionModulesFragment = /* groq */ `
       url
     }
   }
-`;
+` as const;
 
 export const queryCollectionByHandle = defineQuery(`
   *[_type == "collection" && store.slug.current == $handle][0]{
