@@ -1,0 +1,210 @@
+import { sanityFetch } from "@workspace/sanity/live";
+import {
+  queryFooterData,
+  queryGlobalSeoSettings,
+} from "@workspace/sanity/query";
+import type {
+  QueryFooterDataResult,
+  QueryGlobalSeoSettingsResult,
+} from "@workspace/sanity/types";
+import Link from "next/link";
+
+import { NewsletterForm } from "./footer/newsletter-form";
+// import { ModeToggle } from "./mode-toggle";
+import {
+  FacebookIcon,
+  InstagramIcon,
+  LinkedinIcon,
+  RobotoWordmark,
+  ShopifyIcon,
+  VercelIcon,
+  XIcon,
+  YoutubeIcon,
+} from "./social-icons";
+
+type SocialLinksProps = {
+  data: NonNullable<QueryGlobalSeoSettingsResult>["socialLinks"];
+};
+
+type FooterProps = {
+  data: NonNullable<QueryFooterDataResult>;
+  settingsData: NonNullable<QueryGlobalSeoSettingsResult>;
+};
+
+export async function FooterServer() {
+  // No guard needed: `sanityFetch` degrades to null data when the Content Lake
+  // is unreachable, and the skeleton below is already the empty-data path.
+  const [response, settingsResponse] = await Promise.all([
+    sanityFetch({
+      query: queryFooterData,
+    }),
+    sanityFetch({
+      query: queryGlobalSeoSettings,
+    }),
+  ]);
+
+  if (!(response?.data && settingsResponse?.data)) {
+    return <FooterSkeleton />;
+  }
+  return <Footer data={response.data} settingsData={settingsResponse.data} />;
+}
+
+function SocialLinks({ data }: SocialLinksProps) {
+  if (!data) {
+    return null;
+  }
+
+  const { facebook, twitter, instagram, youtube, linkedin } = data;
+
+  const socialLinks = [
+    { url: twitter, Icon: XIcon, label: "Follow us on Twitter" },
+    { url: facebook, Icon: FacebookIcon, label: "Follow us on Facebook" },
+    { url: linkedin, Icon: LinkedinIcon, label: "Follow us on LinkedIn" },
+    { url: instagram, Icon: InstagramIcon, label: "Follow us on Instagram" },
+    { url: youtube, Icon: YoutubeIcon, label: "Subscribe to our YouTube" },
+  ].filter((link) => link.url);
+
+  return (
+    <ul className="flex items-center gap-3 text-muted-foreground">
+      {socialLinks.map(({ url, Icon, label }, index) => (
+        <li key={`social-link-${url}-${index.toString()}`}>
+          <Link
+            aria-label={label}
+            href={url ?? "#"}
+            prefetch={false}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <Icon className="size-[18px] fill-muted-foreground transition-colors hover:fill-foreground" />
+            <span className="sr-only">{label}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function FooterColumns({ columns }: Pick<FooterProps["data"], "columns">) {
+  if (!(Array.isArray(columns) && columns.length > 0)) {
+    return null;
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-8 sm:flex sm:gap-14">
+      {columns.map((column, index) => (
+        <div key={`column-${column?._key}-${index}`}>
+          <h3 className="mb-2 text-muted-foreground text-sm">
+            {column?.title}
+          </h3>
+          {column?.links && column.links.length > 0 && (
+            <ul className="space-y-1">
+              {column.links.map((link, columnIndex) => (
+                <li key={`${link?._key}-${columnIndex}-column-${column?._key}`}>
+                  <Link
+                    className="text-foreground text-sm hover:underline"
+                    href={link.href ?? "#"}
+                    rel={link.openInNewTab ? "noopener noreferrer" : undefined}
+                    target={link.openInNewTab ? "_blank" : undefined}
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HostingCredits() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-foreground text-sm">
+      <a
+        aria-label="Roboto Studio"
+        href="https://robotostudio.com/"
+        rel="noopener noreferrer"
+        target="_blank"
+        className="flex items-center gap-1 hover:opacity-80"
+      >
+        Built by
+        <RobotoWordmark className="h-2.5 w-auto" />
+      </a>
+      <span className="h-4 w-px bg-border" />
+      <a
+        className="flex items-center gap-1 hover:opacity-80"
+        href="https://vercel.com"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        Hosted on
+        <VercelIcon className="h-3.5 w-auto" />
+      </a>
+      <span className="h-4 w-px bg-border" />
+      <a
+        className="flex items-center gap-1 hover:opacity-80"
+        href="https://shopify.com"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        Powered by
+        <ShopifyIcon className="h-4 w-auto" />
+      </a>
+    </div>
+  );
+}
+
+export function FooterSkeleton() {
+  return (
+    <footer className="mt-20 border-t py-9">
+      <div className="site-container">
+        <div className="flex flex-col justify-between gap-10 lg:flex-row">
+          <div className="h-32 w-full max-w-84 animate-pulse rounded bg-muted" />
+          <div className="grid grid-cols-2 gap-8 sm:flex sm:gap-14">
+            {[1, 2, 3, 4].map((col) => (
+              <div className="space-y-3" key={col}>
+                <div className="h-4 w-16 animate-pulse rounded bg-muted" />
+                {[1, 2, 3].map((item) => (
+                  <div
+                    className="h-4 w-20 animate-pulse rounded bg-muted"
+                    key={item}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function Footer({ data, settingsData }: FooterProps) {
+  const { columns } = data;
+  const { siteTitle, socialLinks } = settingsData;
+  const year = new Date().getFullYear();
+
+  return (
+    <footer className="mt-20 bg-background">
+      <div className="site-container">
+        <div className="flex flex-col justify-between gap-10 py-9 lg:flex-row">
+          <div className="flex flex-col gap-6">
+            <NewsletterForm />
+            {socialLinks && <SocialLinks data={socialLinks} />}
+          </div>
+          <FooterColumns columns={columns} />
+        </div>
+        <div className="flex flex-col items-start justify-between gap-4 py-4 sm:flex-row sm:items-center">
+          <p className="text-foreground text-sm">
+            © {year} {siteTitle}. All rights reserved.
+          </p>
+          <div className="flex items-center gap-4">
+            <HostingCredits />
+            {/* <ModeToggle /> */}
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}

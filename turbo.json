@@ -1,0 +1,52 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "stream",
+  "globalEnv": [
+    "SANITY_API_READ_TOKEN",
+    "SANITY_API_WRITE_TOKEN",
+    "SHOPIFY_STORE_DOMAIN",
+    "SHOPIFY_STOREFRONT_ACCESS_TOKEN",
+    "SHOPIFY_API_VERSION",
+    "SHOPIFY_ADMIN_ACCESS_TOKEN",
+    "BIGCOMMERCE_STORE_HASH",
+    "BIGCOMMERCE_STOREFRONT_TOKEN",
+    "BIGCOMMERCE_CHANNEL_ID",
+    "BIGCOMMERCE_API_URL",
+    "NEXT_PUBLIC_STORE_CURRENCY",
+    "SKIP_ENV_VALIDATION",
+    "VERCEL_URL",
+    "VERCEL_PROJECT_PRODUCTION_URL",
+    "VERCEL_ENV",
+    "NODE_ENV"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", ".sanity/**"]
+    },
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "lint": {
+      "dependsOn": ["transit"]
+    },
+    "format": {
+      "dependsOn": ["transit"]
+    },
+    "format:check": {
+      "dependsOn": ["transit"]
+    },
+    "check-types": {
+      "dependsOn": ["transit"]
+    },
+    "test": {
+      "dependsOn": ["transit"],
+      "outputs": []
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

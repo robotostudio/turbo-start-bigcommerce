@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version` input on purpose: pnpm/action-setup reads the version from
+      # the root package.json `packageManager` field. Passing both makes it
+      # throw "Multiple versions of pnpm specified".
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Build against the checked-in examples with env validation ON (no
+      # SKIP_ENV_VALIDATION). If an example drifts out of sync with the env
+      # schema, the build below fails and says so.
+      - name: Seed env from examples
+        run: |
+          cp apps/web/.env.example apps/web/.env.local
+          cp apps/studio/.env.example apps/studio/.env
+          # Removed during the BigCommerce conversion; absence is not an error.
+          if [ -f packages/sanity/.env.example ]; then
+            cp packages/sanity/.env.example packages/sanity/.env
+          fi
+
+      - run: pnpm lint
+
+      - run: pnpm format:check
+
+      - run: pnpm check-types
+
+      - run: pnpm build
+
+      - run: pnpm test
+
+      # Warns on Shopify references, fails on live-system identifiers.
+      # A later ticket flips this to strict by appending `--strict`.
+      - name: Forbidden references
+        run: ./scripts/check-forbidden-refs.sh

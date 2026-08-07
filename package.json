@@ -1,0 +1,36 @@
+{
+  "name": "turbo-start-bigcommerce",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "build:studio": "turbo run build --filter=studio",
+    "build:web": "turbo run build --filter=web",
+    "dev": "turbo run dev",
+    "dev:studio": "turbo run dev --filter=studio",
+    "dev:web": "turbo run dev --filter=web",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "format:check": "turbo run format:check",
+    "check-types": "turbo run check-types",
+    "test": "turbo run test",
+    "check-refs": "./scripts/check-forbidden-refs.sh",
+    "seed:shopify": "pnpm --filter studio seed:shopify",
+    "verify:shopify": "pnpm --filter studio verify:shopify"
+  },
+  "dependencies": {
+    "@workspace/env": "workspace:*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.8",
+    "@workspace/typescript-config": "workspace:*",
+    "tsx": "^4.19.3",
+    "turbo": "^2.7.5",
+    "typescript": "catalog:",
+    "ultracite": "5.6.2"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

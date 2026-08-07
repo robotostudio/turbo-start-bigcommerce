@@ -1,0 +1,14 @@
+# Blank issues stay on: CONTRIBUTING tells people to open one when they're unsure about something,
+# and that doesn't fit either template.
+blank_issues_enabled: true
+
+contact_links:
+  - name: The BigCommerce conversion is still in progress
+    url: https://github.com/robotostudio/turbo-start-bigcommerce#where-this-is-up-to
+    about: The commerce layer is Shopify's until the flip commit. Read this before reporting missing BigCommerce data.
+  - name: Setup, code style, and the PR process
+    url: https://github.com/robotostudio/turbo-start-bigcommerce/blob/main/CONTRIBUTING.md
+    about: Getting it running locally, Biome conventions, commit format, what CI checks.
+  - name: Bugs in the Shopify starter
+    url: https://github.com/robotostudio/turbo-start-shopify/issues
+    about: This repo is a fork mid-conversion. If it reproduces upstream too, file it upstream.
