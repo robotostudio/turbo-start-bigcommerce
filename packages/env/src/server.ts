@@ -26,6 +26,17 @@ const env = createEnv({
     BIGCOMMERCE_CHANNEL_ID: z.string().default("1"),
     /** Endpoint override. Unset means derive it from hash + channel. */
     BIGCOMMERCE_API_URL: z.string().min(1).optional(),
+    /**
+     * How many catalog paths to prerender. The rest render on demand, so this
+     * trades build time against first-visit latency rather than coverage.
+     * Validated rather than read raw so a typo fails the build instead of
+     * silently falling back to the default.
+     */
+    BIGCOMMERCE_PRERENDER_LIMIT: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(100),
   },
 
   experimental__runtimeEnv: {
