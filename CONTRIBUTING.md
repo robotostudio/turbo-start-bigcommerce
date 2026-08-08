@@ -242,12 +242,19 @@ product. `pnpm seed:bigcommerce` will not create it — the catalog fixture has 
 redirects — so on a fresh store it is one Admin API call by hand:
 
 ```bash
-curl -X PUT "https://api.bigcommerce.com/stores/$BIGCOMMERCE_STORE_HASH/v3/storefront/redirects" \
-  -H "X-Auth-Token: $BIGCOMMERCE_ADMIN_TOKEN" -H "Content-Type: application/json" \
-  -d '[{"site_id":1000,"from_path":"/products/wren-washed-cap-old/","to":{"type":"product","entity_id":191}}]'
+API="https://api.bigcommerce.com/stores/$BIGCOMMERCE_STORE_HASH/v3"
+AUTH="X-Auth-Token: $BIGCOMMERCE_ADMIN_TOKEN"
+
+# Both ids are minted by your own store, so read them rather than copying mine.
+SITE_ID=$(curl -s "$API/sites" -H "$AUTH" | jq '.data[0].id')
+PRODUCT_ID=$(curl -s "$API/catalog/products?name=Wren%20Washed%20Cap" -H "$AUTH" | jq '.data[0].id')
+
+curl -X PUT "$API/storefront/redirects" -H "$AUTH" -H "Content-Type: application/json" \
+  -d "[{\"site_id\":$SITE_ID,\"from_path\":\"/products/wren-washed-cap-old/\",\"to\":{\"type\":\"product\",\"entity_id\":$PRODUCT_ID}}]"
 ```
 
-`site_id` and `entity_id` are your store's, from `GET /v3/sites` and the product itself.
+`PUT`, not `POST`: the redirects endpoint is an upsert and answers a bare `POST` with "The route is
+not found", which reads like a wrong URL rather than a wrong verb.
 
 ## Project Structure
 
