@@ -99,6 +99,40 @@ export const FACET_PAYLOAD: SearchFacet[] = [
     },
   },
   {
+    // Values a narrowed result set left with nothing behind them. What the
+    // mapper does with a zero is a decision this repo makes; whether
+    // BigCommerce ever sends one is not asserted anywhere.
+    __typename: "ProductAttributeSearchFilter",
+    displayName: "Fit",
+    isCollapsedByDefault: false,
+    filterKey: "fit",
+    displayProductCount: true,
+    attributes: {
+      pageInfo: { hasNextPage: false },
+      edges: [
+        { node: { value: "Relaxed", isSelected: false, productCount: 3 } },
+        { node: { value: "Slim", isSelected: false, productCount: 0 } },
+        // Selected and down to zero: the pick that narrowed to nothing.
+        { node: { value: "Boxy", isSelected: true, productCount: 0 } },
+      ],
+    },
+  },
+  {
+    // Every value at zero, so the facet itself has nothing left to offer.
+    __typename: "ProductAttributeSearchFilter",
+    displayName: "Material",
+    isCollapsedByDefault: false,
+    filterKey: "material",
+    displayProductCount: true,
+    attributes: {
+      pageInfo: { hasNextPage: false },
+      edges: [
+        { node: { value: "Linen", isSelected: false, productCount: 0 } },
+        { node: { value: "Wool", isSelected: false, productCount: 0 } },
+      ],
+    },
+  },
+  {
     __typename: "RatingSearchFilter",
     displayName: "Rating",
     isCollapsedByDefault: true,

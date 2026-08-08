@@ -3,8 +3,13 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 
+import { ActiveFilters } from "@/components/collection/active-filters";
 import { CollectionPagination } from "@/components/collection/collection-pagination";
-import { filterParamsOnly } from "@/components/collection/filter-utils";
+import {
+  type Facet,
+  filterParamsOnly,
+} from "@/components/collection/filter-utils";
+import { FilterPanel } from "@/components/collection/filter-panel";
 import { ProductGrid } from "@/components/collection/product-grid";
 import {
   DEFAULT_SORT,
@@ -20,6 +25,9 @@ type PageInfo = {
 type CollectionPage = {
   products: CatalogProductCard[];
   pageInfo: PageInfo;
+  /** Facets for this result set — the same read returned both. */
+  facets: Facet[];
+  filteringEnabled: boolean;
 };
 
 type CollectionProductsProps = {
@@ -34,13 +42,30 @@ type CollectionProductsProps = {
   categoryEntityId: number;
   initialPageInfo: PageInfo;
   initialProducts: CatalogProductCard[];
+  /** The server render's facets and plan flag, used until the first refetch. */
+  initialFacets: Facet[];
+  initialFilteringEnabled: boolean;
 };
 
+/**
+ * The whole listing: facet panel, filter chips, grid, pagination.
+ *
+ * They are one component because they read one response. The controls used to
+ * render from props the server resolved at build time while the grid refetched
+ * underneath them, so after any sort change or facet pick the counts described a
+ * result set that was no longer on the page. Threading the fresh facets to
+ * controls sitting in their own Suspense boundaries meant either lifting this
+ * query above both or inventing shared client state — so the boundaries were
+ * merged instead, which is what `/search` has always done (see
+ * `components/search/search-page-content.tsx`).
+ */
 export function CollectionProducts({
   categoryEntityId,
   handle,
   initialPageInfo,
   initialProducts,
+  initialFacets,
+  initialFilteringEnabled,
 }: CollectionProductsProps) {
   const searchParams = useSearchParams();
   // Sort comes off the URL here, not from the server component — awaiting
@@ -79,7 +104,14 @@ export function CollectionProducts({
       initialData:
         sort === DEFAULT_SORT && filterQs === ""
           ? {
-              pages: [{ products: initialProducts, pageInfo: initialPageInfo }],
+              pages: [
+                {
+                  products: initialProducts,
+                  pageInfo: initialPageInfo,
+                  facets: initialFacets,
+                  filteringEnabled: initialFilteringEnabled,
+                },
+              ],
               pageParams: [null],
             }
           : undefined,
@@ -87,8 +119,25 @@ export function CollectionProducts({
 
   const allProducts = data?.pages.flatMap((page) => page.products) ?? [];
 
+  // The first page of the current query, not the last: a sort change or a facet
+  // pick changes the key, so page 0 is already the newest answer, while "Load
+  // more" appends pages describing the same filter set. Reading page 0 keeps the
+  // panel out of the paging path entirely.
+  //
+  // Undefined only while the first fetch for a sorted or filtered URL is in
+  // flight, where the server's facets are the honest thing to show — they are
+  // what the grid underneath is still showing too.
+  const page = data?.pages[0];
+  const facets = page?.facets ?? initialFacets;
+  const filteringEnabled = page?.filteringEnabled ?? initialFilteringEnabled;
+
   return (
     <>
+      <div className="mb-8 flex flex-col gap-4">
+        <FilterPanel filteringEnabled={filteringEnabled} filters={facets} />
+        {/* Facets passed so a brand chip reads "Aster" rather than its entity id. */}
+        <ActiveFilters facets={facets} />
+      </div>
       <ProductGrid density={density} products={allProducts} />
       <CollectionPagination
         hasNextPage={hasNextPage}
