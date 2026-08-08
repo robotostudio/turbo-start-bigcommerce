@@ -337,7 +337,16 @@ const exploreCategoriesBlock = /* groq */ `
       // automatic row. Same call as the hotspot spot-drop and featured-cards.ts:
       // showing an editor four categories they did not choose, because the ones
       // they did choose quietly died, is worse than showing none.
-      count(collections) > 0 => collections[@->store.isDeleted != true]->{${categoryCardFields}},
+      //
+      // array::compact for the other half of the same problem: these references
+      // are weak, so the target may not exist at all rather than merely being
+      // tombstoned — which is the normal state of a fresh install between the
+      // content import and the first sync. The filter does not catch that one.
+      // A missing document makes store.isDeleted null, null != true is true, so
+      // the reference passes and the deref then yields null straight into the
+      // array. featuredProductsBlock compacts the identical shape for the
+      // identical reason.
+      count(collections) > 0 => array::compact(collections[@->store.isDeleted != true]->{${categoryCardFields}}),
       // The parentEntityId clause is what makes "top-level" true rather than
       // accidental. Every synced category is flat today (ROB-2566), so it
       // filters nothing yet; the moment parentage lands in the sync, without it
