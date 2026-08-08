@@ -1,6 +1,8 @@
 import { TagIcon } from "@sanity/icons";
 import { defineField, defineType } from "sanity";
 
+import { catalogReferenceOptions } from "@/schemaTypes/objects/bigcommerce/catalog-reference";
+
 /**
  * A reference to a synced BigCommerce product, with an optional pinned
  * variant. The variant list is filtered to the picked product's own variants,
@@ -24,10 +26,7 @@ export const productWithVariantReference = defineType({
       type: "reference",
       to: [{ type: "bigcommerceProduct" }],
       weak: true,
-      options: {
-        disableNew: true,
-        filter: "store.isDeleted != true",
-      },
+      options: catalogReferenceOptions,
     }),
     defineField({
       name: "variant",
@@ -38,7 +37,10 @@ export const productWithVariantReference = defineType({
       description: "Optional — the product's first variant applies if empty.",
       hidden: ({ parent }) => !parent?.product,
       options: {
-        disableNew: true,
+        disableNew: catalogReferenceOptions.disableNew,
+        // Not `catalogReferenceOptions.filter`: this one also has to scope the
+        // list to the picked product, and a reference filter is either a string
+        // or a function, never both. The `isDeleted` clause is repeated inside.
         filter: ({ parent }) => {
           const reference = (parent as { product?: { _ref?: string } })?.product
             ?._ref;

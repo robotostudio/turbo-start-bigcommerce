@@ -1,6 +1,8 @@
 import { PackageIcon } from "@sanity/icons";
 import { defineField } from "sanity";
 
+import { catalogReferenceOptions } from "@/schemaTypes/objects/bigcommerce/catalog-reference";
+
 export const collectionGroup = defineField({
   name: "collectionGroup",
   title: "Collection group",
@@ -27,6 +29,7 @@ export const collectionGroup = defineField({
       description: "Products from this collection will be listed",
       weak: true,
       to: [{ type: "bigcommerceCategory" }],
+      options: catalogReferenceOptions,
     }),
   ],
 });

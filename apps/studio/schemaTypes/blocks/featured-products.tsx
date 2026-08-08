@@ -2,6 +2,7 @@ import { Star } from "lucide-react";
 import { defineField, defineType } from "sanity";
 
 import { storeThumb } from "@/components/store-thumb";
+import { catalogReferenceOptions } from "@/schemaTypes/objects/bigcommerce/catalog-reference";
 
 export const featuredProducts = defineType({
   name: "featuredProducts",
@@ -28,7 +29,7 @@ export const featuredProducts = defineType({
         {
           type: "reference",
           to: [{ type: "bigcommerceProduct" }],
-          options: { disableNew: true },
+          options: catalogReferenceOptions,
           weak: true,
         },
       ],

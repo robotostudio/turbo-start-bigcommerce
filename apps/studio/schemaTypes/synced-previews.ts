@@ -33,6 +33,18 @@ const IMAGE_PATHS: Record<string, string> = {
   bigcommerceCategory: "store.imageUrl",
 };
 
+/**
+ * Shown instead of the subtitle once the sync has tombstoned a document.
+ *
+ * It has to live here rather than only on the objects that hold the reference.
+ * Sanity's reference input renders the *referenced document's* preview, so this
+ * is the one place that reaches every picker, every reference field and every
+ * search result at once. `productWithVariantReference` and `collectionReference`
+ * each say it on their own preview row as well, but that row is the collapsed
+ * summary — an editor looking at the reference field itself saw nothing.
+ */
+const DELETED_BADGE = "⚠ Deleted in BigCommerce";
+
 export function withStoreThumbnails(
   types: DocumentDefinition[]
 ): DocumentDefinition[] {
@@ -46,12 +58,22 @@ export function withStoreThumbnails(
     return {
       ...type,
       preview: {
-        select: { title: "store.title", subtitle, imageUrl },
+        select: {
+          title: "store.title",
+          subtitle,
+          imageUrl,
+          isDeleted: "store.isDeleted",
+        },
         prepare: (selection: Record<string, unknown>) => ({
           title:
             typeof selection.title === "string" ? selection.title : "Untitled",
-          subtitle:
-            typeof selection.subtitle === "string"
+          // The badge replaces the subtitle rather than joining it. A slug or a
+          // SKU next to "deleted" reads as detail about a product that still
+          // exists, and the line is narrow enough in a picker row to truncate
+          // whichever half went second.
+          subtitle: selection.isDeleted
+            ? DELETED_BADGE
+            : typeof selection.subtitle === "string"
               ? selection.subtitle
               : undefined,
           media: storeThumb(

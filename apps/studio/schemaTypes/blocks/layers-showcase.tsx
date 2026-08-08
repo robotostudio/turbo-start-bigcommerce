@@ -2,6 +2,7 @@ import { LayoutGrid } from "lucide-react";
 import { defineField, defineType } from "sanity";
 
 import { storeThumb } from "@/components/store-thumb";
+import { catalogReferenceOptions } from "@/schemaTypes/objects/bigcommerce/catalog-reference";
 
 export const layersShowcase = defineType({
   name: "layersShowcase",
@@ -38,7 +39,7 @@ export const layersShowcase = defineType({
       // the import set. A strong declaration here makes the Studio flag every
       // seeded homepage with "Reference strength mismatch".
       weak: true,
-      options: { disableNew: true },
+      options: catalogReferenceOptions,
       description:
         "The collage and the large image are pulled from this product's images, with live price, sizes, and add-to-cart",
       validation: (Rule) => Rule.required(),

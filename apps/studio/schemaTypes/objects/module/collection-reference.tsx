@@ -1,6 +1,8 @@
 import { PackageIcon } from "@sanity/icons";
 import { defineField } from "sanity";
 
+import { catalogReferenceOptions } from "@/schemaTypes/objects/bigcommerce/catalog-reference";
+
 export const collectionReference = defineField({
   name: "collectionReference",
   title: "Collection",
@@ -15,6 +17,7 @@ export const collectionReference = defineField({
       description: "The BigCommerce category to display",
       weak: true,
       to: [{ type: "bigcommerceCategory" }],
+      options: catalogReferenceOptions,
       validation: (Rule) => Rule.required(),
     }),
     defineField({
