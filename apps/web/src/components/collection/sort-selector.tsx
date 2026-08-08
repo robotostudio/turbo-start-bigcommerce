@@ -11,6 +11,8 @@ import { Check, ChevronDown } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
+import { sortFromSearchParams } from "./sort-utils";
+
 const SORT_OPTIONS = [
   { label: "Featured", sortKey: "COLLECTION_DEFAULT", reverse: false },
   { label: "Price: Low to High", sortKey: "PRICE", reverse: false },
@@ -21,17 +23,13 @@ const SORT_OPTIONS = [
   { label: "Newest", sortKey: "CREATED", reverse: true },
 ] as const;
 
-type SortSelectorProps = {
-  currentSort: string;
-  currentReverse: boolean;
-};
-
-export function SortSelector({
-  currentSort,
-  currentReverse,
-}: SortSelectorProps) {
+export function SortSelector() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  // Read, not passed in: the server component stays `searchParams`-free so
+  // the route can be statically generated.
+  const { sort: currentSort, reverse: currentReverse } =
+    sortFromSearchParams(searchParams);
 
   const handleSort = useCallback(
     (sortKey: string, reverse: boolean) => {

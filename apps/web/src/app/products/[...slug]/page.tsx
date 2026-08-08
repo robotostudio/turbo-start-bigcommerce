@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import sanitizeHtml from "sanitize-html";
 
 import { BreadcrumbJsonLd } from "@/components/json-ld";
@@ -8,16 +9,13 @@ import {
   type AccordionSection,
   ProductAccordion,
 } from "@/components/product/product-accordion";
-import type { CardVariant } from "@/components/product/product-card";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductJsonLd } from "@/components/product/product-json-ld";
-import { ProductPurchase } from "@/components/product/product-purchase";
-import { RelatedProducts } from "@/components/product/related-products";
-import { VariantSelector } from "@/components/product/variant-selector";
 import {
-  findVariantByOptions,
-  merchandiseId,
-} from "@/components/product/variant-utils";
+  ProductSelection,
+  SelectedVariantGallery,
+} from "@/components/product/product-selection";
+import { RelatedProducts } from "@/components/product/related-products";
 import { SavedItemButton } from "@/components/saved-items/saved-item-button";
 import {
   type CatalogProduct,
@@ -32,14 +30,19 @@ import { keyMetafields } from "@/lib/bigcommerce/metafields";
 import { toMoney } from "@/lib/bigcommerce/money";
 import { cardVariants } from "@/lib/bigcommerce/variant-utils";
 import { fetchOrFallback } from "@/lib/build-guard";
-import { buildLineMetadata } from "@/lib/cart/metadata";
-import type { ProductOption } from "@/lib/cart/types";
+import type { MoneyV2, ProductOption } from "@/lib/cart/types";
 import { getSEOMetadata } from "@/lib/seo";
 import { getBaseUrl } from "@/utils";
 
+/**
+ * No `searchParams`, deliberately: awaiting it opts the route out of static
+ * generation. The `?Color=` selection is URL state, read on the client by
+ * `ProductSelection` / `SelectedVariantGallery`; the catalog read keys on the
+ * path alone, so the prerendered page is the default variant and the client
+ * re-resolves from the query string.
+ */
 type PageProps = {
   params: Promise<{ slug: string[] }>;
-  searchParams: Promise<Record<string, string>>;
 };
 
 /**
@@ -141,63 +144,29 @@ function toSelectorOptions(product: CatalogProduct): ProductOption[] {
   });
 }
 
-function StockIndicator({ isInStock }: { isInStock: boolean }) {
-  // `inventory.aggregated` is null across this store — it hides stock levels —
-  // so there is no count to warn on, only in stock or not.
-  return isInStock ? (
-    <p className="text-muted-foreground text-sm">In stock</p>
-  ) : null;
-}
-
 /**
- * The variant the page renders: whatever the URL asks for, falling back per
- * option to the first variant's own value so a bare PDP URL still lands on
- * something buyable.
+ * The was-price for every variant, keyed by card variant id — computed here
+ * so the client selection component gets a serialisable map instead of the
+ * raw prices payload.
  *
- * `complete` is what gates the CTA — an option the shopper hasn't chosen yet
- * must read "Select Options", not silently add the default.
+ * A markdown puts the pre-markdown figure in `basePrice`; without one,
+ * `retailPrice` is a standing MSRP. `PriceDisplay` ignores either if it isn't
+ * actually above the price being charged.
  */
-function resolveSelection(
-  options: ProductOption[],
-  variants: CardVariant[],
-  searchParams: Record<string, string>
-) {
-  const [defaultVariant] = variants;
-  const selections: Record<string, string> = {};
-
-  for (const option of options) {
-    selections[option.name] =
-      searchParams[option.name] ??
-      defaultVariant?.selectedOptions.find((s) => s.name === option.name)
-        ?.value ??
-      "";
+function compareAtByVariantId(
+  product: CatalogProduct
+): Record<string, MoneyV2 | null> {
+  const map: Record<string, MoneyV2 | null> = {};
+  for (const variant of nodes(product.variants)) {
+    const prices = variant.prices;
+    const was = prices?.salePrice ? prices.basePrice : prices?.retailPrice;
+    map[String(variant.entityId)] = was ? toMoney(was) : null;
   }
-
-  return {
-    complete: options
-      .filter((option) => option.values.length > 1)
-      .every((option) =>
-        option.values.some((v) => v.value === selections[option.name])
-      ),
-    variant: findVariantByOptions(variants, selections) ?? defaultVariant,
-  };
+  return map;
 }
 
-/** The was-price for the strikethrough, or null when nothing is marked down. */
-function compareAtFor(product: CatalogProduct, variantId: string) {
-  const prices = nodes(product.variants).find(
-    (variant) => String(variant.entityId) === variantId
-  )?.prices;
-  // A markdown puts the pre-markdown figure in `basePrice`; without one,
-  // `retailPrice` is a standing MSRP. `PriceDisplay` ignores either if it isn't
-  // actually above the price being charged.
-  const was = prices?.salePrice ? prices.basePrice : prices?.retailPrice;
-  return was ? toMoney(was) : null;
-}
-
-export default async function ProductPage({ params, searchParams }: PageProps) {
+export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params;
-  const sp = await searchParams;
 
   // Two reads, not one: `site.route` resolves the merchant's URL and its
   // auto-created 301, but drops `productOptions` on the way — see
@@ -215,32 +184,15 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const images = nodes(product.images);
   const options = toSelectorOptions(product);
   const variants = cardVariants(product);
+  // No purchasable variant is a page that cannot render its buy box — same
+  // 404 the selection guard produced when it lived here.
+  if (variants.length === 0) notFound();
 
-  const { complete: allOptionsSelected, variant: selectedVariant } =
-    resolveSelection(options, variants, sp);
-  if (!selectedVariant) notFound();
-
-  const compareAt = compareAtFor(product, selectedVariant.id);
   const title = product.name;
   const vendor = product.brand?.name ?? null;
   // Product `type` is BigCommerce's Physical/Digital flag, not a merchandising
   // category — the seed carries that as a metafield.
   const category = keyMetafields(product.metafields.edges).product_type;
-
-  const lineMetadata = buildLineMetadata({
-    productTitle: title,
-    productHandle: handle,
-    price: selectedVariant.price,
-    selectedOptions: selectedVariant.selectedOptions,
-    image: selectedVariant.image?.url
-      ? {
-          url: selectedVariant.image.url,
-          altText: title,
-          width: 0,
-          height: 0,
-        }
-      : null,
-  });
 
   const accordionSections = buildAccordionSections(product);
   const baseUrl = getBaseUrl();
@@ -280,42 +232,40 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
               />
             </div>
 
-            {/* Category + title + price */}
-            <div className="flex flex-col gap-2">
-              {category && (
-                <p className="text-muted-foreground text-sm">{category}</p>
-              )}
-              <h1 className="font-medium text-2xl tracking-tight lg:text-3xl">
-                {title}
-              </h1>
-              <PriceDisplay
-                compareAtPrice={compareAt}
-                price={selectedVariant.price}
-              />
-            </div>
-
-            {/* Variant selectors */}
-            {variants.length > 0 && (
-              <VariantSelector
+            {/* Category + title + price, selectors, add to cart — the
+             * `?Color=`-driven half, resolved on the client. The Suspense
+             * fallback is the default variant's static twin, so the
+             * prerendered HTML still carries title and price. */}
+            <Suspense
+              fallback={
+                <div className="flex flex-col gap-2">
+                  {category && (
+                    <p className="text-muted-foreground text-sm">{category}</p>
+                  )}
+                  <h1 className="font-medium text-2xl tracking-tight lg:text-3xl">
+                    {title}
+                  </h1>
+                  {variants[0] && (
+                    <PriceDisplay
+                      compareAtPrice={
+                        compareAtByVariantId(product)[variants[0].id] ?? null
+                      }
+                      price={variants[0].price}
+                    />
+                  )}
+                </div>
+              }
+            >
+              <ProductSelection
+                category={category}
+                compareAtByVariantId={compareAtByVariantId(product)}
                 handle={handle}
                 options={options}
+                productEntityId={product.entityId}
+                title={title}
                 variants={variants}
               />
-            )}
-
-            {/* Add to cart + stock */}
-            <div className="flex flex-col gap-2">
-              <ProductPurchase
-                availableForSale={selectedVariant.availableForSale}
-                metadata={lineMetadata}
-                optionsSelected={allOptionsSelected}
-                // `aggregated` is null store-wide, so there is no ceiling to
-                // clamp the quantity stepper to.
-                quantityAvailable={null}
-                variantId={merchandiseId(product.entityId, selectedVariant.id)}
-              />
-              <StockIndicator isInStock={selectedVariant.availableForSale} />
-            </div>
+            </Suspense>
 
             {/* Accordion — Description + metafields */}
             {accordionSections.length > 0 && (
@@ -327,10 +277,20 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           </div>
 
           {/* Gallery — vertical thumbnail rail + scrolling image column */}
-          <ProductGallery
-            images={images}
-            selectedVariantImageUrl={selectedVariant.image?.url}
-          />
+          <Suspense
+            fallback={
+              <ProductGallery
+                images={images}
+                selectedVariantImageUrl={variants[0]?.image?.url}
+              />
+            }
+          >
+            <SelectedVariantGallery
+              images={images}
+              options={options}
+              variants={variants}
+            />
+          </Suspense>
         </div>
 
         <RelatedProducts product={product} />

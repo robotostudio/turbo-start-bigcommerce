@@ -5,6 +5,10 @@ import { useSearchParams } from "next/navigation";
 
 import { CollectionPagination } from "@/components/collection/collection-pagination";
 import { ProductGrid } from "@/components/collection/product-grid";
+import {
+  DEFAULT_SORT,
+  sortFromSearchParams,
+} from "@/components/collection/sort-utils";
 import type { CatalogProductCard } from "@/lib/bigcommerce/catalog";
 
 type PageInfo = {
@@ -26,18 +30,17 @@ type CollectionProductsProps = {
   handle: string;
   initialPageInfo: PageInfo;
   initialProducts: CatalogProductCard[];
-  reverse: boolean;
-  sort: string;
 };
 
 export function CollectionProducts({
   handle,
   initialPageInfo,
   initialProducts,
-  reverse,
-  sort,
 }: CollectionProductsProps) {
   const searchParams = useSearchParams();
+  // Sort comes off the URL here, not from the server component — awaiting
+  // `searchParams` there would opt the whole route out of static generation.
+  const { sort, reverse } = sortFromSearchParams(searchParams);
   const density =
     searchParams.get("view") === "dense" ? "dense" : "comfortable";
 
@@ -74,10 +77,16 @@ export function CollectionProducts({
       initialPageParam: null as string | null,
       getNextPageParam: (lastPage) =>
         lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.endCursor : undefined,
-      initialData: {
-        pages: [{ products: initialProducts, pageInfo: initialPageInfo }],
-        pageParams: [null],
-      },
+      // The server always renders the default view, so its products only seed
+      // the matching query — attached to a sorted/filtered key they would
+      // paint the wrong order for a beat before the refetch corrects it.
+      initialData:
+        sort === DEFAULT_SORT && !reverse && filterEntries.length === 0
+          ? {
+              pages: [{ products: initialProducts, pageInfo: initialPageInfo }],
+              pageParams: [null],
+            }
+          : undefined,
     });
 
   const allProducts = data?.pages.flatMap((page) => page.products) ?? [];

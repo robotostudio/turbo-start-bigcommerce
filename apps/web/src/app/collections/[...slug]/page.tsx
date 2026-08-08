@@ -1,13 +1,14 @@
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { ActiveFilters } from "@/components/collection/active-filters";
 import { CollectionProducts } from "@/components/collection/collection-products";
 import { FilterPanel } from "@/components/collection/filter-panel";
+import { ProductGrid } from "@/components/collection/product-grid";
 import {
   ListingControls,
   ListingControlsProvider,
 } from "@/components/collection/listing-controls";
-import { parseSortParams } from "@/components/collection/sort-utils";
 import { BreadcrumbJsonLd, CollectionJsonLd } from "@/components/json-ld";
 import {
   getCategoryByPath,
@@ -21,9 +22,14 @@ import { fetchOrFallback } from "@/lib/build-guard";
 import { getSEOMetadata } from "@/lib/seo";
 import { getBaseUrl } from "@/utils";
 
+/**
+ * No `searchParams` here, deliberately: awaiting it opts the route out of
+ * static generation. Sort, filters and grid density are URL state read by the
+ * client components (`SortSelector`, `CollectionProducts`) via
+ * `useSearchParams`; the category read keys on the path alone.
+ */
 type PageProps = {
   params: Promise<{ slug: string[] }>;
-  searchParams: Promise<Record<string, string | string[]>>;
 };
 
 const PAGE_SIZE = 12;
@@ -73,13 +79,8 @@ export async function generateMetadata({ params }: PageProps) {
   });
 }
 
-export default async function CollectionPage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function CollectionPage({ params }: PageProps) {
   const { slug } = await params;
-  const sp = await searchParams;
-  const { sort, reverse } = parseSortParams(sp);
 
   const result = await getCategoryByPath(slug, { first: PAGE_SIZE });
   if (!result.ok) notFound();
@@ -125,21 +126,28 @@ export default async function CollectionPage({
           <h1 className="min-w-0 text-balance font-medium text-2xl tracking-tight md:text-[32px]">
             {category.name}
           </h1>
-          <ListingControls currentReverse={reverse} currentSort={sort} />
+          <ListingControls />
         </div>
 
         <div className="mb-8 flex flex-col gap-4">
           <FilterPanel filters={[]} />
-          <ActiveFilters />
+          {/* `useSearchParams` consumers need Suspense boundaries on a
+           * statically generated route; each fallback is the default view the
+           * server already rendered, so nothing jumps on hydration. */}
+          <Suspense fallback={null}>
+            <ActiveFilters />
+          </Suspense>
         </div>
 
-        <CollectionProducts
-          handle={handle}
-          initialPageInfo={category.products.pageInfo}
-          initialProducts={products}
-          reverse={reverse}
-          sort={sort}
-        />
+        <Suspense
+          fallback={<ProductGrid density="comfortable" products={products} />}
+        >
+          <CollectionProducts
+            handle={handle}
+            initialPageInfo={category.products.pageInfo}
+            initialProducts={products}
+          />
+        </Suspense>
       </ListingControlsProvider>
     </div>
   );

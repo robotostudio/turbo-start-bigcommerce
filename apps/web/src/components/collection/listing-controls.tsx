@@ -1,7 +1,7 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
-import { createContext, useContext, useState } from "react";
+import { ChevronDown, Minus, Plus } from "lucide-react";
+import { createContext, Suspense, useContext, useState } from "react";
 
 import { SortSelector } from "@/components/collection/sort-selector";
 
@@ -69,15 +69,7 @@ export function ListingControlsProvider({
 const controlTextClass =
   "flex shrink-0 items-center gap-1 whitespace-nowrap text-base text-zinc-900 tracking-[0.24px] transition-colors hover:text-zinc-500 focus-visible:outline-none dark:text-zinc-100 dark:hover:text-zinc-400";
 
-type ListingControlsProps = {
-  currentSort: string;
-  currentReverse: boolean;
-};
-
-export function ListingControls({
-  currentSort,
-  currentReverse,
-}: ListingControlsProps) {
+export function ListingControls() {
   const { filterOpen, toggleFilter } = useListingControls();
 
   // Grid density toggle disabled for now (see brutalist note above).
@@ -150,8 +142,19 @@ export function ListingControls({
         )}
       </button>
 
-      {/* Sort */}
-      <SortSelector currentReverse={currentReverse} currentSort={currentSort} />
+      {/* Sort — `useSearchParams` inside needs a Suspense boundary on a
+       * statically generated route; the fallback is the trigger's static
+       * twin so the header doesn't jump on hydration. */}
+      <Suspense
+        fallback={
+          <span className={controlTextClass}>
+            Sort by
+            <ChevronDown className="size-[18px]" strokeWidth={1.75} />
+          </span>
+        }
+      >
+        <SortSelector />
+      </Suspense>
     </div>
   );
 }
