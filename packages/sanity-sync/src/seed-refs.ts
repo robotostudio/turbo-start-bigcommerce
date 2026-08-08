@@ -198,6 +198,19 @@ export async function linkSeedRefs(
 
   if (options.write && result.mutations.length > 0) {
     await client.mutate(result.mutations);
+
+    // `patch.set` on a path that resolves to nothing is a no-op, and the API
+    // reports it the same way it reports a hit: 200, no error. The only way to
+    // know the paths landed is to read the documents back and look.
+    const after = remapSeedRefs(
+      await client.fetch<ContentDocument[]>(CONTENT_QUERY),
+      catalog
+    );
+    if (after.mutations.length > 0) {
+      throw new Error(
+        `${after.resolved} reference(s) are still placeholders after the patch — the paths did not resolve.`
+      );
+    }
   }
 
   return result;
