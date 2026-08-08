@@ -1,5 +1,7 @@
+import type { ContentSourceMap } from "@sanity/client";
 import { env } from "@workspace/env/server";
 import { Logger } from "@workspace/logger";
+import type { StegaCleaned } from "next-sanity";
 import { defineLive } from "next-sanity/live";
 
 import { client } from "./client";
@@ -99,7 +101,7 @@ function warnOnce(query: string, error: unknown) {
  * generated GROQ result types are nullable and TypeScript has been forcing
  * them to.
  */
-export const sanityFetch: typeof liveFetch = async (options) => {
+const fetchWithFallback: typeof liveFetch = async (options) => {
   try {
     return await liveFetch(options);
   } catch (error) {
@@ -110,3 +112,31 @@ export const sanityFetch: typeof liveFetch = async (options) => {
     return { data: null as never, sourceMap: null, tags: [] };
   }
 };
+
+/**
+ * next-sanity 13 brands every string in a stega-enabled fetch as
+ * `StegaString`, so that comparing one to a literal is a type error rather
+ * than a silent mismatch on the invisible characters stega adds.
+ *
+ * We unbrand it here, at the one choke point every read goes through, which
+ * keeps the generated GROQ result types — the ones every component prop is
+ * typed against — as the shape callers receive. The runtime is untouched:
+ * stega stays on, so Presentation Tool overlays keep working, and the two
+ * places that do compare a fetched string to a literal (`hero.tsx`,
+ * `json-ld.tsx`) already call `stegaClean` themselves.
+ *
+ * The alternative is branded types everywhere and a `stegaClean` at every
+ * comparison. Worth revisiting if a stega mismatch ever ships; today it would
+ * be a wide diff bought with no bug it catches.
+ */
+type CleanFetch = <const QueryString extends string>(
+  ...args: Parameters<typeof liveFetch<QueryString>>
+) => Promise<{
+  data: StegaCleaned<
+    Awaited<ReturnType<typeof liveFetch<QueryString>>>["data"]
+  >;
+  sourceMap: ContentSourceMap | null;
+  tags: string[];
+}>;
+
+export const sanityFetch = fetchWithFallback as CleanFetch;

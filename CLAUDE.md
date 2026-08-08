@@ -43,7 +43,7 @@ pnpm sync:bigcommerce # catalog back out of BigCommerce, into Sanity
 pnpm seed:refs --write # repoint the content at the ids this store minted; dry run without --write
 
 # Studio schema tooling (run from apps/studio)
-npx sanity schema extract --enforce-required-fields
+npx sanity schema extract --enforce-required-fields --force # --force since v6: extract refuses to overwrite schema.json without it
 npx sanity typegen generate
 npx sanity deploy
 ```

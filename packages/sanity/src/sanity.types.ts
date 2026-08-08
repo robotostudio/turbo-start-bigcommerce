@@ -12,6 +12,8 @@
  * ---------------------------------------------------------------------------------
  */
 
+export declare const internalGroqTypeReferenceTo: unique symbol;
+
 // Source: schema.json
 export type Link = {
   title?: string;
@@ -1376,6 +1378,23 @@ export type SanityAssistSchemaTypeField = {
   >;
 };
 
+export type MediaFolderReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "media.folder";
+};
+
+export type MediaFolder = {
+  _id: string;
+  _type: "media.folder";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  name?: string;
+  parent?: MediaFolderReference;
+};
+
 export type MediaTag = {
   _id: string;
   _type: "media.tag";
@@ -1458,14 +1477,14 @@ export type SanityFileAsset = {
   title?: string;
   description?: string;
   altText?: string;
-  sha1hash?: string;
-  extension?: string;
-  mimeType?: string;
-  size?: number;
-  assetId?: string;
+  sha1hash: string;
+  extension: string;
+  mimeType: string;
+  size: number;
+  assetId: string;
   uploadId?: string;
-  path?: string;
-  url?: string;
+  path: string;
+  url: string;
   source?: SanityAssetSourceData;
 };
 
@@ -1487,14 +1506,14 @@ export type SanityImageAsset = {
   title?: string;
   description?: string;
   altText?: string;
-  sha1hash?: string;
-  extension?: string;
-  mimeType?: string;
-  size?: number;
-  assetId?: string;
+  sha1hash: string;
+  extension: string;
+  mimeType: string;
+  size: number;
+  assetId: string;
   uploadId?: string;
-  path?: string;
-  url?: string;
+  path: string;
+  url: string;
   metadata?: SanityImageMetadata;
   source?: SanityAssetSourceData;
 };
@@ -1593,6 +1612,8 @@ export type AllSanitySchemaTypes =
   | SanityAssistInstructionFieldRef
   | SanityAssistInstruction
   | SanityAssistSchemaTypeField
+  | MediaFolderReference
+  | MediaFolder
   | MediaTag
   | RgbaColor
   | HsvaColor
@@ -1605,14 +1626,6 @@ export type AllSanitySchemaTypes =
   | SanityAssetSourceData
   | SanityImageAsset
   | Geopoint;
-
-export declare const internalGroqTypeReferenceTo: unique symbol;
-
-type ArrayOf<T> = Array<
-  T & {
-    _key: string;
-  }
->;
 
 // Source: ../../packages/sanity/src/query.ts
 // Variable: queryImageType
