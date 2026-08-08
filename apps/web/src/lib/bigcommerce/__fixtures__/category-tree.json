@@ -2,7 +2,7 @@
   "query": "query CategoryTree {\n  site {\n    categoryTree {\n      entityId\n      name\n      path\n      description\n      productCount\n      hasChildren\n      image {\n        url(width: 320)\n        altText\n      }\n      children {\n        entityId\n        name\n        path\n        productCount\n        hasChildren\n        children {\n          entityId\n          name\n          path\n          productCount\n          hasChildren\n        }\n      }\n    }\n  }\n}",
   "variables": null,
   "status": 200,
-  "note": "Captured while the throwaway nested category from category-nested.json existed, so Jackets carries hasChildren: true and a populated children array. A recapture against the seeded store alone returns a wholly flat tree and silently loses that coverage — recreate the nested category first.",
+  "note": "The whole tree. Tops carries hasChildren: true and a populated children array because the seed writes Henleys underneath it — that nesting is what keeps this fixture's child coverage alive across a recapture.",
   "response": {
     "data": {
       "site": {
@@ -15,7 +15,7 @@
             "productCount": 1,
             "hasChildren": false,
             "image": {
-              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/l/41760__41760.original.png",
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/v/69174__69174.original.png",
               "altText": "Accessories"
             },
             "children": []
@@ -28,7 +28,7 @@
             "productCount": 12,
             "hasChildren": false,
             "image": {
-              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/p/93451__93451.original.png",
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/w/71874__71874.original.png",
               "altText": "All Products"
             },
             "children": []
@@ -41,7 +41,7 @@
             "productCount": 2,
             "hasChildren": false,
             "image": {
-              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/u/10644__10644.original.png",
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/b/63025__63025.original.png",
               "altText": "Bottoms"
             },
             "children": []
@@ -54,7 +54,7 @@
             "productCount": 1,
             "hasChildren": false,
             "image": {
-              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/r/95711__95711.original.png",
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/l/16291__16291.original.png",
               "altText": "Dresses"
             },
             "children": []
@@ -65,21 +65,12 @@
             "path": "/collections/jackets/",
             "description": "<p>Outerwear and jackets.</p>",
             "productCount": 2,
-            "hasChildren": true,
+            "hasChildren": false,
             "image": {
-              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/h/71370__71370.original.png",
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/n/47466__47466.original.png",
               "altText": "Jackets"
             },
-            "children": [
-              {
-                "entityId": 42,
-                "name": "Leather",
-                "path": "/collections/jackets/leather/",
-                "productCount": 1,
-                "hasChildren": false,
-                "children": []
-              }
-            ]
+            "children": []
           },
           {
             "entityId": 37,
@@ -89,7 +80,7 @@
             "productCount": 2,
             "hasChildren": false,
             "image": {
-              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/b/79607__79607.original.png",
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/f/42913__42913.original.png",
               "altText": "Knitwear"
             },
             "children": []
@@ -102,7 +93,7 @@
             "productCount": 12,
             "hasChildren": false,
             "image": {
-              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/a/69288__69288.original.png",
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/w/85431__85431.original.png",
               "altText": "New Arrivals"
             },
             "children": []
@@ -115,7 +106,7 @@
             "productCount": 4,
             "hasChildren": false,
             "image": {
-              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/s/67731__67731.original.png",
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/r/28335__28335.original.png",
               "altText": "Sale"
             },
             "children": []
@@ -128,7 +119,7 @@
             "productCount": 3,
             "hasChildren": false,
             "image": {
-              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/k/23378__23378.original.png",
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/i/14045__14045.original.png",
               "altText": "Shirts"
             },
             "children": []
@@ -139,12 +130,21 @@
             "path": "/collections/tops/",
             "description": "<p>Tees, henleys and tops.</p>",
             "productCount": 1,
-            "hasChildren": false,
+            "hasChildren": true,
             "image": {
-              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/u/58825__58825.original.png",
+              "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/320w/a/43366__43366.original.png",
               "altText": "Tops"
             },
-            "children": []
+            "children": [
+              {
+                "entityId": 43,
+                "name": "Henleys",
+                "path": "/collections/tops/henleys/",
+                "productCount": 1,
+                "hasChildren": false,
+                "children": []
+              }
+            ]
           }
         ]
       }

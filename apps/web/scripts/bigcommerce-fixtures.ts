@@ -1127,13 +1127,13 @@ const captures: Capture[] = [
   {
     name: "category-nested",
     document: CategoryByPath,
-    variables: { path: "/collections/jackets/leather/" },
-    note: "Multi-segment path, captured against a throwaway category created for ROB-2531 and deleted afterwards, because pnpm seed:bigcommerce keeps the tree deliberately flat. Recreate before recapturing: POST /v3/catalog/trees/categories [{tree_id:1, parent_id:<Jackets>, name:\"Leather\", url:{path:\"/collections/jackets/leather/\", is_customized:true}, is_visible:true}], then PUT /v3/catalog/products/category-assignments [{product_id:<Rye>, category_id:<new>}].",
+    variables: { path: "/collections/tops/henleys/" },
+    note: "Multi-segment path. Henleys is a real child of Tops in the seeded catalog, so pnpm seed:bigcommerce alone is enough to recapture this — no throwaway category to recreate first. breadcrumbs carries both segments, which is the difference from category-top-level.json.",
   },
   {
     name: "category-tree",
     document: CategoryTree,
-    note: "Captured while the throwaway nested category from category-nested.json existed, so Jackets carries hasChildren: true and a populated children array. A recapture against the seeded store alone returns a wholly flat tree and silently loses that coverage — recreate the nested category first.",
+    note: "The whole tree. Tops carries hasChildren: true and a populated children array because the seed writes Henleys underneath it — that nesting is what keeps this fixture's child coverage alive across a recapture.",
   },
   {
     name: "search-filters-unavailable",

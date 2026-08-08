@@ -171,10 +171,10 @@ export async function pruneCatalog(
  * the old one. The committed catalog names those paths, so an unconditional
  * re-send would leave every category image 404 after the second run.
  */
-function categoryBody(def: CategoryDef, hasImage = false) {
+function categoryBody(def: CategoryDef, hasImage = false, parentId = 0) {
   return {
     tree_id: TREE_ID,
-    parent_id: 0,
+    parent_id: parentId,
     name: def.name,
     description: def.description,
     sort_order: def.sortOrder,
@@ -187,14 +187,51 @@ function categoryBody(def: CategoryDef, hasImage = false) {
 }
 
 /**
- * Writes the categories as a flat set. Flat is the point: a nested
- * BigCommerce tree would put the parent segments back into the path and stop
- * `/collections/{slug}/` matching.
+ * Writes the categories, parents before children, and returns slug → id.
+ *
+ * The tree is mostly flat, with one child so the storefront's catch-all route
+ * meets a real multi-segment path instead of only a fixture. Nesting is safe
+ * because `is_customized` makes the path we send authoritative — BigCommerce
+ * does not regenerate it from the tree, so the flat paths around the child
+ * keep matching.
+ *
+ * ponytail: one level, two passes. A deeper tree needs a topological sort —
+ * add it when a deeper tree exists.
  */
 export async function upsertCategories(
   defs: CategoryDef[],
   stats: RunStats
 ): Promise<Map<string, number>> {
+  const ids = await upsertCategoryLevel(
+    defs.filter((d) => d.parent === undefined),
+    new Map(),
+    stats
+  );
+
+  const children = defs.filter((d) => d.parent !== undefined);
+  if (children.length === 0) return ids;
+
+  for (const [slug, id] of await upsertCategoryLevel(children, ids, stats)) {
+    ids.set(slug, id);
+  }
+  return ids;
+}
+
+/** One level of the tree. `parents` holds ids written by the level above. */
+async function upsertCategoryLevel(
+  defs: CategoryDef[],
+  parents: Map<string, number>,
+  stats: RunStats
+): Promise<Map<string, number>> {
+  const parentIdFor = (def: CategoryDef) => {
+    if (def.parent === undefined) return 0;
+    const id = parents.get(def.parent);
+    if (id === undefined) {
+      throw new Error(`Category ${def.slug} names an unknown parent`);
+    }
+    return id;
+  };
+
   const existing = await listCategories();
   const byPath = new Map(existing.map((c) => [c.url?.path, c]));
 
@@ -204,7 +241,7 @@ export async function upsertCategories(
       const found = byPath.get(categoryPath(d.slug)) as BcCategory;
       return {
         category_id: found.category_id,
-        ...categoryBody(d, Boolean(found.image_url)),
+        ...categoryBody(d, Boolean(found.image_url), parentIdFor(d)),
       };
     });
   const creates = defs.filter((d) => !byPath.has(categoryPath(d.slug)));
@@ -221,7 +258,7 @@ export async function upsertCategories(
     await bc(
       "POST",
       "/v3/catalog/trees/categories",
-      creates.map((d) => categoryBody(d))
+      creates.map((d) => categoryBody(d, false, parentIdFor(d)))
     );
     stats.created += creates.length;
     log.info(`Categories created: ${creates.map((c) => c.name).join(", ")}`);

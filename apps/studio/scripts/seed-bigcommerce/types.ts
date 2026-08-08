@@ -8,6 +8,12 @@ export interface CategoryDef {
   description: string;
   imageUrl?: string;
   sortOrder: number;
+  /**
+   * Slug of the parent category, for a nested one. The child's own slug still
+   * carries every segment, so `slug: "tops/henleys"` with `parent: "tops"`
+   * lands at `/collections/tops/henleys/`.
+   */
+  parent?: string;
 }
 
 export interface OptionValueDef {

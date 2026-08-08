@@ -69,6 +69,13 @@
       "description": "<p>Tees, henleys and tops.</p>",
       "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/a/43366__43366.png",
       "sortOrder": 9
+    },
+    {
+      "slug": "tops/henleys",
+      "name": "Henleys",
+      "description": "<p>Waffle and jersey henleys.</p>",
+      "sortOrder": 10,
+      "parent": "tops"
     }
   ],
   "products": [
@@ -838,7 +845,8 @@
       "categorySlugs": [
         "all-products",
         "new-arrivals",
-        "tops"
+        "tops",
+        "tops/henleys"
       ],
       "images": [
         {

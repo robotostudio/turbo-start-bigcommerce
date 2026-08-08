@@ -346,21 +346,21 @@ describe("getCategoryByPath", () => {
     const { response, variables } = fixture("category-nested");
     const fetchMock = mockResponse(response);
 
-    const result = await catalog.getCategoryByPath(["jackets", "leather"]);
+    const result = await catalog.getCategoryByPath(["tops", "henleys"]);
 
     // The whole point: one joined lookup, byte-identical to the path the
     // fixture was captured against.
     expect(sentBody(fetchMock).variables.path).toBe(variables?.path);
     expect(sentBody(fetchMock).variables.path).toBe(
-      "/collections/jackets/leather/"
+      "/collections/tops/henleys/"
     );
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data.node?.entityId).toBe(42);
+    expect(result.data.node?.entityId).toBe(43);
     expect(
       catalog.nodes(result.data.node?.breadcrumbs).map((crumb) => crumb.name)
-    ).toEqual(["Jackets", "Leather"]);
+    ).toEqual(["Tops", "Henleys"]);
   });
 
   it("pages the product list", async () => {
@@ -399,9 +399,9 @@ describe("getCategoryTree", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.data).toHaveLength(10);
-    expect(
-      result.data.find((item) => item.name === "Jackets")?.hasChildren
-    ).toBe(true);
+    expect(result.data.find((item) => item.name === "Tops")?.hasChildren).toBe(
+      true
+    );
   });
 
   it("flattens children into the path list", async () => {
@@ -413,8 +413,8 @@ describe("getCategoryTree", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.data).toHaveLength(11);
-    expect(result.data).toContain("/collections/jackets/");
-    expect(result.data).toContain("/collections/jackets/leather/");
+    expect(result.data).toContain("/collections/tops/");
+    expect(result.data).toContain("/collections/tops/henleys/");
   });
 
   it("yields segments a catch-all route can prerender", async () => {
@@ -426,8 +426,8 @@ describe("getCategoryTree", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.data.map(catalog.toSegments)).toContainEqual([
-      "jackets",
-      "leather",
+      "tops",
+      "henleys",
     ]);
   });
 });
