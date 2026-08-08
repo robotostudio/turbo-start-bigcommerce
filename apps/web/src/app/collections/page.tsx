@@ -41,12 +41,23 @@ export default async function CollectionsPage() {
     getCategoryTree(),
   ]);
 
+  // Throwing rather than degrading to an empty list, because this page is
+  // prerendered and held for the `revalidate` window above: a transient failure
+  // that rendered "no collections" would be baked and served for five minutes,
+  // and a shopper cannot tell it apart from a store with no categories.
+  // Throwing leaves the last good page in place through a revalidation, and is
+  // the verdict the category listing page and `/collections.md` already reached
+  // on the same failure.
+  if (!treeResult.ok) {
+    throw new Error(`Category tree read failed: ${treeResult.error}`);
+  }
+
   const baseUrl = getBaseUrl();
   const title = indexData?.title ?? "Collections";
   // Flattened per top-level branch rather than in one pass: only the root level
   // of `categoryTree` selects an image, so mapping the roots directly is what
   // keeps their artwork while still listing every descendant.
-  const collections = (treeResult.ok ? treeResult.data : []).flatMap((root) =>
+  const collections = treeResult.data.flatMap((root) =>
     [root, ...flattenCategoryTree(root.children ?? [])].map(categoryToCardProps)
   );
 
