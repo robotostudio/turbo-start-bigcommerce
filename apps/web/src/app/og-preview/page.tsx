@@ -3,6 +3,13 @@ import { client } from "@workspace/sanity/client";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import {
+  flattenCategoryTree,
+  getCategoryTree,
+  getProductSummaries,
+  toSegments,
+} from "@/lib/bigcommerce/catalog";
+
 export const metadata: Metadata = {
   title: "OG Image Preview",
   robots: "noindex, nofollow",
@@ -17,15 +24,16 @@ type Content = {
   home: { _id: string } | null;
   pages: Doc[];
   blogs: Doc[];
-  collections: Doc[];
-  products: Doc[];
-  productCount: number;
 };
 
 // Cap the number of product previews so the page stays light (each card renders
 // a full OG image). Raise or remove once the layout is signed off.
 const PRODUCT_PREVIEW_LIMIT = 10;
 
+// Editorial content only. Products and categories are enumerated from
+// BigCommerce, keyed exactly as each page's own metadata keys them — the id for
+// a product, the path segments for a category — so a card that renders here is
+// the card a crawler gets.
 const CONTENT_QUERY = /* groq */ `{
   "home": *[_type == "homePage"][0]{ _id },
   "pages": *[_type == "page" && defined(slug.current)] | order(_createdAt desc){
@@ -33,14 +41,7 @@ const CONTENT_QUERY = /* groq */ `{
   },
   "blogs": *[_type == "blog" && defined(slug.current)] | order(_createdAt desc){
     _id, "title": coalesce(title, slug.current)
-  },
-  "collections": *[_type == "collection"] | order(store.title asc){
-    _id, "title": store.title
-  },
-  "products": *[_type == "product" && store.status == "active" && store.isDeleted != true] | order(store.title asc)[0...${PRODUCT_PREVIEW_LIMIT}]{
-    _id, "title": store.title
-  },
-  "productCount": count(*[_type == "product" && store.status == "active" && store.isDeleted != true])
+  }
 }`;
 
 function ogUrl(params: Record<string, string | number>): string {
@@ -61,8 +62,15 @@ export default async function OgPreviewPage() {
     notFound();
   }
 
-  const content = await client.fetch<Content>(CONTENT_QUERY);
-  const products = content.products;
+  const [content, productsResult, categoryTree] = await Promise.all([
+    client.fetch<Content>(CONTENT_QUERY),
+    getProductSummaries(PRODUCT_PREVIEW_LIMIT),
+    getCategoryTree(),
+  ]);
+  const products = productsResult.ok ? productsResult.data : [];
+  const categories = categoryTree.ok
+    ? flattenCategoryTree(categoryTree.data)
+    : [];
 
   const sections: Section[] = [];
 
@@ -88,12 +96,6 @@ export default async function OgPreviewPage() {
         type: "blog",
         docs: content.blogs,
       },
-      {
-        key: "collections",
-        heading: "Collections",
-        type: "collection",
-        docs: content.collections,
-      },
     ];
 
   for (const group of simple) {
@@ -108,16 +110,32 @@ export default async function OgPreviewPage() {
     });
   }
 
-  if (products.length > 0) {
-    const capped = content.productCount > products.length;
+  if (categories.length > 0) {
     sections.push({
-      heading: capped
-        ? `Products (${products.length} of ${content.productCount})`
-        : "Products",
+      heading: `Collections (${categories.length})`,
+      cards: categories.map((category) => ({
+        id: String(category.entityId),
+        title: category.name,
+        url: ogUrl({
+          type: "collection",
+          id: toSegments(category.path).join("/"),
+        }),
+      })),
+    });
+  }
+
+  if (products.length > 0) {
+    sections.push({
+      // The cap is a request size, not a catalog count — there is no cheap
+      // total to compare it against, so the heading does not claim one.
+      heading:
+        products.length === PRODUCT_PREVIEW_LIMIT
+          ? `Products (first ${PRODUCT_PREVIEW_LIMIT})`
+          : `Products (${products.length})`,
       cards: products.map((product) => ({
-        id: product._id,
-        title: product.title ?? product._id,
-        url: ogUrl({ type: "product", id: product._id }),
+        id: String(product.entityId),
+        title: product.name,
+        url: ogUrl({ type: "product", id: product.entityId }),
       })),
     });
   }

@@ -91,6 +91,10 @@ export async function generateMetadata({ params }: PageProps) {
     title: seo.title,
     description: seo.description,
     slug: `/collections/${slug.join("/")}`,
+    // The card resolves the category by this path, the same lookup the page
+    // just did — categories are addressed by path everywhere in this route.
+    contentType: "collection",
+    contentId: slug.join("/"),
   });
 }
 

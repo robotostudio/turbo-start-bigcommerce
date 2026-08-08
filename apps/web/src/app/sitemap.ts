@@ -1,14 +1,15 @@
+import { Logger } from "@workspace/logger";
 import { client } from "@workspace/sanity/client";
-import {
-  queryCollectionPaths,
-  queryProductPaths,
-  querySitemapData,
-} from "@workspace/sanity/query";
+import { querySitemapData } from "@workspace/sanity/query";
 import type { QuerySitemapDataResult } from "@workspace/sanity/types";
 import type { MetadataRoute } from "next";
 
+import { getCategoryPaths, getProductPaths } from "@/lib/bigcommerce/catalog";
+import type { StorefrontQueryResult } from "@/lib/bigcommerce/client";
 import { fetchOrFallback } from "@/lib/build-guard";
 import { getBaseUrl } from "@/utils";
+
+const logger = new Logger("Sitemap");
 
 type ChangeFrequency = NonNullable<
   MetadataRoute.Sitemap[number]["changeFrequency"]
@@ -20,7 +21,7 @@ type SitemapRank = {
   readonly changeFrequency: ChangeFrequency;
 };
 
-/** A rank plus the prefix joined to each Sanity slug or commerce handle. */
+/** A rank plus the prefix joined to each Sanity slug. */
 type SitemapSource = SitemapRank & { readonly pathPrefix: string };
 
 /**
@@ -39,25 +40,34 @@ const SANITY_SITEMAP_SOURCES = [
 })[];
 
 /**
- * Commerce-backed routes — product and collection documents synced into
- * Sanity. These reuse the path queries that also drive `generateStaticParams`
- * and llms.txt rather than being folded into `querySitemapData`. Results are
- * fetched by mapping over this array, so they stay index-aligned with it.
+ * Commerce-backed routes. These call the same BigCommerce path enumeration
+ * that `generateStaticParams` and llms.txt use, so the three surfaces cannot
+ * disagree about which catalog pages exist. Results are fetched by mapping
+ * over this array, so they stay index-aligned with it.
+ *
+ * There is no `pathPrefix`: a BigCommerce path arrives whole, already carrying
+ * its `/products/` or `/collections/` segment. Visibility filtering moves with
+ * the source — the storefront API omits a product or category the merchant has
+ * unpublished, which is what the `store.isVisible` clause on the retired GROQ
+ * queries was mirroring.
  */
 const COMMERCE_SITEMAP_SOURCES = [
   {
-    query: queryProductPaths,
-    pathPrefix: "/products/",
+    label: "products",
+    fetchPaths: getProductPaths,
     priority: 0.7,
     changeFrequency: "weekly",
   },
   {
-    query: queryCollectionPaths,
-    pathPrefix: "/collections/",
+    label: "collections",
+    fetchPaths: getCategoryPaths,
     priority: 0.6,
     changeFrequency: "weekly",
   },
-] as const satisfies readonly (SitemapSource & { query: string })[];
+] as const satisfies readonly (SitemapRank & {
+  label: string;
+  fetchPaths: () => Promise<StorefrontQueryResult<string[]>>;
+})[];
 
 /** Routes with no backing document. */
 const STATIC_SITEMAP_ENTRIES = [
@@ -68,7 +78,7 @@ const STATIC_SITEMAP_ENTRIES = [
 const baseUrl = getBaseUrl();
 
 /**
- * Sanity sources carry `_updatedAt`; commerce handles have no timestamp, so
+ * Sanity sources carry `_updatedAt`; commerce paths have no timestamp, so
  * they fall back to now — matching what each branch emitted previously.
  */
 function toEntry(
@@ -89,17 +99,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     toEntry(path, rank)
   );
 
-  // Every dynamic entry comes from one round trip. If it fails there is no
-  // partial sitemap to salvage, so fall back to the static routes rather than
-  // failing the build (or, in production, serving a 500 to a crawler).
+  // The editorial half is one round trip. If it fails there is no partial
+  // sitemap to salvage, so fall back to the static routes rather than failing
+  // the build (or, in production, serving a 500 to a crawler).
   const fetched = await fetchOrFallback(
     "Sanity sitemap data",
     "the sitemap lists static routes only",
     async () => {
       const [sanityDocs, commercePaths] = await Promise.all([
         client.fetch(querySitemapData),
+        // A catalog read that fails costs its own section and nothing else —
+        // the editorial routes are already in hand, and llms.txt degrades the
+        // same way for the same reason.
         Promise.all(
-          COMMERCE_SITEMAP_SOURCES.map((source) => client.fetch(source.query))
+          COMMERCE_SITEMAP_SOURCES.map(async ({ label, fetchPaths }) => {
+            const result = await fetchPaths();
+            if (result.ok) {
+              return result.data;
+            }
+            logger.error(`Failed to load ${label} for the sitemap`, {
+              error: result.error,
+            });
+            return [];
+          })
         ),
       ]);
       return { sanityDocs, commercePaths };
@@ -122,10 +144,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       )
     ),
 
-    ...COMMERCE_SITEMAP_SOURCES.flatMap(({ pathPrefix, ...rank }, index) =>
-      (commercePaths[index] ?? [])
-        .filter((handle): handle is string => handle !== null)
-        .map((handle) => toEntry(`${pathPrefix}${handle}`, rank))
+    // BigCommerce paths end in a slash; the canonical URL the page itself
+    // emits does not, and a sitemap that disagrees with the canonical tag is
+    // asking a crawler to pick one.
+    ...COMMERCE_SITEMAP_SOURCES.flatMap(({ label: _label, ...rank }, index) =>
+      (commercePaths[index] ?? []).map((path) =>
+        toEntry(path.replace(/\/+$/, ""), rank)
+      )
     ),
   ];
 }

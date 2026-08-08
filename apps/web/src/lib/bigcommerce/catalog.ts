@@ -570,7 +570,11 @@ const StoreSettingsQuery = graphql(`
   }
 `);
 
-/** Paths only. Cheap enough to page through a whole catalog at build time. */
+/**
+ * Scalars only. Cheap enough to page through a whole catalog at build time —
+ * `entityId` and `name` ride along because they cost nothing next to `path`
+ * and save the OG preview a second enumeration.
+ */
 const ProductPathsQuery = graphql(`
   query ProductPaths($first: Int!, $after: String) {
     site {
@@ -581,6 +585,8 @@ const ProductPathsQuery = graphql(`
         }
         edges {
           node {
+            entityId
+            name
             path
           }
         }
@@ -905,11 +911,23 @@ export function prerenderLimit(): number {
   return env.BIGCOMMERCE_PRERENDER_LIMIT;
 }
 
-/** One page of product paths, plus the cursor for the next one. */
+/** The scalars `ProductPathsQuery` returns for one product. */
+export type CatalogProductSummary = {
+  entityId: number;
+  name: string;
+  path: string;
+};
+
+/** One page of product summaries, plus the cursor for the next one. */
 async function fetchProductPathPage(
   first: number,
   after: string | null
-): Promise<StorefrontQueryResult<{ paths: string[]; next: string | null }>> {
+): Promise<
+  StorefrontQueryResult<{
+    products: CatalogProductSummary[];
+    next: string | null;
+  }>
+> {
   const result = await storefrontQuery(ProductPathsQuery, {
     variables: { first, after },
   });
@@ -923,7 +941,7 @@ async function fetchProductPathPage(
   return {
     ok: true,
     data: {
-      paths: nodes(connection).map((product) => product.path),
+      products: nodes(connection),
       next: connection.pageInfo.hasNextPage
         ? (connection.pageInfo.endCursor ?? null)
         : null,
@@ -932,28 +950,29 @@ async function fetchProductPathPage(
 }
 
 /**
- * Product paths for `generateStaticParams`, the sitemap and llms.txt, paged
- * until the cap is reached rather than fetched in one oversized request.
+ * The same walk as `getProductPaths`, keeping the id and name each page
+ * already carried. Its one caller is the Open Graph preview gallery, which
+ * needs the id the card is keyed by.
  */
-export async function getProductPaths(
+export async function getProductSummaries(
   limit = prerenderLimit()
-): Promise<StorefrontQueryResult<string[]>> {
-  const paths: string[] = [];
+): Promise<StorefrontQueryResult<CatalogProductSummary[]>> {
+  const products: CatalogProductSummary[] = [];
   let after: string | null = null;
 
-  while (paths.length < limit) {
-    const first = Math.min(PATHS_PAGE_SIZE, limit - paths.length);
+  while (products.length < limit) {
+    const first = Math.min(PATHS_PAGE_SIZE, limit - products.length);
     const result = await fetchProductPathPage(first, after);
 
     if (!result.ok) {
       return result;
     }
 
-    paths.push(...result.data.paths);
+    products.push(...result.data.products);
 
     // An empty page that still claims a next cursor would spin the build
     // forever, so no progress ends the walk regardless of what the API says.
-    if (!result.data.next || result.data.paths.length === 0) {
+    if (!(result.data.next && result.data.products.length > 0)) {
       break;
     }
 
@@ -963,7 +982,21 @@ export async function getProductPaths(
   // `first` already bounds each request, so this only bites if the API returns
   // more than it was asked for. The cap is the point of the whole function —
   // it holds whatever the other end does.
-  return { ok: true, data: paths.slice(0, limit) };
+  return { ok: true, data: products.slice(0, limit) };
+}
+
+/**
+ * Product paths for `generateStaticParams`, the sitemap and llms.txt, paged
+ * until the cap is reached rather than fetched in one oversized request.
+ */
+export async function getProductPaths(
+  limit = prerenderLimit()
+): Promise<StorefrontQueryResult<string[]>> {
+  const result = await getProductSummaries(limit);
+
+  return result.ok
+    ? { ok: true, data: result.data.map((product) => product.path) }
+    : result;
 }
 
 /**
