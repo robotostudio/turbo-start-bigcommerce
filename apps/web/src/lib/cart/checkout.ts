@@ -26,6 +26,31 @@ const CreateCartRedirectUrlsMutation = graphql(`
   }
 `);
 
+const CartExistsQuery = graphql(`
+  query CartExists($entityId: String!) {
+    site {
+      cart(entityId: $entityId) {
+        entityId
+      }
+    }
+  }
+`);
+
+/**
+ * Whether BigCommerce has really lost the cart, asked directly.
+ *
+ * `site.cart` answers null for a cart that does not exist, which is the one
+ * unambiguous signal available — the redirect mutation gives none. A request
+ * that fails for any other reason is not evidence of anything, so it reads as
+ * "still there" and nothing gets thrown away.
+ */
+async function cartIsGone(cartId: string): Promise<boolean> {
+  const result = await storefrontQuery(CartExistsQuery, {
+    variables: { entityId: cartId },
+  });
+  return result.ok && result.data.site.cart === null;
+}
+
 /**
  * Mints a hosted-checkout URL for the current cart.
  *
@@ -74,6 +99,23 @@ export async function redirectToCheckout(): Promise<CheckoutRedirect> {
       ?.redirectedCheckoutUrl;
 
   if (!url) {
+    // A cart that no longer exists is the common reason, and BigCommerce does
+    // not say so: measured against the live store, `createCartRedirectUrls`
+    // against a deleted or made-up cart id answers 200 with `redirectUrls:
+    // null` and no GraphQL error at all, so the classified CART_NOT_FOUND
+    // above never fires for it. The stale id then survives until some later
+    // cart read happens to clear it, which is why a checkout straight after
+    // the previous one converted the cart fails once and works on the retry.
+    //
+    // Asking whether the cart is really gone costs a request only on this
+    // path, and it has to be asked: clearing on a null URL alone would throw
+    // away a live cart whenever BigCommerce answers oddly for any other
+    // reason.
+    if (await cartIsGone(cartId)) {
+      await clearCartId();
+      logger.error("redirectToCheckout: cart no longer exists, id cleared");
+      return { ok: false, message: "Your cart is empty." };
+    }
     logger.error("redirectToCheckout: BigCommerce returned no checkout URL");
     return { ok: false, message: "Checkout is unavailable. Please try again." };
   }

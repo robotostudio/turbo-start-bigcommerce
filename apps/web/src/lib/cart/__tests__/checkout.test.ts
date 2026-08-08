@@ -14,10 +14,11 @@ vi.mock("@workspace/env/server", () => ({
 }));
 
 const cartId = vi.fn<() => Promise<string | null>>();
+const clearCartId = vi.fn();
 vi.mock("@/lib/cart/server", () => ({
   getCartId: () => cartId(),
   setCartId: vi.fn(),
-  clearCartId: vi.fn(),
+  clearCartId: () => clearCartId(),
 }));
 
 const storefrontQuery = vi.fn();
@@ -90,15 +91,55 @@ describe("redirectToCheckout", () => {
   it("returns a message when BigCommerce answers without a URL", async () => {
     // The failure this replaces was silent. Every path has to give the caller
     // something to show, or the button is a no-op again.
-    storefrontQuery.mockResolvedValue({
-      ok: true,
-      data: { cart: { createCartRedirectUrls: { redirectUrls: null } } },
-    });
+    storefrontQuery
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { cart: { createCartRedirectUrls: { redirectUrls: null } } },
+      })
+      // The cart is still there, so the null URL was something else.
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { site: { cart: { entityId: "cart-1" } } },
+      });
 
     const result = await redirectToCheckout();
 
     expect(result.ok).toBe(false);
     expect(result.ok === false && result.message).toBeTruthy();
+    expect(clearCartId).not.toHaveBeenCalled();
+  });
+
+  it("clears a dead cart id, which BigCommerce reports as no URL rather than an error", async () => {
+    // Measured live: the redirect mutation answers 200 with `redirectUrls:
+    // null` for a cart that does not exist, so the id would otherwise survive
+    // and fail the next click too.
+    storefrontQuery
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { cart: { createCartRedirectUrls: { redirectUrls: null } } },
+      })
+      .mockResolvedValueOnce({ ok: true, data: { site: { cart: null } } });
+
+    expect(await redirectToCheckout()).toEqual({
+      ok: false,
+      message: "Your cart is empty.",
+    });
+    expect(clearCartId).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the cart id when the existence check itself fails", async () => {
+    // A failed request is not evidence the cart is gone. Throwing away a live
+    // cart on a transport blip would lose the shopper their basket.
+    storefrontQuery
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { cart: { createCartRedirectUrls: { redirectUrls: null } } },
+      })
+      .mockResolvedValueOnce({ ok: false, kind: "network", error: "boom" });
+
+    await redirectToCheckout();
+
+    expect(clearCartId).not.toHaveBeenCalled();
   });
 
   it("returns a message when the request itself fails", async () => {
