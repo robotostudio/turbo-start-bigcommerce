@@ -15,6 +15,7 @@
       "apps/*/*.tsx",
       "apps/*/*.mjs",
       "packages/*/src/**",
+      "e2e/**",
       "*.ts",
       "*.tsx",
       "*.js",

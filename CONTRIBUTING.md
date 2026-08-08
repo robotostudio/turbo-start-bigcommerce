@@ -213,6 +213,42 @@ that order. If the dataset says one thing and the page says another, the page is
 than the dataset is wrong — check what is cached between them before you go looking for a bug in the
 data.
 
+## The end-to-end suite
+
+`e2e/` holds two Playwright specs, and the bar for a third is high. Everything else in this repo
+is tested as pure functions fed committed fixtures; a spec earns a place here only when the thing
+it checks depends on real BigCommerce state changing between two requests, which is what a fixture
+cannot express. A case added here that a unit test could cover makes the suite slower without
+making it stricter.
+
+The two that qualify: a checkout URL is minted per click and spent on use — ask for the same one
+twice and BigCommerce bounces you to `cart.php` — and a stale product slug resolves through a 301
+to the canonical page.
+
+```bash
+rm -rf apps/web/.next && pnpm build:web && pnpm test:e2e
+```
+
+The build is not optional. `next start` serves whatever is already in `.next` and never rebuilds,
+so without it you are testing yesterday.
+
+It is not part of CI, deliberately. The workflow seeds env from `.env.example`, whose placeholder
+credentials reach no store, so every spec would fail on its first storefront call. The suite runs
+headless and reads `apps/web/.env.local`, so any runner holding real credentials can run it as it
+stands.
+
+One store fixture it needs: a 301 from `/products/wren-washed-cap-old/` to the Wren Washed Cap
+product. `pnpm seed:bigcommerce` will not create it — the catalog fixture has no notion of
+redirects — so on a fresh store it is one Admin API call by hand:
+
+```bash
+curl -X PUT "https://api.bigcommerce.com/stores/$BIGCOMMERCE_STORE_HASH/v3/storefront/redirects" \
+  -H "X-Auth-Token: $BIGCOMMERCE_ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '[{"site_id":1000,"from_path":"/products/wren-washed-cap-old/","to":{"type":"product","entity_id":191}}]'
+```
+
+`site_id` and `entity_id` are your store's, from `GET /v3/sites` and the product itself.
+
 ## Project Structure
 
 ```

@@ -421,6 +421,11 @@ const ProductByPathQuery = graphql(
       route(path: $path, redirectBehavior: FOLLOW) {
         redirect {
           toUrl
+          # Which kind of redirect this is decides whether the shopper may be
+          # sent off this storefront — see redirectTarget below.
+          to {
+            __typename
+          }
         }
         node {
           __typename
@@ -497,6 +502,11 @@ const CategoryByPathQuery = graphql(
       route(path: $path, redirectBehavior: FOLLOW) {
         redirect {
           toUrl
+          # Which kind of redirect this is decides whether the shopper may be
+          # sent off this storefront — see redirectTarget below.
+          to {
+            __typename
+          }
         }
         node {
           __typename
@@ -724,22 +734,43 @@ export function flattenCategoryTree(
 }
 
 /**
- * `toUrl` is absolute. Comparing pathnames keeps a redirect that points at the
- * path we already asked for from becoming a redirect loop in production.
+ * Where a resolved redirect should actually send the shopper.
+ *
+ * `toUrl` is absolute and on BigCommerce's own canonical domain, which is not
+ * where this storefront lives. Following it verbatim walks a shopper who
+ * opened a stale link off the headless storefront and onto the
+ * BigCommerce-hosted store — a different site, with different navigation and
+ * none of the editorial content. Every redirect kind but one names an entity
+ * this app renders itself, so the path is what carries over.
+ *
+ * `ManualRedirect` is the exception and stays absolute: it is whatever the
+ * merchant typed, and it is allowed to point at another domain entirely.
+ *
+ * Comparing pathnames also keeps a redirect that points at the path we already
+ * asked for from becoming a redirect loop in production.
  */
 function redirectTarget(
-  toUrl: string | undefined,
+  redirect: { toUrl: string; to: { __typename: string } } | null | undefined,
   path: string
 ): string | null {
-  if (!toUrl) {
+  if (!redirect) {
     return null;
   }
 
+  let pathname: string;
   try {
-    return new URL(toUrl).pathname === path ? null : toUrl;
+    pathname = new URL(redirect.toUrl).pathname;
   } catch {
-    return toUrl === path ? null : toUrl;
+    pathname = redirect.toUrl;
   }
+
+  if (pathname === path) {
+    return null;
+  }
+
+  return redirect.to.__typename === "ManualRedirect"
+    ? redirect.toUrl
+    : pathname;
 }
 
 // ---------------------------------------------------------------------------
@@ -765,7 +796,7 @@ export async function getProductByPath(
     ok: true,
     data: {
       node: node?.__typename === "Product" ? node : null,
-      redirectTo: redirectTarget(redirect?.toUrl, path),
+      redirectTo: redirectTarget(redirect, path),
     },
   };
 }
@@ -866,7 +897,7 @@ export async function getCategoryByPath(
     ok: true,
     data: {
       node: node?.__typename === "Category" ? node : null,
-      redirectTo: redirectTarget(redirect?.toUrl, path),
+      redirectTo: redirectTarget(redirect, path),
     },
   };
 }

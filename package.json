@@ -14,6 +14,7 @@
     "format:check": "turbo run format:check",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
+    "test:e2e": "node --env-file-if-exists=apps/web/.env.local node_modules/@playwright/test/cli.js test",
     "check-refs": "./scripts/check-forbidden-refs.sh --strict",
     "bigcommerce:schema": "pnpm --filter web bigcommerce:schema",
     "bigcommerce:smoke": "pnpm --filter web bigcommerce:smoke",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.8",
+    "@playwright/test": "^1.62.1",
     "@workspace/typescript-config": "workspace:*",
     "tsx": "^4.19.3",
     "turbo": "^2.7.5",
