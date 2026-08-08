@@ -56,22 +56,47 @@ const ROUTE_PREFIXES = new Set(["products", "collections"]);
 /**
  * BigCommerce `custom_url.url` is a full storefront path with a leading slash
  * and usually a trailing one: `/products/wren-washed-cap/`,
- * `/collections/jackets/leather/`. Our routes are single dynamic segments, so
- * a stored slug containing a slash can never match.
- *
- * Drop the route prefix when there is one, then join what's left with `-`.
- * Flat categories give the handle unchanged; nested ones flatten losslessly
- * (`jackets-leather`), which the last segment alone would not — two branches
- * sharing a leaf name would collide. Products with a customised URL carry no
+ * `/collections/jackets/leather/`. Products with a customised URL carry no
  * prefix at all (`/turbo-start-care-guide-digital/` on the sandbox), which is
  * why the prefix is stripped conditionally rather than by position.
  */
-export function slugFromPath(path: string): string {
+function pathSegments(path: string): string[] {
   const segments = path.split("/").filter(Boolean);
   if (segments[0] && ROUTE_PREFIXES.has(segments[0])) {
     segments.shift();
   }
-  return segments.join("-");
+  return segments;
+}
+
+/**
+ * The document's identifier, joined with `-`.
+ *
+ * Flat categories give the handle unchanged; nested ones flatten losslessly
+ * (`jackets-leather`), which the last segment alone would not — two branches
+ * sharing a leaf name would collide.
+ *
+ * This is an identifier and not a URL, and the two must not be conflated. Every
+ * store mints its own `entityId`s, so `apps/studio/seed/reference-dataset.ndjson`
+ * names catalog documents by slug and `seed-refs.ts` swaps each one for the id
+ * this store handed out — a placeholder its regex reads as `[a-z0-9-]+`, with no
+ * `/` in the class. `verify.ts` matches catalog paths to documents through the
+ * same flattening. Putting a real path in here breaks both. `handleFromPath`
+ * carries the URL shape instead.
+ */
+export function slugFromPath(path: string): string {
+  return pathSegments(path).join("-");
+}
+
+/**
+ * The href tail: every segment below the route prefix, joined with `/`.
+ *
+ * `/collections/[...slug]` is a catch-all resolving against the live catalog, so
+ * a nested category is reached at `/collections/tops/henleys` — which the
+ * flattened slug cannot spell. Stored alongside the slug as `store.path`, it is
+ * what every surface that builds a category link projects (ROB-2576).
+ */
+export function handleFromPath(path: string): string {
+  return pathSegments(path).join("/");
 }
 
 // ---------------------------------------------------------------------------
@@ -257,6 +282,8 @@ export function toCategoryDocument(category: RestCategory): SyncedDocument {
       entityId: category.id,
       title: category.name,
       slug: { _type: "slug", current: slugFromPath(category.custom_url.url) },
+      // Beside the slug, never instead of it. See `handleFromPath`.
+      path: handleFromPath(category.custom_url.url),
       descriptionHtml: category.description,
       parentEntityId: category.parent_id || null,
       isVisible: category.is_visible,

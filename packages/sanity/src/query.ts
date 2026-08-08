@@ -67,13 +67,28 @@ const imageFragment = /* groq */ `
 // `array::compact` -- `buttons[]`, footer `links[]` and `markDefs[]` keep their
 // length and their objects, and the components already fall back on a missing
 // href.
+//
+// `coalesce(store.path, store.slug.current)` is the tail of every category URL
+// this file builds, and it is spelled out at each of the four rather than
+// factored into a helper -- a second interpolated function inside these
+// fragments overflows the typegen parser's stack, which drops eight queries from
+// `sanity.types.ts` and reports only a warning. The reason it is not the slug
+// alone: `slugFromPath` in `packages/sanity-sync/src/upsert.ts` joins a nested
+// category's segments with `-`, so Henleys under Tops reads `tops-henleys`
+// while its storefront path is `/collections/tops/henleys/`, and an editor who
+// picked it by hand got a 404 (ROB-2576). `store.path` is the same segments
+// joined with `/`, written beside the slug by the same sync -- beside, because
+// `seed-refs.ts` matches documents by slug through a regex with no `/` in its
+// class. The fallback is not padding: `path` lands only once the sync that
+// introduced it has run, and until then every top-level category keeps the
+// single-segment href it already had.
 const hrefFragment = <A extends string, F extends string>(at: A, fallback: F) =>
   /* groq */ `"href": select(
       ${at}type == "internal" => coalesce(
         ${at}internal->slug.current,
         select(
           ${at}internal->store.isDeleted != true && ${at}internal->store.isVisible == true =>
-            "/collections/" + ${at}internal->store.slug.current
+            "/collections/" + coalesce(${at}internal->store.path, ${at}internal->store.slug.current)
         )
       ),
       ${at}type == "external" => ${at}external,
@@ -344,11 +359,16 @@ const subscribeNewsletterBlock = /* groq */ `
  * `sections/explore-categories.tsx` and feed the same `CollectionCard`, and a
  * key that exists on one branch only widens the generated type into a union
  * that nothing downstream expects.
+ *
+ * `slug` keeps its name and carries the URL tail (see `hrefFragment`), because
+ * that is the only thing its consumer does with it: `sanityCollectionToCardProps`
+ * passes it straight to `CollectionCard`'s `handle` and the card renders
+ * `/collections/{handle}`. Cards key on `_id`.
  */
 const categoryCardFields = /* groq */ `
   _id,
   "title": store.title,
-  "slug": store.slug.current,
+  "slug": coalesce(store.path, store.slug.current),
   "imageUrl": store.imageUrl,
 ` as const;
 
@@ -440,7 +460,7 @@ const editorialTwoUpBlock = /* groq */ `
       // and dropping the item would leave one column in a layout the schema
       // validates as exactly two.
       "collectionHref": select(
-        collection->store.isDeleted != true && collection->store.isVisible == true => "/collections/" + collection->store.slug.current,
+        collection->store.isDeleted != true && collection->store.isVisible == true => "/collections/" + coalesce(collection->store.path, collection->store.slug.current),
         null
       ),
     })
@@ -690,7 +710,7 @@ export const queryNavbarData = defineQuery(`
         // identical shape.
         "collectionLinks": array::compact(collectionLinks[@->store.isDeleted != true && @->store.isVisible == true]->{
           _id,
-          "slug": store.slug.current,
+          "slug": coalesce(store.path, store.slug.current),
           store{
             title,
             imageUrl
@@ -702,7 +722,7 @@ export const queryNavbarData = defineQuery(`
         "collectionProducts": select(
           collectionProducts->store.isDeleted != true && collectionProducts->store.isVisible == true => collectionProducts->{
             _id,
-            "slug": store.slug.current,
+            "slug": coalesce(store.path, store.slug.current),
             store{
               title
             }

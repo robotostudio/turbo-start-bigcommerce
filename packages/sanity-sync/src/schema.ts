@@ -187,7 +187,7 @@ export const bigcommerceCategory = defineType({
   title: "Category",
   type: "document",
   description:
-    "A BigCommerce category. Rendered at /collections/{slug}; nested paths are flattened into one segment.",
+    "A BigCommerce category. Rendered at /collections/{path}; the slug beside it is a flattened identifier, not a URL.",
   fields: [
     defineField({
       name: "store",
@@ -199,6 +199,18 @@ export const bigcommerceCategory = defineType({
         defineField({ name: "entityId", type: "number", readOnly: true }),
         defineField({ name: "title", type: "string", readOnly: true }),
         syncedSlug,
+        defineField({
+          // The two are deliberately both here. `slug` names the document —
+          // `seed-refs.ts` and `verify.ts` match on it and neither tolerates a
+          // `/` — while `path` is the only one that survives being used as a
+          // URL. Every link surface projects this one.
+          name: "path",
+          type: "string",
+          title: "Storefront path",
+          description:
+            "Every segment below /collections, joined with `/` — `tops/henleys`. Derived from the BigCommerce storefront path.",
+          readOnly: true,
+        }),
         defineField({ name: "descriptionHtml", type: "text", readOnly: true }),
         defineField({ name: "parentEntityId", type: "number", readOnly: true }),
         defineField({ name: "isVisible", type: "boolean", readOnly: true }),
