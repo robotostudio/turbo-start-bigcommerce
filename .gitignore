@@ -44,3 +44,17 @@ npm-debug.log*
 
 # Playwright MCP console logs
 .playwright-mcp/
+# shelve-managed-block
+.env
+.env.*
+!.env.template
+!.env.example
+.shelve/
+# end shelve-managed-block
+
+# shelve init writes one of these per agent tool; regenerate with `shelve init`
+.cursorignore
+.aiderignore
+.codeiumignore
+.continueignore
+.aigignore

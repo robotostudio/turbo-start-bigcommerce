@@ -1,0 +1,5 @@
+{
+  "$schema": "https://shelve.cloud/schema.json",
+  "slug": "robotostudio",
+  "defaultEnv": "development"
+}
