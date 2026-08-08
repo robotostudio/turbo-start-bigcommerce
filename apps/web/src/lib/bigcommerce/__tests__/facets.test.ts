@@ -89,6 +89,42 @@ describe("toFacets, branching on the typed union", () => {
     );
   });
 
+  it("does not offer a value nothing matches", () => {
+    // About `toFacet`, not about BigCommerce: an option that arrives at zero
+    // and unselected is a control that cannot change the grid, so the panel
+    // stops offering it. What the store puts in `productCount` is its business.
+    const fit = facets().find((facet) => facet.name === "Fit");
+    const labels =
+      fit?.kind === "options" ? fit.options.map((option) => option.label) : [];
+
+    expect(labels).toContain("Relaxed");
+    expect(labels).not.toContain("Slim");
+  });
+
+  it("keeps a selected value that has narrowed to zero", () => {
+    // Dropping it would remove the control that undoes the combination, and
+    // the label its chip reads from.
+    const fit = facets().find((facet) => facet.name === "Fit");
+    const labels =
+      fit?.kind === "options" ? fit.options.map((option) => option.label) : [];
+
+    expect(labels).toContain("Boxy");
+  });
+
+  it("drops a facet whose every value reached zero", () => {
+    // Same rule as the empty facet above: a heading with nothing pickable under
+    // it reads as a UI bug.
+    expect(facets().map((facet) => facet.name)).not.toContain("Material");
+  });
+
+  it("keeps hidden counts, which are not zeroes", () => {
+    // `displayProductCount: false` arrives as `null`, and a facet that hides
+    // its counts says nothing about how many products are behind each value.
+    const category = facets().find((facet) => facet.name === "Category");
+
+    expect(category?.kind === "options" && category.options).toHaveLength(1);
+  });
+
   it("keeps two attribute facets distinct", () => {
     // Both are `ProductAttributeSearchFilter`; keying on the type name alone
     // collides in React and in the collapse state.

@@ -312,7 +312,28 @@ function toFacet(facet: SearchFacet): Facet | null {
 
   const options = optionsFor(facet);
   if (options === null) return null;
-  return options.length ? { kind: "options", ...shared, options } : null;
+  const offerable = options.filter(isOfferable);
+  return offerable.length
+    ? { kind: "options", ...shared, options: offerable }
+    : null;
+}
+
+/**
+ * Whether an option is worth offering, which is a rule about this panel rather
+ * than a claim about what BigCommerce counts.
+ *
+ * A value that matches nothing in the current result set is a control that
+ * cannot change the grid, so it is dropped — and a facet left with none of them
+ * drops with it, by the same rule that drops an empty one above.
+ *
+ * Two values are not zero and must survive. `null` is a facet that asked for its
+ * counts to be hidden, which says nothing about how many products are behind
+ * each value. And a *selected* value at zero is a combination the shopper
+ * narrowed to nothing: removing it from the panel would take away the control
+ * that undoes it, and the label its chip reads from.
+ */
+function isOfferable(option: FacetOption): boolean {
+  return option.productCount !== 0 || option.isSelected;
 }
 
 /** `null` for a union member added after this was written. */

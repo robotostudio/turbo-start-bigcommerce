@@ -1,9 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { ActiveFilters } from "@/components/collection/active-filters";
 import { CollectionProducts } from "@/components/collection/collection-products";
-import { FilterPanel } from "@/components/collection/filter-panel";
 import { ProductGrid } from "@/components/collection/product-grid";
 import {
   ListingControls,
@@ -172,28 +170,30 @@ export default async function CollectionPage({ params }: PageProps) {
           <ListingControls />
         </div>
 
-        {/* `useSearchParams` consumers need Suspense boundaries on a
-         * statically generated route; each fallback is the default view the
-         * server already rendered, so nothing jumps on hydration. */}
-        <div className="mb-8 flex flex-col gap-4">
-          {/* Both empty on a plan without Product Filtering, which is what the
-           * panel's "unavailable" state is for. Passed through rather than
-           * derived: the same read that returned these products returned the
-           * facets that describe them. */}
-          <Suspense fallback={null}>
-            <FilterPanel filteringEnabled={filteringEnabled} filters={facets} />
-          </Suspense>
-          <Suspense fallback={null}>
-            <ActiveFilters facets={facets} />
-          </Suspense>
-        </div>
-
+        {/* One boundary, not three: the panel, the chips and the grid all read
+         * the same listing response, and only the component that refetches it
+         * has the current one. `useSearchParams` consumers need a boundary at
+         * all on a statically generated route; the fallback is the default view
+         * the server already rendered — grid plus the gap the collapsed panel
+         * occupies — so nothing jumps on hydration.
+         *
+         * Facets and the plan flag are passed through rather than derived: the
+         * same read that returned these products returned the facets that
+         * describe them. Both are empty on a plan without Product Filtering,
+         * which is what the panel's "unavailable" state is for. */}
         <Suspense
-          fallback={<ProductGrid density="comfortable" products={products} />}
+          fallback={
+            <>
+              <div className="mb-8" />
+              <ProductGrid density="comfortable" products={products} />
+            </>
+          }
         >
           <CollectionProducts
             categoryEntityId={category.entityId}
             handle={handle}
+            initialFacets={facets}
+            initialFilteringEnabled={filteringEnabled}
             initialPageInfo={pageInfo}
             initialProducts={products}
           />
