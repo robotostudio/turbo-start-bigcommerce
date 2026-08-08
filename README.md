@@ -152,6 +152,7 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 | `BIGCOMMERCE_API_URL` | No | Endpoint override. Derived from the hash and channel if unset |
 | `BIGCOMMERCE_PRERENDER_LIMIT` | No | How many catalog paths to prerender at build, defaults to `100`. The rest render on demand |
 | `NEXT_PUBLIC_STORE_CURRENCY` | No | ISO 4217 code, defaults to `GBP` |
+| `SANITY_REVALIDATE_SECRET` | In production | Shared with the Sanity webhook that publishes content changes. See [Wiring up content revalidation](#wiring-up-content-revalidation). Without it `/api/revalidate` answers 503 and published edits never reach the site |
 
 ### Studio (`apps/studio/.env`)
 
@@ -203,6 +204,48 @@ The second list catches leftovers from the platform this starter was ported off.
 3. Set the root directory to `apps/web`
 4. Add the web environment variables
 5. Deploy
+
+### Wiring up content revalidation
+
+**Do this before you call a deployment finished.** Without it, editors publish into a void: the Content
+Lake takes the change instantly and the deployed site keeps serving the old page indefinitely.
+
+`sanityFetch` caches every Sanity read with `revalidate: false` in production and tags it `sanity`, so
+nothing expires on a timer — a named tag has to be invalidated. `/api/revalidate` does that, and a Sanity
+webhook is what calls it.
+
+1. Generate a secret and add it to the deployment as `SANITY_REVALIDATE_SECRET`:
+
+   ```bash
+   openssl rand -hex 24
+   ```
+
+2. In [sanity.io/manage](https://sanity.io/manage) → your project → **API** → **Webhooks**, create one:
+
+   | Field | Value |
+   |-------|-------|
+   | URL | `https://your-site.com/api/revalidate` |
+   | Dataset | the one the site reads, e.g. `production` |
+   | Trigger on | Create, Update, Delete |
+   | Filter | `!(_id in path("drafts.**"))` |
+   | Projection | `{_id, _type}` |
+   | HTTP method | `POST` |
+   | API version | `v2025-05-08` |
+   | Secret | the value from step 1 |
+
+   The filter keeps drafts from firing the hook — they cannot affect a published page, and every
+   keystroke in the Studio saves a draft. The projection is only used for the log line; the route
+   revalidates the same tag whatever the payload says, so keep it small.
+
+3. Publish something and reload the page. It should change on the first request.
+
+The route rejects anything without a valid signature, so an unset or mismatched secret shows up as
+`401`s in the Sanity webhook log rather than as silent staleness. A missing secret answers `503`.
+
+One deliberate limitation: the `sanity` tag is invalidated wholesale, because Sanity's sync tags are
+content hashes rather than document ids and a webhook payload cannot be mapped to them. One publish
+therefore refreshes all Sanity-backed content, not just the document that changed. For per-route
+precision, give the route's own `sanityFetch` call an extra tag and invalidate that instead.
 
 ### Sanity Studio
 

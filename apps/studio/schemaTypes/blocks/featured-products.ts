@@ -7,7 +7,7 @@ export const featuredProducts = defineType({
   icon: Star,
   title: "Featured Products",
   description:
-    "A grid of hand-picked products. Falls back to best-selling products when none are selected.",
+    "A grid of hand-picked products. Falls back to the newest products when none are selected.",
   fields: [
     defineField({
       name: "heading",
@@ -21,7 +21,7 @@ export const featuredProducts = defineType({
       title: "Products",
       type: "array",
       description:
-        "Pick up to 4 products to feature. Leave empty to automatically show best-selling products.",
+        "Pick up to 4 products to feature. Leave empty to automatically show the newest products.",
       of: [
         {
           type: "reference",
@@ -43,7 +43,7 @@ export const featuredProducts = defineType({
       subtitle:
         count > 0
           ? `${count} product${count === 1 ? "" : "s"}`
-          : "Best-selling (auto)",
+          : "Newest (auto)",
     }),
   },
 });

@@ -62,6 +62,30 @@ export const customUrl = defineType({
       options: { disableNew: true },
       hidden: ({ parent }) => parent?.type !== "internal",
       to: allLinkableTypes,
+      /**
+       * Weak, and this one costs something — read before reverting it.
+       *
+       * `allLinkableTypes` spans both halves of the content model: synced
+       * catalog documents, which arrive from `pnpm sync:bigcommerce` after the
+       * content import that links to them, and editorial documents (`page`,
+       * `blog`, `blogIndex`), which do not. A strong reference is impossible
+       * for the first group — `sanity dataset import` fails at "Strengthening
+       * references" for any target outside the import set — and the field
+       * cannot be strong for some targets and weak for others.
+       *
+       * What is lost: Sanity no longer refuses to delete a `page` or `blog`
+       * that a navbar link, promo banner or button points at. The link is left
+       * dangling and the storefront renders it as an inert element rather than
+       * a broken route, because every href is built from a dereferenced slug
+       * that is now null.
+       *
+       * What is bought: no "Reference strength mismatch" on a fresh install.
+       * The seed stores all 14 of these weakly, so a strong declaration flags
+       * every navbar link, the promo banner and the collections index the
+       * moment a fork opens the Studio — and the "Convert to strong reference"
+       * button offered alongside it breaks the next seed-and-sync cycle.
+       */
+      weak: true,
       validation: (Rule) =>
         Rule.custom((value, { parent }) => {
           const type = (parent as { type?: string })?.type;
@@ -94,6 +118,9 @@ export const customUrl = defineType({
       type: "reference",
       description: "Select a product to link to",
       to: [{ type: "bigcommerceProduct" }],
+      // Weak for the same reason as every other reference into the synced
+      // catalog: the documents arrive after the content that links to them.
+      weak: true,
       options: { disableNew: true },
       hidden: ({ parent }) => parent?.type !== "product",
       validation: (Rule) =>

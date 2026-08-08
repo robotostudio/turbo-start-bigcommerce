@@ -19,6 +19,10 @@ const editorialItem = defineArrayMember({
       title: "Collection",
       type: "reference",
       to: [{ type: "bigcommerceCategory" }],
+      // Weak for the same reason as `layersShowcase.product`: the category
+      // documents arrive from the sync, after the content import that
+      // references them.
+      weak: true,
       options: { disableNew: true },
       description:
         "The collection this column links to — its image and name are used automatically",
@@ -28,9 +32,12 @@ const editorialItem = defineArrayMember({
   preview: {
     select: {
       title: "collection.store.title",
+      // See `layersShowcase`: names the missing target instead of leaving the
+      // row blank when the referenced category is gone.
+      ref: "collection._ref",
     },
-    prepare: ({ title }) => ({
-      title: title || "Editorial Item",
+    prepare: ({ title, ref }) => ({
+      title: title || (ref ? `Missing category: ${ref}` : "Editorial Item"),
       subtitle: "Editorial Item",
     }),
   },

@@ -5,6 +5,8 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { toast } from "@workspace/ui/components/sonner";
+
 import { redirectToCheckout } from "@/app/cart/actions";
 import { useCart } from "@/components/cart/cart-context";
 import { CartLineItem } from "@/components/cart/cart-line-item";
@@ -19,16 +21,25 @@ export default function CartPage() {
 
   async function handleCheckout() {
     setIsCheckingOut(true);
-    try {
-      // The redirect URL is single-use, so it is minted per click by the
-      // server action — never read off the cart.
-      const confirmed = await settle();
-      if (confirmed) {
-        await redirectToCheckout();
-      }
-    } finally {
+    // Settle first, so an in-flight quantity change is not lost on redirect.
+    const confirmed = await settle();
+    if (!confirmed) {
       setIsCheckingOut(false);
+      return;
     }
+
+    // The redirect URL is single-use, so it is minted per click by the server
+    // action — never read off the cart.
+    const redirect = await redirectToCheckout();
+    if (!redirect.ok) {
+      toast.error(redirect.message);
+      setIsCheckingOut(false);
+      return;
+    }
+
+    // Left disabled on purpose: the window is leaving for BigCommerce, and
+    // re-arming the button would let a second click burn a URL already spent.
+    window.location.href = redirect.url;
   }
 
   if (isLoading && !cart) {

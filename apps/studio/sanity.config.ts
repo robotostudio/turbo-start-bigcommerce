@@ -54,6 +54,20 @@ export default defineConfig({
     assist(),
   ],
   document: {
+    /**
+     * Duplicate is a trap on a synced document, so it is removed from them.
+     *
+     * The sync owns these documents at deterministic ids
+     * (`bigcommerceProduct-{entityId}`). A duplicate lands at a fresh uuid
+     * carrying the same `store.entityId`, which nothing will ever update — and
+     * which the reconcile sweep's soft-delete pass then flags as "no longer in
+     * the catalog", because it is not an id the catalog maps to. Two documents
+     * claiming one BigCommerce entity, one of them permanently wrong.
+     */
+    actions: (prev, { schemaType }) =>
+      schemaType.startsWith("bigcommerce")
+        ? prev.filter((action) => action.action !== "duplicate")
+        : prev,
     newDocumentOptions: (prev, { creationContext }) => {
       const { type } = creationContext;
       if (type === "global") {

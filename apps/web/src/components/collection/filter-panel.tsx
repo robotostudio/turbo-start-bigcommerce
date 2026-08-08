@@ -55,8 +55,12 @@ export function FilterPanel(_props: FilterPanelProps) {
         )}
         inert={!filterOpen}
       >
+        {/* Centred in the row the facets would have filled, not right-aligned
+         * under the Filter button — as a stray line of grey text off to one
+         * side it read as a caption someone forgot to delete rather than as
+         * the panel's answer. */}
         <p
-          className="pt-2 text-right text-sm text-zinc-600 tracking-[0.24px] dark:text-zinc-400"
+          className="border-zinc-200 border-t py-6 text-center text-sm text-zinc-600 tracking-[0.24px] dark:border-zinc-800 dark:text-zinc-400"
           data-testid="filter-panel"
         >
           Filters are unavailable for this store.

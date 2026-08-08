@@ -141,7 +141,11 @@ function GalleryDesktop({
               className="object-cover"
               fill
               priority={index === 0}
-              sizes="(min-width: 1024px) 55vw, 100vw"
+              // Mirrors the PDP grid's own caps on this column — see the
+              // `lg:`/`xl:`/`2xl:` track sizes in `products/[...slug]/page.tsx`.
+              // The old `55vw` described a column this one never was, and
+              // over-declaring pushes every breakpoint a rendition too high.
+              sizes="(min-width: 1536px) 760px, (min-width: 1280px) 600px, (min-width: 1024px) 480px, 100vw"
               src={image.url}
             />
             <span className="absolute top-3 right-3 bg-black/50 p-2 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
@@ -242,11 +246,18 @@ function GalleryMobile({
             }}
             type="button"
           >
+            {/* No `priority` here, unlike the desktop column. Both layouts are
+             * in the DOM at every width — this one is `lg:hidden`, the other
+             * `hidden lg:flex` — and `priority` makes an image eager even when
+             * CSS has hidden it. On desktop that downloaded a full-viewport
+             * rendition, measured at 3840w and 2.5 MB, for a carousel nobody
+             * could see. Without it the default lazy loading never fires for a
+             * `display: none` element, and on mobile this image sits at the top
+             * of the viewport so it is fetched immediately anyway. */}
             <StoreImage
               alt={image.altText ?? "Product image"}
               className="object-cover"
               fill
-              priority={index === 0}
               sizes="100vw"
               src={image.url}
             />

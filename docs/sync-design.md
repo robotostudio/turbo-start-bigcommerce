@@ -160,6 +160,33 @@ never synced would otherwise take the whole batch down with it. Nothing to flag 
 That same `store.isDeleted != true` filter is what makes a re-delivery free. Confirmed against the
 sandbox: the second identical delete reports `absent, 0 document(s), 0 mutation(s)`.
 
+### Why the deterministic ids earn their keep — measured, not argued
+
+Deleting a synced document that page-builder content points at is survivable, and the reason is the
+combination of a weak reference and an id derived from `entityId`. Verified end to end against the
+sandbox on 2026-08-08, not reasoned about:
+
+1. `bigcommerceProduct-183` was deleted from Sanity while the homepage's `layersShowcase` block
+   referenced it. Sanity allowed it without complaint — the reference is weak, so it is not
+   delete-protected. The stored `_ref` stayed on the block; only the target went.
+2. The storefront degraded rather than breaking: the block kept its heading and description and rendered
+   empty collage tiles, because `product->store.slug.current` resolved to null and the component's
+   fetch is gated on that handle. No exception, no blank page.
+3. In the Studio the block row turned red and the field read "Document unavailable".
+4. `pnpm sync:bigcommerce` restored it with **no editor action at all**. The sweep rewrote
+   `bigcommerceProduct-183` — the same id, because the id is a function of the BigCommerce entity rather
+   than of when the document was made — and the dangling `_ref` resolved again to "Aster Denim Coach
+   Jacket".
+
+A random-uuid id scheme fails step 4: the restored document would carry a new id, every reference to it
+would stay dangling, and someone would have to re-pick each one by hand. That is the argument for
+`bigcommerceProduct-{entityId}`, and it is why the ids must never become random, even for documents the
+sync creates fresh.
+
+The one thing this does not do is *tell* anyone. Step 2 is silent on the storefront and step 3 does not
+name which product went missing, which is why the block previews now fall back to `Missing product:
+{_ref}` instead of an empty row.
+
 ### What deduplication?
 
 Nothing here needs a `hash` cache. Every function re-fetches and writes current state, so a duplicate

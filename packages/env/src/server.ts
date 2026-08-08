@@ -12,6 +12,14 @@ const env = createEnv({
   server: {
     SANITY_API_READ_TOKEN: z.string().min(1),
     SANITY_API_WRITE_TOKEN: z.string().min(1),
+    /**
+     * Shared with the Sanity webhook that drives `/api/revalidate`.
+     *
+     * Optional on purpose: a clone with no webhook configured must still
+     * build. The route answers 503 when it is absent rather than accepting
+     * unsigned calls, so the failure is visible without being fatal.
+     */
+    SANITY_REVALIDATE_SECRET: z.string().min(1).optional(),
 
     /** BigCommerce GraphQL Storefront API.
      *  BIGCOMMERCE_STOREFRONT_TOKEN must be a *private* token. Vanilla tokens
