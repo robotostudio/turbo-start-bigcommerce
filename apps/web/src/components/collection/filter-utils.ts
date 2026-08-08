@@ -3,7 +3,7 @@ type ProductFilter = Record<string, unknown>;
 /**
  * Preset price buckets shown in the filter panel. The URL stores the bucket
  * `value` under `filter.price` (e.g. `?filter.price=100-150`) and it round-trips
- * back into a Shopify `{ price: { min, max } }` ProductFilter.
+ * back into a `{ price: { min, max } }` filter for the storefront API.
  *
  * Value format is `<min>-<max>` where an empty side is open-ended:
  *   "-50" → Under $50 · "50-100" → $50–$100 · "150-" → $150+
@@ -91,7 +91,7 @@ function readCategories(sp: ParamSource): ProductFilter[] {
 }
 
 /**
- * Parse URL search params into Shopify ProductFilter array.
+ * Parse URL search params into a storefront product-filter array.
  *
  * URL format:
  *   ?filter.available=true

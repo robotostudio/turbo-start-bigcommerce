@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 
 import { CollectionPagination } from "@/components/collection/collection-pagination";
 import { ProductGrid } from "@/components/collection/product-grid";
-import type { ShopifyCollectionProduct } from "@/lib/shopify/types";
+import type { CatalogProductCard } from "@/lib/bigcommerce/catalog";
 
 type PageInfo = {
   hasNextPage: boolean;
@@ -13,14 +13,19 @@ type PageInfo = {
 };
 
 type CollectionPage = {
-  products: ShopifyCollectionProduct[];
+  products: CatalogProductCard[];
   pageInfo: PageInfo;
 };
 
 type CollectionProductsProps = {
+  /**
+   * Every segment below `/collections`. The load-more route is still
+   * single-segment (`/api/collections/[handle]/products`), so a nested category
+   * renders its first page and stops there rather than paging wrongly.
+   */
   handle: string;
   initialPageInfo: PageInfo;
-  initialProducts: ShopifyCollectionProduct[];
+  initialProducts: CatalogProductCard[];
   reverse: boolean;
   sort: string;
 };

@@ -42,13 +42,16 @@ export type BigCommerceCardProduct = {
     aggregated?: { availableToSell: number } | null;
   } | null;
   defaultImage?: BigCommerceCardImage | null;
-  images?: { edges: readonly { node: BigCommerceCardImage }[] } | null;
+  // Connections keep `edges` nullable so gql.tada payload types — which type
+  // every connection as `edges: T[] | null` off the real schema — fit without
+  // rewrapping.
+  images?: { edges?: readonly { node: BigCommerceCardImage }[] | null } | null;
   productOptions?: {
-    edges: readonly { node: BigCommerceProductOption }[];
+    edges?: readonly { node: BigCommerceProductOption }[] | null;
   } | null;
-  variants?: { edges: readonly { node: BigCommerceVariant }[] } | null;
+  variants?: { edges?: readonly { node: BigCommerceVariant }[] | null } | null;
   metafields?: {
-    edges: readonly { node: { key: string; value: string } }[];
+    edges?: readonly { node: { key: string; value: string } }[] | null;
   } | null;
 };
 
@@ -220,10 +223,10 @@ function colorGallery(
  * BigCommerce keeps variant photos in a namespace of their own —
  * `attribute_rule_images/`, which never appears in the product's `images`
  * connection — so a variant's `defaultImage` is an unambiguous override. There
- * is no Shopify-style silent fallback to the product image to unpick, and no
- * gallery position to look the photo up at. Both halves of the fork's
- * heuristic are therefore gone rather than translated: the URL match it was
- * built on can never succeed here.
+ * is no silent fallback to the product image to unpick, and no gallery
+ * position to look the photo up at. Both halves of the fork's heuristic are
+ * therefore gone rather than translated: the URL match it was built on can
+ * never succeed here.
  *
  * The hover partner still comes from the gallery. BigCommerce groups a
  * product's own photos per colourway and names the colour in each image's
@@ -233,7 +236,7 @@ function colorGallery(
  * ponytail: alt-text grouping is a heuristic — merchants author that text. It
  * can only ever supply `secondary` (and `primary` when there is no override at
  * all), so a miss degrades to the product-level pair instead of showing
- * another colour's photo, which is the failure the Shopify version had to
+ * another colour's photo, which is the failure the forked version had to
  * work so hard to avoid. Upgrade path if merchants leave alt text blank: a
  * colour-to-image metafield, read from the same fetch.
  */
@@ -330,6 +333,9 @@ export function productToCardProps(
 
   return {
     slug: slugFromPath(product.path),
+    // The cart merchandise id needs the product half; call sites spread this
+    // straight into ProductCard.
+    productId: String(product.entityId),
     title: product.name,
     vendor: product.brand?.name ?? null,
     imageUrl,

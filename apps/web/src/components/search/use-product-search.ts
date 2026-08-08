@@ -4,17 +4,22 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { useDebounce } from "@/hooks/use-debounce";
-import type {
-  ShopifyCollectionLite,
-  ShopifyCollectionProduct,
-} from "@/lib/shopify/types";
+import type { BigCommerceCardProduct } from "@/lib/bigcommerce/product-card";
 
 const SEARCH_DEBOUNCE_MS = 250;
 const CACHE_STALE_TIME_MS = 30_000;
 
+/** A category as the search API serves it. */
+export type SearchCollection = {
+  entityId: number;
+  name: string;
+  path: string;
+  image: { url: string; altText: string } | null;
+};
+
 type SearchResponse = {
-  products: ShopifyCollectionProduct[];
-  collections: ShopifyCollectionLite[];
+  products: BigCommerceCardProduct[];
+  collections: SearchCollection[];
   related: string[];
 };
 

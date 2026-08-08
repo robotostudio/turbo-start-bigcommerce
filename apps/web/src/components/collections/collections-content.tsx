@@ -1,20 +1,21 @@
 "use client";
 
-import type { QueryAllCollectionsResult } from "@workspace/sanity/types";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-import { CollectionCard } from "@/components/collection/collection-card";
+import {
+  CollectionCard,
+  type CollectionCardProps,
+} from "@/components/collection/collection-card";
 import {
   CollectionsSortSelector,
   type SortOption,
   sortCollections,
 } from "@/components/collections/collections-sort";
-import { sanityCollectionToCardProps } from "@/lib/collection-card";
 
 type CollectionsContentProps = {
   title: string;
-  collections: QueryAllCollectionsResult;
+  collections: CollectionCardProps[];
 };
 
 function CollectionsGrid({ title, collections }: CollectionsContentProps) {
@@ -35,10 +36,7 @@ function CollectionsGrid({ title, collections }: CollectionsContentProps) {
       ) : (
         <div className="grid grid-cols-2 gap-x-1 gap-y-10 md:grid-cols-3">
           {sorted.map((collection) => (
-            <CollectionCard
-              key={collection._id}
-              {...sanityCollectionToCardProps(collection)}
-            />
+            <CollectionCard key={collection.handle} {...collection} />
           ))}
         </div>
       )}

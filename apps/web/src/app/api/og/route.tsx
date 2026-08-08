@@ -4,7 +4,6 @@ import { ImageResponse } from "next/og";
 import type { ImageResponseOptions } from "next/server";
 import type { CSSProperties, ReactNode } from "react";
 
-import { getColorHex } from "@/lib/shopify/color";
 import type { Maybe } from "@/types";
 import { getBaseUrl } from "@/utils";
 import { getOgMetaData } from "./og-config";
@@ -39,15 +38,11 @@ type BrandedRenderProps = {
 type ProductRenderProps = BrandedRenderProps & {
   title?: Maybe<string>;
   price?: Maybe<string>;
-  /** Comma-separated hex list of all available colors. */
-  swatches?: Maybe<string>;
   /** Preformatted markdown label, e.g. "-16%". */
   discount?: Maybe<string>;
 };
 
 type OgVariant = { price: number | null; compareAtPrice: number | null };
-
-const MAX_SWATCHES = 6;
 
 // Normal pages (home / page / collection) all use this single static full-bleed
 // image. Only products (and blogs) use a dynamic image.
@@ -64,17 +59,6 @@ const formatOgPrice = (price: Maybe<number>): string | undefined => {
     style: "currency",
     currency: OG_CURRENCY,
   }).format(price);
-};
-
-/** Resolve the product's color option values to a comma-separated hex list. */
-const resolveSwatches = (
-  colors: Maybe<Array<{ name: string | null; values: Array<string> | null }>>
-): string | undefined => {
-  const colorOption = colors?.find((o) => o.name && /colou?r/i.test(o.name));
-  const hexes = (colorOption?.values ?? [])
-    .map((value) => getColorHex(value))
-    .filter((hex): hex is string => Boolean(hex));
-  return hexes.length > 0 ? hexes.join(",") : undefined;
 };
 
 /**
@@ -125,10 +109,6 @@ const svgDataUri = (svg: string) =>
 
 const VERCEL_MARK = svgDataUri(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1L24 22H0L12 1Z" fill="#000000"/></svg>'
-);
-
-const SHOPIFY_MARK = svgDataUri(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 18"><path d="M13.5388 3.41608C13.5262 3.32784 13.4506 3.27742 13.3875 3.27742C13.3245 3.27742 12.0766 3.25221 12.0766 3.25221C12.0766 3.25221 11.0304 2.24381 10.9295 2.13036C10.8287 2.02952 10.627 2.05473 10.5514 2.07994C10.5514 2.07994 10.3497 2.14297 10.022 2.24381C9.97156 2.06734 9.88333 1.85305 9.76988 1.62616C9.40434 0.92028 8.84972 0.542129 8.19425 0.542129C8.14383 0.542129 8.10602 0.542129 8.0556 0.554734C8.03039 0.529524 8.01778 0.504314 7.99257 0.491709C7.70266 0.189188 7.33711 0.0379276 6.89593 0.0505326C6.0514 0.0757427 5.20686 0.69339 4.51358 1.77742C4.03459 2.54633 3.66904 3.50431 3.5556 4.24801C2.58501 4.55053 1.90434 4.76482 1.87913 4.76482C1.38753 4.91608 1.37493 4.92868 1.3119 5.39507C1.28669 5.74801 0.000976562 15.6934 0.000976562 15.6934L10.7909 17.5589L15.4674 16.3993C15.4548 16.3993 13.5514 3.50431 13.5388 3.41608ZM9.47997 2.42028C9.22787 2.49591 8.95056 2.58415 8.64804 2.68499C8.64804 2.25641 8.58501 1.65137 8.39593 1.14717C9.03879 1.24801 9.35392 1.9791 9.47997 2.42028ZM8.08081 2.84885C7.51358 3.02532 6.89593 3.2144 6.27829 3.40347C6.45476 2.73541 6.78249 2.07994 7.18585 1.63877C7.33711 1.4749 7.5514 1.29843 7.79089 1.19759C8.04299 1.68919 8.09341 2.38247 8.08081 2.84885ZM6.92114 0.617759C7.12283 0.617759 7.28669 0.655575 7.42535 0.756415C7.19846 0.86986 6.97156 1.04633 6.76988 1.27322C6.22787 1.85305 5.8119 2.74801 5.64804 3.61776C5.13123 3.78163 4.62703 3.93289 4.17324 4.07154C4.47577 2.69759 5.62283 0.655575 6.92114 0.617759Z" fill="#95BF47"/><path d="M13.3867 3.27747C13.3237 3.27747 12.0758 3.25226 12.0758 3.25226C12.0758 3.25226 11.0295 2.24385 10.9287 2.13041C10.8909 2.09259 10.8405 2.06738 10.79 2.06738V17.559L15.4665 16.3993C15.4665 16.3993 13.5631 3.50436 13.5505 3.41612C13.5253 3.32789 13.4497 3.27747 13.3867 3.27747Z" fill="#5E8E3E"/><path d="M8.19335 5.68484L7.65133 7.71425C7.65133 7.71425 7.04629 7.43694 6.32781 7.48736C5.26898 7.55039 5.26898 8.21845 5.26898 8.38232C5.33201 9.28988 7.71436 9.49156 7.85302 11.6218C7.95386 13.2983 6.97066 14.4453 5.53369 14.5336C3.8194 14.6218 2.87402 13.6134 2.87402 13.6134L3.23957 12.063C3.23957 12.063 4.19755 12.7815 4.95386 12.7311C5.44545 12.7058 5.63453 12.2899 5.60932 12.0126C5.53369 10.8277 3.59251 10.9033 3.46646 8.94955C3.36562 7.31089 4.43705 5.65963 6.8068 5.50837C7.72696 5.44534 8.19335 5.68484 8.19335 5.68484Z" fill="#ffffff"/></svg>'
 );
 
 const ROBOTO_MARK = svgDataUri(
@@ -293,41 +273,12 @@ const brandedPageRender = ({ image, siteTitle, title }: BrandedRenderProps) => (
         <CreditDivider />
         <CreditGroup>
           <span>Powered by</span>
-          <CreditMark src={SHOPIFY_MARK} />
-          <span style={{ fontWeight: 500 }}>Shopify</span>
+          <span style={{ fontWeight: 500 }}>BigCommerce</span>
         </CreditGroup>
       </div>
     </div>
   </FullBleed>
 );
-
-const SwatchRow = ({ swatches }: { swatches: string }) => {
-  const hexes = swatches.split(",").filter(Boolean);
-  if (hexes.length === 0) return null;
-  const shown = hexes.slice(0, MAX_SWATCHES);
-  const overflow = hexes.length - shown.length;
-  return (
-    <div
-      style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}
-    >
-      {shown.map((hex, i) => (
-        <div
-          key={`${hex}-${i}`}
-          style={{
-            width: 20,
-            height: 20,
-            backgroundColor: hex,
-            border: "1px solid rgba(0,0,0,0.08)",
-            flexShrink: 0,
-          }}
-        />
-      ))}
-      {overflow > 0 ? (
-        <span style={{ fontSize: 14, color: "#71717a" }}>+{overflow}</span>
-      ) : null}
-    </div>
-  );
-};
 
 // Sale markdown label — grey zinc/200 chip.
 const DiscountBadge = ({ label }: { label: string }) => (
@@ -355,7 +306,6 @@ const productOgRender = ({
   siteTitle,
   title,
   price,
-  swatches,
   discount,
 }: ProductRenderProps) => (
   <FullBleed image={image}>
@@ -384,7 +334,6 @@ const productOgRender = ({
             {truncate(title, 32)}
           </span>
         ) : null}
-        {swatches ? <SwatchRow swatches={swatches} /> : null}
         {price ? <span style={{ flexShrink: 0 }}>{price}</span> : null}
         {discount ? <DiscountBadge label={discount} /> : null}
       </div>
@@ -514,13 +463,14 @@ const getProductContent = async ({ id }: ContentProps) => {
   if (err || !result) {
     return;
   }
-  // Everything is sourced from Sanity (Shopify data synced into store.*).
+  // Everything is sourced from Sanity (BigCommerce data synced into store.*).
+  // Swatches went with the name-to-hex table: BigCommerce carries hexes on the
+  // option values themselves, which the synced store.* shape doesn't hold yet.
   return productOgRender({
     image: result.seoImage ?? result.image,
     siteTitle: result.siteTitle,
     title: result.title,
     price: formatOgPrice(result.price),
-    swatches: resolveSwatches(result.colors),
     discount: resolveDiscount(result.variants),
   });
 };

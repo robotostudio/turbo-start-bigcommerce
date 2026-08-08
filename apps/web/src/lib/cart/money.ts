@@ -1,4 +1,4 @@
-import type { MoneyV2 } from "@/lib/shopify/types";
+import type { MoneyV2 } from "@/lib/cart/types";
 
 function toMinorUnits(amount: string): number {
   const parsed = Number.parseFloat(amount);

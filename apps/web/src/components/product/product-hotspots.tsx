@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-
 import type { QueryProductByHandleResult } from "@workspace/sanity/types";
+import { useState } from "react";
 
 import { SanityImage } from "@/components/elements/sanity-image";
 import { ProductCard } from "./product-card";

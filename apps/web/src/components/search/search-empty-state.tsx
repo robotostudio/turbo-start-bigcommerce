@@ -30,11 +30,11 @@ export function SearchEmptyState({
             {collections.map((collection) => (
               <button
                 className="bg-zinc-200 px-1 text-base text-zinc-900 tracking-[0.24px] transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
-                key={collection.id}
-                onClick={() => onSelectTerm(collection.title)}
+                key={collection.entityId}
+                onClick={() => onSelectTerm(collection.name)}
                 type="button"
               >
-                {collection.title}
+                {collection.name}
               </button>
             ))}
           </div>

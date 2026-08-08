@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  type NormalizedCart,
+  fromMerchandiseId,
   toInternalCart,
   toMerchandiseId,
 } from "@/lib/bigcommerce/cart";
@@ -13,7 +13,6 @@ import {
   updateIntent,
 } from "@/lib/cart/intents";
 import type { LineMetadata } from "@/lib/cart/types";
-import type { Cart } from "@/lib/shopify/types";
 import createMutation from "../__fixtures__/cart-create-mutation.json";
 import digital from "../__fixtures__/cart-digital.json";
 import mixed from "../__fixtures__/cart-mixed.json";
@@ -21,15 +20,6 @@ import physical from "../__fixtures__/cart-physical.json";
 
 const CAP = "191:235";
 const GUIDE = "193:237";
-
-/**
- * The engine still types its cart with Shopify's `checkoutUrl`, which the
- * BigCommerce payload has no equivalent for. This spread is the whole gap, and
- * it disappears when the internal cart type drops the field at the flip.
- */
-function forEngine(cart: NormalizedCart): Cart {
-  return { ...cart, checkoutUrl: "" };
-}
 
 function makeMetadata(overrides?: Partial<LineMetadata>): LineMetadata {
   return {
@@ -117,6 +107,19 @@ describe("toInternalCart", () => {
     ).toBe(GUIDE);
   });
 
+  it("fromMerchandiseId round-trips both id shapes and rejects junk", () => {
+    expect(fromMerchandiseId(GUIDE)).toEqual({
+      productEntityId: 193,
+      variantEntityId: 237,
+    });
+    expect(fromMerchandiseId("193")).toEqual({ productEntityId: 193 });
+    expect(fromMerchandiseId("")).toBeNull();
+    expect(fromMerchandiseId("abc")).toBeNull();
+    expect(fromMerchandiseId("193:abc")).toBeNull();
+    expect(fromMerchandiseId("193:237:1")).toBeNull();
+    expect(fromMerchandiseId("gid://shopify/ProductVariant/42")).toBeNull();
+  });
+
   it("recalcTotals agrees with the totals BigCommerce reported", () => {
     const cart = toInternalCart(mixed.response.data.site.cart);
     expect(
@@ -126,7 +129,7 @@ describe("toInternalCart", () => {
 });
 
 describe("the cart engine running on a normalised BigCommerce cart", () => {
-  const base = forEngine(toInternalCart(mixed.response.data.site.cart));
+  const base = toInternalCart(mixed.response.data.site.cart);
 
   it("bumps the matching line instead of appending a synthetic one", () => {
     const cart = fold(base, [addIntent(CAP, 1, makeMetadata())]);

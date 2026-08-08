@@ -3,7 +3,7 @@
 import NumberFlow from "@number-flow/react";
 
 import { AnimatedMoney } from "@/components/elements/animated-money";
-import type { Cart } from "@/lib/shopify/types";
+import type { Cart } from "@/lib/cart/types";
 
 export function CartSummary({ cart }: { cart: Cart }) {
   const itemLabel = cart.totalQuantity === 1 ? "Item" : "Items";

@@ -3,13 +3,15 @@
 import { Skeleton } from "@workspace/ui/components/skeleton";
 
 import { ProductCard } from "@/components/product/product-card";
-import { collectionProductToCardProps } from "@/lib/shopify/product-card";
-import type { ShopifyCollectionProduct } from "@/lib/shopify/types";
+import {
+  type BigCommerceCardProduct,
+  productToCardProps,
+} from "@/lib/bigcommerce/product-card";
 
 const DEFAULT_SKELETON_COUNT = 8;
 
 type SearchProductGridProps = {
-  products: ShopifyCollectionProduct[];
+  products: BigCommerceCardProduct[];
   isLoading: boolean;
   skeletonCount?: number;
   /** Forwarded to `next/link`: replace the current history entry, don't push. */
@@ -46,8 +48,8 @@ export function SearchProductGrid({
     <div className="grid grid-cols-2 gap-x-1 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
       {products.map((product) => (
         <ProductCard
-          key={product.id}
-          {...collectionProductToCardProps(product)}
+          key={product.entityId}
+          {...productToCardProps(product)}
           replace={replace}
         />
       ))}

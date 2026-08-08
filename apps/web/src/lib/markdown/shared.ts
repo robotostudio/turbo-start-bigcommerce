@@ -14,7 +14,7 @@ export type SanityImageRef = {
   caption?: string | null;
 };
 
-/** A Shopify Money value. */
+/** A money value as `{ amount, currencyCode }` strings. */
 export type Money = { amount: string; currencyCode: string };
 
 /** Drops empty/nullish sections and joins the rest with blank lines. */
@@ -87,7 +87,7 @@ export function sanityImageMarkdown(
   return `![${escapeMarkdown(alt)}](${url})`;
 }
 
-/** Formats a Shopify Money value, e.g. `£29.00`. Falls back to `CODE amount`. */
+/** Formats a Money value, e.g. `£29.00`. Falls back to `CODE amount`. */
 export function formatMoney(money: Money | null | undefined): string {
   if (!money) return "";
   const amount = Number.parseFloat(money.amount);

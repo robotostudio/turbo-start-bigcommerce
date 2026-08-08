@@ -3,7 +3,7 @@ import "server-only";
 import { env } from "@workspace/env/server";
 import type { ResultOf } from "gql.tada";
 
-import { storefrontQuery, type StorefrontQueryResult } from "./client";
+import { type StorefrontQueryResult, storefrontQuery } from "./client";
 import { graphql } from "./graphql";
 
 /**
@@ -36,7 +36,13 @@ const PATHS_PAGE_SIZE = 50;
 // Fragments
 // ---------------------------------------------------------------------------
 
-/** Grid/PLP shape. Deliberately small: this runs 12-50 times per request. */
+/**
+ * Grid/PLP shape. Carries options, variants and metafields so every card can
+ * render swatches, sizes, badges, hover add-to-cart and the `?Color=`
+ * preselect. Measured live at first: 12: complexity 4721 of the 10000
+ * per-request budget — small enough to run on every PLP, load-more page and
+ * search grid.
+ */
 const ProductCard = graphql(`
   fragment ProductCard on Product {
     entityId
@@ -46,9 +52,25 @@ const ProductCard = graphql(`
       entityId
       name
     }
+    inventory {
+      isInStock
+      hasVariantInventory
+      aggregated {
+        availableToSell
+      }
+    }
     defaultImage {
       url(width: 320)
       altText
+    }
+    images(first: 6) {
+      edges {
+        node {
+          url(width: 320)
+          altText
+          isDefault
+        }
+      }
     }
     prices {
       price {
@@ -62,6 +84,71 @@ const ProductCard = graphql(`
       salePrice {
         value
         currencyCode
+      }
+    }
+    productOptions(first: 5) {
+      edges {
+        node {
+          __typename
+          entityId
+          displayName
+          ... on MultipleChoiceOption {
+            values(first: 25) {
+              edges {
+                node {
+                  __typename
+                  entityId
+                  label
+                  ... on SwatchOptionValue {
+                    hexColors
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    variants(first: 15) {
+      edges {
+        node {
+          entityId
+          isPurchasable
+          prices {
+            price {
+              value
+              currencyCode
+            }
+          }
+          inventory {
+            isInStock
+          }
+          defaultImage {
+            url(width: 320)
+          }
+          options(first: 5) {
+            edges {
+              node {
+                displayName
+                values(first: 10) {
+                  edges {
+                    node {
+                      label
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    metafields(namespace: "turbo_start", first: 5) {
+      edges {
+        node {
+          key
+          value
+        }
       }
     }
   }
@@ -320,7 +407,12 @@ const ProductByPathQuery = graphql(
         }
         node {
           __typename
-          ...ProductDetail
+          # The inline wrap is load-bearing: a bare named-fragment spread on
+          # the route's interface field silently drops productOptions and
+          # defaultImage — same complexity, HTTP 200, no errors key.
+          ... on Product {
+            ...ProductDetail
+          }
         }
       }
     }
@@ -370,7 +462,11 @@ const CategoryByPathQuery = graphql(
         }
         node {
           __typename
-          ...CategoryDetail
+          # Same inline wrap as ProductByPath: spread bare, the route field
+          # silently drops breadcrumbs.
+          ... on Category {
+            ...CategoryDetail
+          }
         }
       }
     }

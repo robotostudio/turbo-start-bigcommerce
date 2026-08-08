@@ -6,40 +6,31 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
-import type { QueryAllCollectionsResult } from "@workspace/sanity/types";
 import { ChevronDown } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export type SortOption = "a-z" | "z-a" | "newest";
+import type { CollectionCardProps } from "@/components/collection/collection-card";
+
+/**
+ * "Newest" is gone: a BigCommerce category carries no creation date on the
+ * storefront API, and sorting by something the catalog doesn't report is a
+ * label that lies.
+ */
+export type SortOption = "a-z" | "z-a";
 
 const SORT_LABELS: Record<SortOption, string> = {
   "a-z": "A-Z",
   "z-a": "Z-A",
-  newest: "Newest",
 };
 
 export function sortCollections(
-  collections: QueryAllCollectionsResult,
+  collections: CollectionCardProps[],
   sort: SortOption
-): QueryAllCollectionsResult {
+): CollectionCardProps[] {
   const sorted = [...collections];
-  switch (sort) {
-    case "a-z":
-      return sorted.sort((a, b) =>
-        (a.title ?? "").localeCompare(b.title ?? "")
-      );
-    case "z-a":
-      return sorted.sort((a, b) =>
-        (b.title ?? "").localeCompare(a.title ?? "")
-      );
-    case "newest":
-      return sorted.sort(
-        (a, b) =>
-          new Date(b._createdAt).getTime() - new Date(a._createdAt).getTime()
-      );
-    default:
-      return sorted;
-  }
+  return sort === "z-a"
+    ? sorted.sort((a, b) => b.title.localeCompare(a.title))
+    : sorted.sort((a, b) => a.title.localeCompare(b.title));
 }
 
 export function CollectionsSortSelector() {

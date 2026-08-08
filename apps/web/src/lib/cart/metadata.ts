@@ -1,9 +1,4 @@
-import type {
-  MoneyV2,
-  SelectedOption,
-  ShopifyImage,
-} from "@/lib/shopify/types";
-import type { LineMetadata } from "./types";
+import type { CartImage, LineMetadata, MoneyV2, SelectedOption } from "./types";
 
 const DEFAULT_VARIANT_TITLE = "Default Title";
 
@@ -19,7 +14,7 @@ export function buildLineMetadata(args: {
   price: MoneyV2;
   selectedOptions: SelectedOption[];
   variantTitle?: string;
-  image?: ShopifyImage | null;
+  image?: CartImage | null;
 }): LineMetadata {
   return {
     productTitle: args.productTitle,

@@ -16,8 +16,12 @@ import {
   updateCartLine,
 } from "@/app/cart/actions";
 import { type AddLineResult, CartController } from "@/lib/cart/controller";
-import type { CartError, CartWarning, LineMetadata } from "@/lib/cart/types";
-import type { Cart } from "@/lib/shopify/types";
+import type {
+  Cart,
+  CartError,
+  CartWarning,
+  LineMetadata,
+} from "@/lib/cart/types";
 
 type CartStateValue = {
   cart: Cart | null;

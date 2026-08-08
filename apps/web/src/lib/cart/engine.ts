@@ -1,7 +1,11 @@
 import { syntheticLineId } from "@/lib/cart/intents";
 import { addMoney, multiplyMoney, zeroMoney } from "@/lib/cart/money";
-import type { CartIntent, LineMetadata } from "@/lib/cart/types";
-import type { Cart, CartLine } from "@/lib/shopify/types";
+import type {
+  Cart,
+  CartIntent,
+  CartLine,
+  LineMetadata,
+} from "@/lib/cart/types";
 
 export function recalcTotals(
   lines: readonly CartLine[],
@@ -155,7 +159,6 @@ export function applyIntent(cart: Cart, intent: CartIntent): Cart {
 function syntheticCartShell(currencyCode: string): Cart {
   return {
     id: "optimistic-cart",
-    checkoutUrl: "",
     totalQuantity: 0,
     lines: {
       edges: [],

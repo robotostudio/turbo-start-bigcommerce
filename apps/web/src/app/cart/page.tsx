@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { redirectToCheckout } from "@/app/cart/actions";
 import { useCart } from "@/components/cart/cart-context";
 import { CartLineItem } from "@/components/cart/cart-line-item";
 import { CartSummary } from "@/components/cart/cart-summary";
@@ -18,12 +19,16 @@ export default function CartPage() {
 
   async function handleCheckout() {
     setIsCheckingOut(true);
-    const confirmed = await settle();
-    if (confirmed?.checkoutUrl) {
-      window.location.href = confirmed.checkoutUrl;
-      return;
+    try {
+      // The redirect URL is single-use, so it is minted per click by the
+      // server action — never read off the cart.
+      const confirmed = await settle();
+      if (confirmed) {
+        await redirectToCheckout();
+      }
+    } finally {
+      setIsCheckingOut(false);
     }
-    setIsCheckingOut(false);
   }
 
   if (isLoading && !cart) {

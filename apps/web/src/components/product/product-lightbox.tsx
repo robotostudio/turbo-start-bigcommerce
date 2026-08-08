@@ -17,11 +17,23 @@ import {
 } from "react";
 
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
-import { shopifyFullscreenURL } from "@/lib/shopify/image-loader";
-import type { ShopifyImage } from "@/lib/shopify/types";
+import { bigcommerceImageLoader } from "@/lib/bigcommerce/image-loader";
+import type { GalleryImage } from "./product-gallery";
+
+/** Widest rendition worth asking the CDN for; covers a 2x 1440px viewport. */
+const FULLSCREEN_WIDTH = 2560;
+
+/**
+ * The fullscreen rendition of a gallery photo. BigCommerce addresses sizes in
+ * the URL path, so this is the same loader `next/image` uses — one bounded
+ * rendition, never the master.
+ */
+function fullscreenUrl(src: string): string {
+  return bigcommerceImageLoader({ src, width: FULLSCREEN_WIDTH });
+}
 
 type ProductLightboxProps = {
-  images: ShopifyImage[];
+  images: GalleryImage[];
   index: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -184,7 +196,7 @@ export function ProductLightbox({
   // memoizes it on deps that never change between mount and open (`images`,
   // `index`, and the stable parent callbacks — not `open`). That froze the
   // value to the mount-time result, when the gallery's refs were still empty,
-  // so every first open fetched the multi-MB Shopify master instead.
+  // so every first open fetched the multi-MB master instead.
   //
   // Falls back to a bounded transform only when the image isn't loaded on-page
   // (e.g. an arrow-navigated image that was still lazy) — never the master.
@@ -192,7 +204,7 @@ export function ProductLightbox({
     if (!(open && current)) return;
     const cached =
       sourceSrc?.index === index ? sourceSrc.src : getSourceSrc(index);
-    setDisplaySrc(cached ?? shopifyFullscreenURL(current.url));
+    setDisplaySrc(cached ?? fullscreenUrl(current.url));
   }, [open, index, current, sourceSrc, getSourceSrc]);
 
   // Hold the outgoing ghost at full opacity until the incoming image has
@@ -229,7 +241,7 @@ export function ProductLightbox({
       const target = images[i];
       if (!target) continue;
       const pre = new window.Image();
-      pre.src = getSourceSrc(i) ?? shopifyFullscreenURL(target.url);
+      pre.src = getSourceSrc(i) ?? fullscreenUrl(target.url);
     }
   }, [open, index, images, getSourceSrc]);
 
@@ -471,7 +483,6 @@ export function ProductLightbox({
                 className="block max-h-[calc(100vh-4rem)] w-auto max-w-[92vw] select-none object-contain"
                 draggable={false}
                 fetchPriority="high"
-                height={current.height}
                 ref={imgRef}
                 src={displaySrc}
                 style={{
@@ -482,7 +493,6 @@ export function ProductLightbox({
                   transition:
                     panning || reduced ? "none" : "transform 200ms ease",
                 }}
-                width={current.width}
               />
             </button>
           )}

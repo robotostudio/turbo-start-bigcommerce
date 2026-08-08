@@ -2,16 +2,19 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import type { ShopifyCollectionProduct } from "@/lib/shopify/types";
+import {
+  type BigCommerceCardProduct,
+  slugFromPath,
+} from "@/lib/bigcommerce/product-card";
 import { useSavedItems } from "./saved-items-context";
 
 type SavedProductsResponse = {
-  products: ShopifyCollectionProduct[];
+  products: BigCommerceCardProduct[];
 };
 
 async function fetchSavedProducts(
   handles: string[]
-): Promise<ShopifyCollectionProduct[]> {
+): Promise<BigCommerceCardProduct[]> {
   if (handles.length === 0) return [];
   const response = await fetch(`/api/saved-items?handles=${handles.join(",")}`);
   if (!response.ok) return [];
@@ -37,8 +40,12 @@ export function useSavedProducts() {
 
   const products = query.data ?? [];
   const sortedProducts = items
-    .map((handle) => products.find((p) => p.handle === handle))
-    .filter((p): p is ShopifyCollectionProduct => p !== undefined);
+    .map((handle) =>
+      products.find((product) => slugFromPath(product.path) === handle)
+    )
+    .filter(
+      (product): product is BigCommerceCardProduct => product !== undefined
+    );
 
   return { ...query, products: sortedProducts };
 }

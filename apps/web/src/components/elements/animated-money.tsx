@@ -2,7 +2,7 @@
 
 import NumberFlow from "@number-flow/react";
 
-import type { MoneyV2 } from "@/lib/shopify/types";
+import type { MoneyV2 } from "@/lib/cart/types";
 
 /**
  * Animated counterpart of `formatMoney` — digits tween on change instead of

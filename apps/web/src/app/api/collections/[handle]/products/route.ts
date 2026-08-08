@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import { parseFilterParams } from "@/components/collection/filter-utils";
-import { storefrontQuery } from "@/lib/shopify/client";
-import { COLLECTION_QUERY } from "@/lib/shopify/queries";
-import type { CollectionQueryResponse } from "@/lib/shopify/types";
+import { getCategoryByPath, nodes } from "@/lib/bigcommerce/catalog";
+
+const DEFAULT_FIRST = 12;
+/** `Category.products(first:)` refuses anything larger. */
+const MAX_FIRST = 50;
 
 export async function GET(
   request: NextRequest,
@@ -13,36 +14,28 @@ export async function GET(
   const sp = request.nextUrl.searchParams;
 
   const after = sp.get("after");
-  const sort = sp.get("sort") ?? "COLLECTION_DEFAULT";
-  const reverse = sp.get("reverse") === "true";
-  const first = Number(sp.get("first") ?? 12);
-  const filters = parseFilterParams(sp);
+  const firstParam = Number(sp.get("first") ?? DEFAULT_FIRST);
+  const first =
+    Number.isFinite(firstParam) && firstParam > 0
+      ? Math.min(firstParam, MAX_FIRST)
+      : DEFAULT_FIRST;
 
-  const result = await storefrontQuery<CollectionQueryResponse>(
-    COLLECTION_QUERY,
-    {
-      variables: {
-        handle,
-        first,
-        after,
-        sortKey: sort,
-        reverse,
-        filters: filters.length > 0 ? filters : undefined,
-      },
-    }
-  );
+  // `sort`, `reverse` and `filter.*` params are accepted but ignored for now:
+  // the category read has no filter arguments, and faceting is plan-gated on
+  // this store. ROB-2546 rebuilds both on `site.search.searchProducts`.
+  const result = await getCategoryByPath([handle], { first, after });
 
-  if (!result.ok || !result.data.collection) {
+  if (!result.ok || !result.data.node) {
     return NextResponse.json(
       { error: "Failed to fetch products" },
       { status: 500 }
     );
   }
 
-  const { products } = result.data.collection;
+  const { products } = result.data.node;
 
   return NextResponse.json({
-    products: products.edges.map((e) => e.node),
+    products: nodes(products),
     pageInfo: products.pageInfo,
   });
 }

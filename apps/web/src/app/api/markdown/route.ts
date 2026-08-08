@@ -5,68 +5,49 @@ import {
   queryAllCollections,
   queryBlogIndexPageData,
   queryBlogSlugPageData,
-  queryCollectionByHandle,
   queryCollectionsIndexPageData,
   queryHomePageData,
-  queryProductByHandle,
   queryRedirectBySource,
   querySlugPageData,
 } from "@workspace/sanity/query";
 
+import { getCategoryByPath, getProductByPath } from "@/lib/bigcommerce/catalog";
+import {
+  categoryToMarkdown,
+  productToMarkdown,
+} from "@/lib/bigcommerce/markdown";
 import {
   type BlogListItem,
   blogIndexToMarkdown,
   blogPostToMarkdown,
   type CollectionListItem,
   collectionsIndexToMarkdown,
-  collectionToMarkdown,
   pageToMarkdown,
-  productToMarkdown,
 } from "@/lib/markdown/documents";
 import { normalizeMarkdownPath } from "@/lib/markdown/path";
-import { storefrontQuery } from "@/lib/shopify/client";
-import { COLLECTION_QUERY, PRODUCT_QUERY } from "@/lib/shopify/queries";
-import type {
-  CollectionQueryResponse,
-  ProductQueryResponse,
-} from "@/lib/shopify/types";
 
 const logger = new Logger("MarkdownRoute");
 
 /** Published, non-stega reads — this surface is for agents, never draft preview. */
 const PUBLISHED = { perspective: "published", stega: false } as const;
 
+/** How many products a category's Markdown lists. */
+const CATEGORY_PRODUCTS = 50;
+
 async function fetchProductMarkdown(handle: string): Promise<string | null> {
-  const [sanityRes, shopifyRes] = await Promise.all([
-    sanityFetch({
-      query: queryProductByHandle,
-      params: { handle },
-      ...PUBLISHED,
-    }),
-    storefrontQuery<ProductQueryResponse>(PRODUCT_QUERY, {
-      variables: { handle },
-    }),
-  ]);
-  if (!shopifyRes.ok || !shopifyRes.data.product) return null;
-  return productToMarkdown(shopifyRes.data.product, sanityRes.data ?? null);
+  const result = await getProductByPath([handle]);
+  if (!result.ok || !result.data.node) return null;
+  return productToMarkdown(result.data.node);
 }
 
-async function fetchCollectionMarkdown(handle: string): Promise<string | null> {
-  const [sanityRes, shopifyRes] = await Promise.all([
-    sanityFetch({
-      query: queryCollectionByHandle,
-      params: { handle },
-      ...PUBLISHED,
-    }),
-    storefrontQuery<CollectionQueryResponse>(COLLECTION_QUERY, {
-      variables: { handle, first: 50 },
-    }),
-  ]);
-  if (!shopifyRes.ok || !shopifyRes.data.collection) return null;
-  return collectionToMarkdown(
-    shopifyRes.data.collection,
-    sanityRes.data ?? null
-  );
+async function fetchCollectionMarkdown(
+  segments: string[]
+): Promise<string | null> {
+  const result = await getCategoryByPath(segments, {
+    first: CATEGORY_PRODUCTS,
+  });
+  if (!result.ok || !result.data.node) return null;
+  return categoryToMarkdown(result.data.node);
 }
 
 async function fetchCollectionsIndexMarkdown(): Promise<string> {
@@ -116,9 +97,9 @@ async function fetchCollectionsMarkdown(
   segments: string[]
 ): Promise<string | null> {
   if (segments.length === 1) return fetchCollectionsIndexMarkdown();
-  if (segments.length === 2)
-    return fetchCollectionMarkdown(segments[1] as string);
-  return null;
+  // BigCommerce category paths are multi-segment; pass everything after the
+  // `/collections` prefix through as one lookup.
+  return fetchCollectionMarkdown(segments.slice(1));
 }
 
 async function fetchPageMarkdown(path: string): Promise<string | null> {

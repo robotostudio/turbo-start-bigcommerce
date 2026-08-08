@@ -2,10 +2,16 @@
 
 import { cn } from "@workspace/ui/lib/utils";
 
-import { getColorHex } from "@/lib/shopify/color";
+import type { ProductOptionValue } from "@/lib/cart/types";
 
 type ColorSwatchProps = {
-  values: string[];
+  /**
+   * BigCommerce hangs the swatch hex off the option value itself, so there is
+   * no name-to-hex table to author and keep in sync with the catalog. A value
+   * the merchant didn't style as a swatch has a null hex and falls back to the
+   * text button below.
+   */
+  values: ProductOptionValue[];
   selectedValue: string;
   availability: Record<string, boolean>;
   onSelect: (value: string) => void;
@@ -19,8 +25,7 @@ export function ColorSwatch({
 }: ColorSwatchProps) {
   return (
     <div className="flex flex-wrap items-start gap-0.5">
-      {values.map((value) => {
-        const hex = getColorHex(value);
+      {values.map(({ value, hex }) => {
         const isAvailable = availability[value] !== false;
         const isSelected = selectedValue === value;
 

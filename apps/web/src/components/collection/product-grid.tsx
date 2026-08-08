@@ -1,11 +1,11 @@
 import { cn } from "@workspace/ui/lib/utils";
 
 import { ProductCard } from "@/components/product/product-card";
-import { collectionProductToCardProps } from "@/lib/shopify/product-card";
-import type { ShopifyCollectionProduct } from "@/lib/shopify/types";
+import type { CatalogProductCard } from "@/lib/bigcommerce/catalog";
+import { productToCardProps } from "@/lib/bigcommerce/product-card";
 
 type ProductGridProps = {
-  products: ShopifyCollectionProduct[];
+  products: CatalogProductCard[];
   /** "comfortable" = 4-col (default), "dense" = 6-col on large screens. */
   density?: "comfortable" | "dense";
 };
@@ -33,8 +33,9 @@ export function ProductGrid({
     >
       {products.map((product) => (
         <ProductCard
-          key={product.id}
-          {...collectionProductToCardProps(product)}
+          key={product.entityId}
+          {...productToCardProps(product)}
+          productId={String(product.entityId)}
         />
       ))}
     </div>

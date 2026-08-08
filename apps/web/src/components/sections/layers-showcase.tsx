@@ -3,19 +3,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/utils";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
 import { useCartActions } from "@/components/cart/cart-context";
 import type { CardVariant } from "@/components/product/product-card";
+import { StoreImage as Image } from "@/components/product/store-image";
+import { merchandiseId } from "@/components/product/variant-utils";
+import type { CatalogProduct } from "@/lib/bigcommerce/catalog";
+import { formatMoney, toMoney } from "@/lib/bigcommerce/money";
+import { productToCardProps } from "@/lib/bigcommerce/product-card";
 import { buildLineMetadata } from "@/lib/cart/metadata";
-import { formatMoney } from "@/lib/shopify/money";
-import { collectionProductToCardProps } from "@/lib/shopify/product-card";
-import type {
-  ProductByHandleResponse,
-  ShopifyCollectionProduct,
-} from "@/lib/shopify/types";
 
 type LayersShowcaseProps = {
   _key: string;
@@ -43,27 +41,25 @@ function resolveVariant(
   });
 }
 
-async function fetchProduct(
-  handle: string
-): Promise<ShopifyCollectionProduct | null> {
+async function fetchProduct(handle: string): Promise<CatalogProduct | null> {
   const res = await fetch(`/api/products/${handle}`);
   if (!res.ok) return null;
-  const data: ProductByHandleResponse = await res.json();
+  const data: { product: CatalogProduct | null } = await res.json();
   return data.product;
 }
 
 /** Ordered, de-duplicated list of the product's image URLs (featured first). */
-function productImageUrls(product: ShopifyCollectionProduct): string[] {
+function productImageUrls(product: CatalogProduct): string[] {
   const urls = [
-    product.featuredImage?.url,
-    ...(product.images?.edges ?? []).map((edge) => edge.node.url),
+    product.defaultImage?.url,
+    ...(product.images.edges ?? []).map((edge) => edge.node.url),
   ].filter((url): url is string => Boolean(url));
   return Array.from(new Set(urls));
 }
 
 /** Bottom bar: add-to-cart action, size selector, and price. */
-function PurchaseBar({ product }: { product: ShopifyCollectionProduct }) {
-  const card = collectionProductToCardProps(product);
+function PurchaseBar({ product }: { product: CatalogProduct }) {
+  const card = productToCardProps(product);
   const { addLine, openCart } = useCartActions();
   const [selectedSize, setSelectedSize] = useState(card.selectedSize);
 
@@ -74,22 +70,31 @@ function PurchaseBar({ product }: { product: ShopifyCollectionProduct }) {
     selectedSize
   );
   const canAdd = Boolean(variant?.availableForSale);
-  const price = formatMoney({
-    amount: String(card.priceRange.minVariantPrice),
-    currencyCode: card.currencyCode ?? "GBP",
-  });
+  const price = formatMoney(
+    toMoney({
+      value: card.priceRange.minVariantPrice,
+      currencyCode: card.currencyCode ?? "GBP",
+    })
+  );
 
   function handleAdd() {
     if (!variant) return;
     const metadata = buildLineMetadata({
-      productTitle: product.title,
-      productHandle: product.handle,
+      productTitle: product.name,
+      productHandle: card.slug,
       price: variant.price,
       selectedOptions: variant.selectedOptions,
-      image: product.featuredImage ?? null,
+      image: card.imageUrl
+        ? {
+            url: card.imageUrl,
+            altText: product.name,
+            width: 0,
+            height: 0,
+          }
+        : null,
     });
     openCart();
-    void addLine(variant.id, 1, metadata);
+    void addLine(merchandiseId(product.entityId, variant.id), 1, metadata);
   }
 
   return (
@@ -146,7 +151,7 @@ export function LayersShowcase({
     ? Array.from({ length: COLLAGE_CELLS }, (_, i) => pool[i % pool.length])
     : [];
   const largeImage = pool[0] ?? null;
-  const alt = product?.title ?? productTitle ?? "";
+  const alt = product?.name ?? productTitle ?? "";
 
   return (
     <section className="site-container py-12 md:py-20">
@@ -193,10 +198,7 @@ export function LayersShowcase({
         <div className="group card-surface relative aspect-4/5 overflow-hidden md:aspect-auto md:h-full md:min-h-125">
           {isLoading && <Skeleton className="absolute inset-0" />}
           {largeImage && product && (
-            <Link
-              className="relative block size-full"
-              href={`/products/${product.handle}`}
-            >
+            <Link className="relative block size-full" href={product.path}>
               <Image
                 alt={alt}
                 className="object-cover"

@@ -1,10 +1,10 @@
-import type { ShopifyVariant } from "./types";
+import type { ProductVariant } from "@/lib/cart/types";
 
-/** Finds variant matching selected options map. */
+/** Finds the variant matching a selected-options map. */
 export function findVariantByOptions(
-  variants: ShopifyVariant[],
+  variants: ProductVariant[],
   selectedOptions: Record<string, string>
-): ShopifyVariant | null {
+): ProductVariant | null {
   const entries = Object.entries(selectedOptions).filter(
     ([, value]) => value !== ""
   );
@@ -21,9 +21,9 @@ export function findVariantByOptions(
   );
 }
 
-/** Returns availability map: option value -> boolean, given current selections for other options. */
+/** Availability map: option value -> boolean, given the other selections. */
 export function getOptionAvailability(
-  variants: ShopifyVariant[],
+  variants: ProductVariant[],
   optionName: string,
   currentSelections: Record<string, string>
 ): Record<string, boolean> {
@@ -53,19 +53,4 @@ export function getOptionAvailability(
   }
 
   return availability;
-}
-
-/** Builds URL path with search params from selected options. */
-export function buildVariantUrl(
-  handle: string,
-  selectedOptions: Record<string, string>
-): string {
-  const params = new URLSearchParams();
-  for (const [name, value] of Object.entries(selectedOptions)) {
-    if (value) {
-      params.set(name, value);
-    }
-  }
-  const qs = params.toString();
-  return `/products/${handle}${qs ? `?${qs}` : ""}`;
 }

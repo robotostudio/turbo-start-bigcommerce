@@ -136,7 +136,7 @@ export default async function OgPreviewPage() {
             /api/og
           </code>{" "}
           at 1200×630 — the exact links used by each page's metadata. Products
-          include live Shopify price, discount, colors, and image.
+          include live BigCommerce price, discount, colors, and image.
         </p>
       </header>
 

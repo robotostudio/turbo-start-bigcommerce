@@ -1,12 +1,10 @@
 import { Logger } from "@workspace/logger";
 import { sanityFetch } from "@workspace/sanity/live";
-import {
-  queryBlogPaths,
-  queryCollectionPaths,
-  queryProductPaths,
-  querySlugPagePaths,
-} from "@workspace/sanity/query";
+import { queryBlogPaths, querySlugPagePaths } from "@workspace/sanity/query";
 
+import { getCategoryPaths, getProductPaths } from "@/lib/bigcommerce/catalog";
+import type { StorefrontQueryResult } from "@/lib/bigcommerce/client";
+import { normalizeMarkdownPath } from "@/lib/markdown/path";
 import { toMarkdownHref } from "@/lib/markdown/shared";
 import { getBaseUrl } from "@/utils";
 
@@ -20,7 +18,7 @@ const SITE_DESCRIPTION =
 
 /** Absolute `.md` URL for an internal path. */
 function mdUrl(base: string, path: string): string {
-  return `${base}${toMarkdownHref(path)}`;
+  return `${base}${toMarkdownHref(normalizeMarkdownPath(path))}`;
 }
 
 function section(title: string, links: string[]): string | null {
@@ -31,14 +29,16 @@ function section(title: string, links: string[]): string | null {
 export async function GET(): Promise<Response> {
   const base = getBaseUrl();
 
+  // Editorial paths come from Sanity; catalog paths come from BigCommerce —
+  // the same enumeration `generateStaticParams` and the sitemap use.
   const [pages, blogs, products, collections] = await Promise.allSettled([
     sanityFetch({ query: querySlugPagePaths, ...PUBLISHED }),
     sanityFetch({ query: queryBlogPaths, ...PUBLISHED }),
-    sanityFetch({ query: queryProductPaths, ...PUBLISHED }),
-    sanityFetch({ query: queryCollectionPaths, ...PUBLISHED }),
+    getProductPaths(),
+    getCategoryPaths(),
   ]);
 
-  const value = <T>(
+  const sanityValue = <T>(
     result: PromiseSettledResult<{ data: T }>,
     label: string
   ): T | null => {
@@ -47,18 +47,29 @@ export async function GET(): Promise<Response> {
     return null;
   };
 
-  const pagePaths = (value(pages, "pages") ?? []).filter(
+  const catalogValue = (
+    result: PromiseSettledResult<StorefrontQueryResult<string[]>>,
+    label: string
+  ): string[] => {
+    if (result.status !== "fulfilled") {
+      logger.error(`Failed to load ${label} for llms.txt`, result.reason);
+      return [];
+    }
+    if (!result.value.ok) {
+      logger.error(`Failed to load ${label} for llms.txt`, result.value.error);
+      return [];
+    }
+    return result.value.data;
+  };
+
+  const pagePaths = (sanityValue(pages, "pages") ?? []).filter(
     (slug): slug is string => Boolean(slug)
   );
-  const blogPaths = (value(blogs, "blogs") ?? []).filter(
+  const blogPaths = (sanityValue(blogs, "blogs") ?? []).filter(
     (slug): slug is string => Boolean(slug)
   );
-  const productHandles = (value(products, "products") ?? []).filter(
-    (handle): handle is string => Boolean(handle)
-  );
-  const collectionHandles = (value(collections, "collections") ?? []).filter(
-    (handle): handle is string => Boolean(handle)
-  );
+  const productPaths = catalogValue(products, "products");
+  const categoryPaths = catalogValue(collections, "collections");
 
   const body = [
     `# ${SITE_TITLE}`,
@@ -69,11 +80,11 @@ export async function GET(): Promise<Response> {
     ]),
     section(
       "Collections",
-      collectionHandles.map((handle) => mdUrl(base, `/collections/${handle}`))
+      categoryPaths.map((path) => mdUrl(base, path))
     ),
     section(
       "Products",
-      productHandles.map((handle) => mdUrl(base, `/products/${handle}`))
+      productPaths.map((path) => mdUrl(base, path))
     ),
     section("Blog", [
       mdUrl(base, "/blog"),

@@ -7,17 +7,15 @@ import {
 } from "@/lib/cart/controller";
 import { recalcTotals } from "@/lib/cart/engine";
 import type {
+  Cart,
   CartActionResult,
   CartErrorCode,
-  CartWarning,
-  LineMetadata,
-} from "@/lib/cart/types";
-import type {
-  Cart,
   CartLine,
   CartLineInput,
+  CartWarning,
+  LineMetadata,
   MoneyV2,
-} from "@/lib/shopify/types";
+} from "@/lib/cart/types";
 
 const usd = (amount: string): MoneyV2 => ({ amount, currencyCode: "USD" });
 
@@ -45,10 +43,9 @@ function makeLine(
   };
 }
 
-function makeCart(lines: CartLine[], id = "gid://shopify/Cart/1"): Cart {
+function makeCart(lines: CartLine[], id = "cart-1"): Cart {
   return {
     id,
-    checkoutUrl: "https://shop.example/checkout",
     totalQuantity: lines.reduce((sum, l) => sum + l.quantity, 0),
     lines: {
       edges: lines.map((node) => ({ node })),
@@ -228,7 +225,7 @@ describe("CartController", () => {
         type: "updateLine",
         lineId: "line-1",
         quantity: 2,
-        merchandiseId: undefined,
+        merchandiseId: "variant-1",
       },
     ]);
 
@@ -257,7 +254,7 @@ describe("CartController", () => {
       type: "updateLine",
       lineId: "line-1",
       quantity: 15,
-      merchandiseId: undefined,
+      merchandiseId: "variant-1",
     });
 
     resolveMutation(
@@ -305,13 +302,13 @@ describe("CartController", () => {
         type: "updateLine",
         lineId: "line-1",
         quantity: 2,
-        merchandiseId: undefined,
+        merchandiseId: "variant-1",
       },
       {
         type: "updateLine",
         lineId: "line-1",
         quantity: 5,
-        merchandiseId: undefined,
+        merchandiseId: "variant-1",
       },
       {
         type: "addLines",
@@ -447,7 +444,7 @@ describe("CartController", () => {
     expect(lineQty(controller.getSnapshot().cartWithPending, "line-2")).toBe(4);
     expect(lineQty(controller.getSnapshot().cartWithPending, "line-1")).toBe(5);
 
-    resolveMutation(mock, 0, fail("SHOPIFY_USER_ERROR", "cannot update"));
+    resolveMutation(mock, 0, fail("STOREFRONT_USER_ERROR", "cannot update"));
     await flush();
 
     const snapshot = controller.getSnapshot();
@@ -456,7 +453,7 @@ describe("CartController", () => {
     expect(snapshot.error).toEqual({
       intentKind: "update",
       lineId: "line-1",
-      code: "SHOPIFY_USER_ERROR",
+      code: "STOREFRONT_USER_ERROR",
       message: "cannot update",
       retryable: false,
     });
@@ -485,7 +482,7 @@ describe("CartController", () => {
         type: "updateLine",
         lineId: "line-1",
         quantity: 3,
-        merchandiseId: undefined,
+        merchandiseId: "variant-1",
       },
       { type: "removeLine", lineId: "line-2" },
     ]);
@@ -569,7 +566,7 @@ describe("CartController", () => {
             makeLine("line-1", "variant-1", 1, "10.00"),
             makeLine("line-2", "variant-2", 2, "5.00"),
           ],
-          "gid://shopify/Cart/new"
+          "cart-new"
         )
       )
     );
@@ -579,7 +576,7 @@ describe("CartController", () => {
 
     snapshot = controller.getSnapshot();
     expect(snapshot.isCreatingCart).toBe(false);
-    expect(snapshot.cartWithPending?.id).toBe("gid://shopify/Cart/new");
+    expect(snapshot.cartWithPending?.id).toBe("cart-new");
     expect(lineIds(snapshot.cartWithPending)).toEqual(["line-1", "line-2"]);
 
     await vi.advanceTimersByTimeAsync(1000);
@@ -622,7 +619,7 @@ describe("CartController", () => {
       ok(
         makeCart(
           [makeLine("line-9", "variant-9", 1, "10.00")],
-          "gid://shopify/Cart/recreated"
+          "cart-recreated"
         )
       )
     );
@@ -630,7 +627,7 @@ describe("CartController", () => {
     await expect(addPromise).resolves.toEqual({ ok: true, warnings: [] });
 
     snapshot = controller.getSnapshot();
-    expect(snapshot.cartWithPending?.id).toBe("gid://shopify/Cart/recreated");
+    expect(snapshot.cartWithPending?.id).toBe("cart-recreated");
     expect(snapshot.isCreatingCart).toBe(false);
     controller.dispose();
   });
@@ -770,7 +767,7 @@ describe("CartController", () => {
       type: "updateLine",
       lineId: "line-1",
       quantity: 7,
-      merchandiseId: undefined,
+      merchandiseId: "variant-1",
     });
 
     resolveMutation(
@@ -797,12 +794,12 @@ describe("CartController", () => {
     await vi.advanceTimersByTimeAsync(400);
     expect(updateCalls(mock)).toHaveLength(1);
 
-    resolveMutation(mock, 0, fail("SHOPIFY_USER_ERROR", "cannot update"));
+    resolveMutation(mock, 0, fail("STOREFRONT_USER_ERROR", "cannot update"));
     await flush();
 
     const snapshot = controller.getSnapshot();
     expect(lineQty(snapshot.cartWithPending, "line-1")).toBe(2);
-    expect(snapshot.error?.code).toBe("SHOPIFY_USER_ERROR");
+    expect(snapshot.error?.code).toBe("STOREFRONT_USER_ERROR");
     expect(updateCalls(mock)).toHaveLength(1);
 
     await vi.advanceTimersByTimeAsync(1000);

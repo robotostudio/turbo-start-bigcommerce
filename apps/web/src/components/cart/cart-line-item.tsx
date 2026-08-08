@@ -6,16 +6,15 @@ import Link from "next/link";
 import { AnimatedMoney } from "@/components/elements/animated-money";
 import { BookmarkIcon } from "@/components/icons";
 import { QuantitySelector } from "@/components/product/quantity-selector";
-import { ShopifyImage as Image } from "@/components/product/shopify-image";
+import { StoreImage as Image } from "@/components/product/store-image";
 import { useSavedItems } from "@/components/saved-items/saved-items-context";
+import { getOptionType } from "@/lib/bigcommerce/options";
 import { isSyntheticLineId } from "@/lib/cart/intents";
-import { getColorHex } from "@/lib/shopify/color";
-import { getOptionType } from "@/lib/shopify/options";
-import type { CartLine, SelectedOption } from "@/lib/shopify/types";
+import type { CartLine, SelectedOption } from "@/lib/cart/types";
 import {
   findVariantByOptions,
   getOptionAvailability,
-} from "@/lib/shopify/variant-utils";
+} from "@/lib/cart/variant-match";
 import { useCart } from "./cart-context";
 import {
   CartLineVariantSelect,
@@ -68,7 +67,7 @@ export function CartLineItem({ line }: { line: CartLine }) {
     line.merchandise.selectedOptions.map((option) => ({
       id: option.name,
       name: option.name,
-      values: [option.value],
+      values: [{ value: option.value, hex: null }],
     }));
   const variants = productOptions?.variants ?? [];
 
@@ -92,7 +91,7 @@ export function CartLineItem({ line }: { line: CartLine }) {
 
   const selectableOptions = optionDefs.filter(
     (option) =>
-      !(option.values.length === 1 && option.values[0] === DEFAULT_TITLE)
+      !(option.values.length === 1 && option.values[0]?.value === DEFAULT_TITLE)
   );
 
   return (
@@ -120,11 +119,13 @@ export function CartLineItem({ line }: { line: CartLine }) {
                 option.name,
                 currentSelections
               );
-              const values: VariantOption[] = option.values.map((value) => ({
-                value,
-                available: availability[value] ?? variants.length === 0,
-                hex: type === "color" ? getColorHex(value) : null,
-              }));
+              const values: VariantOption[] = option.values.map(
+                ({ value, hex }) => ({
+                  value,
+                  available: availability[value] ?? variants.length === 0,
+                  hex: type === "color" ? hex : null,
+                })
+              );
               return (
                 <CartLineVariantSelect
                   disabled={isSynthetic}

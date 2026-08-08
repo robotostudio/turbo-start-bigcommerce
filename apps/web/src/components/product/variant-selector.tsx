@@ -4,15 +4,16 @@ import { cn } from "@workspace/ui/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useOptimistic, useTransition } from "react";
 
-import { getOptionType } from "@/lib/shopify/options";
-import type { ShopifyProductOption, ShopifyVariant } from "@/lib/shopify/types";
-import { getOptionAvailability } from "@/lib/shopify/variant-utils";
+import { getOptionType } from "@/lib/bigcommerce/options";
+import type { ProductOption } from "@/lib/cart/types";
 import { ColorSwatch } from "./color-swatch";
+import type { CardVariant } from "./product-card";
 import { SizeSelector } from "./size-selector";
+import { getOptionAvailability } from "./variant-utils";
 
 type VariantSelectorProps = {
-  options: ShopifyProductOption[];
-  variants: ShopifyVariant[];
+  options: ProductOption[];
+  variants: CardVariant[];
   handle: string;
 };
 
@@ -90,11 +91,11 @@ export function VariantSelector({
                 availability={availability}
                 onSelect={(v) => handleSelect(option.name, v)}
                 selectedValue={selected ?? ""}
-                values={option.values}
+                values={option.values.map((v) => v.value)}
               />
             ) : (
               <div className="flex flex-wrap items-center gap-2">
-                {option.values.map((value) => {
+                {option.values.map(({ value }) => {
                   const isAvailable = availability[value] !== false;
                   const isSelected = selected === value;
 

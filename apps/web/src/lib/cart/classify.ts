@@ -1,27 +1,11 @@
-import type { StorefrontFailureKind } from "@/lib/shopify/client";
-import type {
-  Cart,
-  CartLineInput,
-  ShopifyCartUserError,
-  ShopifyCartWarning,
-} from "@/lib/shopify/types";
-import type { CartErrorCode, CartWarning } from "./types";
+import type { Cart, CartLineInput, CartWarning } from "@/lib/cart/types";
 
-const CART_GONE_PATTERN =
-  /cart\s+(?:does\s?n.t\s+exist|not\s+found|could\s+not\s+be\s+found)/i;
-const CART_COMPLETED_PATTERN = /cart.{0,40}(?:complete|purchased)/i;
-
-const VARIANT_UNAVAILABLE_CODES = new Set([
-  "MERCHANDISE_NOT_FOUND",
-  "MERCHANDISE_OUT_OF_STOCK",
-  "PRODUCT_NOT_AVAILABLE",
-  "INVALID_MERCHANDISE_LINE",
-]);
-
-const CLAMP_WARNING_CODES = new Set([
-  "MERCHANDISE_NOT_ENOUGH_STOCK",
-  "MERCHANDISE_OUT_OF_STOCK",
-]);
+/**
+ * Silent-clamp detection: BigCommerce reports no warnings on cart writes, so
+ * the only way to notice a clamped quantity or a dropped line is to compare
+ * what was requested against the cart that came back. Error classification
+ * itself lives in `lib/bigcommerce/classify.ts`.
+ */
 
 export type RequestedLine = {
   key: "lineId" | "merchandiseId";
@@ -31,42 +15,6 @@ export type RequestedLine = {
 };
 
 export type ExpectedTotal = { merchandiseId: string; quantity: number };
-
-export function classifyTransportError(
-  error: string,
-  kind: StorefrontFailureKind
-): { code: CartErrorCode; message: string } {
-  if (kind === "network") return { code: "NETWORK", message: error };
-  if (CART_GONE_PATTERN.test(error)) {
-    return { code: "CART_NOT_FOUND", message: error };
-  }
-  return { code: "UNKNOWN", message: error };
-}
-
-export function classifyUserErrors(
-  userErrors: ShopifyCartUserError[]
-): { code: CartErrorCode; message: string } | null {
-  const first = userErrors[0];
-  if (!first) return null;
-  if (CART_GONE_PATTERN.test(first.message)) {
-    return { code: "CART_NOT_FOUND", message: first.message };
-  }
-  if (CART_COMPLETED_PATTERN.test(first.message)) {
-    return { code: "CART_COMPLETED", message: first.message };
-  }
-  if (first.code && VARIANT_UNAVAILABLE_CODES.has(first.code)) {
-    return { code: "VARIANT_UNAVAILABLE", message: first.message };
-  }
-  return { code: "SHOPIFY_USER_ERROR", message: first.message };
-}
-
-export function mapShopifyWarning(warning: ShopifyCartWarning): CartWarning {
-  return {
-    code: CLAMP_WARNING_CODES.has(warning.code) ? "QUANTITY_CLAMPED" : "OTHER",
-    lineId: warning.target ?? undefined,
-    message: warning.message,
-  };
-}
 
 /**
  * Adds can merge into an existing line, so the response quantity is the line

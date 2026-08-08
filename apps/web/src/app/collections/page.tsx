@@ -1,11 +1,13 @@
 import { sanityFetch } from "@workspace/sanity/live";
-import {
-  queryAllCollections,
-  queryCollectionsIndexPageData,
-} from "@workspace/sanity/query";
+import { queryCollectionsIndexPageData } from "@workspace/sanity/query";
 
 import { CollectionsContent } from "@/components/collections/collections-content";
 import { BreadcrumbJsonLd, CollectionJsonLd } from "@/components/json-ld";
+import {
+  flattenCategoryTree,
+  getCategoryTree,
+} from "@/lib/bigcommerce/catalog";
+import { categoryToCardProps } from "@/lib/collection-card";
 import { getSEOMetadata } from "@/lib/seo";
 import { getBaseUrl } from "@/utils";
 
@@ -23,14 +25,22 @@ export async function generateMetadata() {
 }
 
 export default async function CollectionsPage() {
-  const [{ data: indexData }, { data: collections }] = await Promise.all([
+  // The index heading is editorial and stays in Sanity; the categories
+  // themselves come from the catalog, so a new one appears here the moment the
+  // merchant creates it, with no document to author.
+  const [{ data: indexData }, treeResult] = await Promise.all([
     sanityFetch({ query: queryCollectionsIndexPageData }),
-    sanityFetch({ query: queryAllCollections }),
+    getCategoryTree(),
   ]);
 
   const baseUrl = getBaseUrl();
   const title = indexData?.title ?? "Collections";
-  const allCollections = collections ?? [];
+  // Flattened per top-level branch rather than in one pass: only the root level
+  // of `categoryTree` selects an image, so mapping the roots directly is what
+  // keeps their artwork while still listing every descendant.
+  const collections = (treeResult.ok ? treeResult.data : []).flatMap((root) =>
+    [root, ...flattenCategoryTree(root.children ?? [])].map(categoryToCardProps)
+  );
 
   return (
     <>
@@ -39,14 +49,14 @@ export default async function CollectionsPage() {
       />
       <CollectionJsonLd
         description={indexData?.subtitle ?? null}
-        items={allCollections.map((c) => ({
-          name: c.title ?? "",
-          ...(c.slug ? { url: `${baseUrl}/collections/${c.slug}` } : {}),
+        items={collections.map((collection) => ({
+          name: collection.title,
+          url: `${baseUrl}/collections/${collection.handle}`,
         }))}
         name={title}
         url={`${baseUrl}/collections`}
       />
-      <CollectionsContent collections={allCollections} title={title} />
+      <CollectionsContent collections={collections} title={title} />
     </>
   );
 }

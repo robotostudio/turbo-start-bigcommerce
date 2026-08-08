@@ -13,8 +13,7 @@ import {
   swapIntent,
   updateIntent,
 } from "@/lib/cart/intents";
-import type { LineMetadata } from "@/lib/cart/types";
-import type { Cart, CartLine, MoneyV2 } from "@/lib/shopify/types";
+import type { Cart, CartLine, LineMetadata, MoneyV2 } from "@/lib/cart/types";
 
 const usd = (amount: string): MoneyV2 => ({ amount, currencyCode: "USD" });
 
@@ -44,8 +43,7 @@ function makeLine(
 
 function makeCart(lines: CartLine[]): Cart {
   return {
-    id: "gid://shopify/Cart/1",
-    checkoutUrl: "https://shop.example/checkout",
+    id: "cart-1",
     totalQuantity: lines.reduce((sum, l) => sum + l.quantity, 0),
     lines: {
       edges: lines.map((node) => ({ node })),
@@ -81,7 +79,6 @@ describe("fold", () => {
     ]);
     expect(cart).not.toBeNull();
     expect(cart?.id).toBe("optimistic-cart");
-    expect(cart?.checkoutUrl).toBe("");
     expect(cart?.lines.edges.map((e) => e.node.id)).toEqual([
       "optimistic-variant-1",
       "optimistic-variant-2",

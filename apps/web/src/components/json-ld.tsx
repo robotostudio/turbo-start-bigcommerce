@@ -309,7 +309,7 @@ export function BreadcrumbJsonLd({
         "@type": "ListItem",
         position: index + 1,
         // stegaClean strips Sanity visual-editing markers (zero-width chars)
-        // from CMS-sourced names; no-op on plain strings (e.g. Shopify titles).
+        // from CMS-sourced names; no-op on plain strings (e.g. product titles).
         name: stegaClean(crumb.name),
         ...(crumb.url ? { item: crumb.url } : {}),
       })
@@ -337,7 +337,7 @@ export function CollectionJsonLd({
   id = "collection-json-ld",
 }: CollectionJsonLdProps) {
   // stegaClean strips Sanity visual-editing markers from CMS-sourced strings;
-  // no-op on plain strings (e.g. Shopify product titles).
+  // no-op on plain strings (e.g. product titles).
   const collectionJsonLd: WithContext<CollectionPage> = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",

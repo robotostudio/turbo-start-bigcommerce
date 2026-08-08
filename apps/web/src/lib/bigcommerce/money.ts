@@ -4,7 +4,7 @@ export type BigCommerceMoney = {
   currencyCode: string;
 };
 
-/** The app's internal money shape — a string amount, unchanged from Shopify. */
+/** The app's internal money shape — a string amount plus a currency code. */
 export type Money = {
   amount: string;
   currencyCode: string;

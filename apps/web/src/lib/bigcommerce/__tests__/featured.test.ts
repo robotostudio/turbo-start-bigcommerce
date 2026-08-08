@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Hoisted by vitest, so both run before `client.ts` is evaluated — it derives
@@ -106,18 +105,20 @@ describe("getFeaturedProducts", () => {
     await expect(getFeaturedProducts([189, 183])).resolves.toEqual([]);
   });
 
-  it("falls back to best sellers when the editor picked none", async () => {
+  it("falls back to newest products when the editor picked none", async () => {
+    // Not bestSellingProducts: that reads from order history and is [] on
+    // every fresh install of this starter.
     const fetchMock = mockBody(
       JSON.stringify({
         data: {
-          site: { bestSellingProducts: { edges: [{ node: RYE }] } },
+          site: { newestProducts: { edges: [{ node: RYE }] } },
         },
       })
     );
 
     const products = await getFeaturedProducts();
 
-    expect(sentBody(fetchMock).query).toContain("bestSellingProducts");
+    expect(sentBody(fetchMock).query).toContain("newestProducts");
     expect(products.map((product) => product.entityId)).toEqual([189]);
   });
 });

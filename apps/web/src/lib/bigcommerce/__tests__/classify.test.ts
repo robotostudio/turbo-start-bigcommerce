@@ -74,23 +74,21 @@ describe("classifyStorefrontFailure", () => {
         message: "Something else went wrong",
         errors: [{ message: "Something else went wrong", path: ["cart"] }],
       }).code
-    ).toBe("SHOPIFY_USER_ERROR");
+    ).toBe("STOREFRONT_USER_ERROR");
   });
 
-  it("still classifies cart faults when only the joined message survives", () => {
-    // `client.ts` folds `errors[]` into one string and drops `path`, so this is
-    // what the classifier sees until that changes. The message-keyed rules
-    // still fire; only the `path`-keyed one is lost.
-    const joined = (fixture: string) =>
+  it("uses `path` to keep a non-cart refusal out of the shopper-facing codes", () => {
+    // `client.ts` surfaces the raw `errors` array now, so the `path` rule can
+    // fire: a message that no message-keyed rule recognises is UNKNOWN when it
+    // is not rooted at `cart`, and the shopper-facing catch-all when it is.
+    const refusal = (path?: readonly (string | number)[]) =>
       classifyStorefrontFailure({
         kind: "graphql",
-        message:
-          CASES.find((c) => c.fixture === fixture)?.errors[0]?.message ?? "",
+        message: "Internal server error",
+        errors: [{ message: "Internal server error", path }],
       }).code;
-    expect(joined("error-cart-not-found")).toBe("CART_NOT_FOUND");
-    expect(joined("error-invalid-quantity")).toBe("INVALID_INPUT");
-    expect(joined("error-product-not-found")).toBe("VARIANT_UNAVAILABLE");
-    expect(joined("error-login-invalid-credentials")).toBe("UNKNOWN");
+    expect(refusal(["login"])).toBe("UNKNOWN");
+    expect(refusal(["cart", "createCart"])).toBe("STOREFRONT_USER_ERROR");
   });
 
   it("does not show an infrastructure message as a backend refusal", () => {

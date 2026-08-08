@@ -5,7 +5,7 @@ import type { ResultOf } from "gql.tada";
 import { storefrontQuery } from "./client";
 import { graphql } from "./graphql";
 
-/** How many best sellers to show when the editor hasn't picked any. */
+/** How many fallback products to show when the editor hasn't picked any. */
 const FALLBACK_COUNT = 4;
 
 /**
@@ -54,11 +54,11 @@ const FeaturedProductsByEntityIdQuery = graphql(
   [FeaturedProductCardFields]
 );
 
-const BestSellingFeaturedProductsQuery = graphql(
+const NewestFeaturedProductsQuery = graphql(
   `
-  query BestSellingFeaturedProducts($first: Int!) {
+  query NewestFeaturedProducts($first: Int!) {
     site {
-      bestSellingProducts(first: $first) {
+      newestProducts(first: $first) {
         edges {
           node {
             ...FeaturedProductCardFields
@@ -70,6 +70,20 @@ const BestSellingFeaturedProductsQuery = graphql(
 `,
   [FeaturedProductCardFields]
 );
+
+const NewestProductIdsQuery = graphql(`
+  query NewestProductIds($first: Int!) {
+    site {
+      newestProducts(first: $first) {
+        edges {
+          node {
+            entityId
+          }
+        }
+      }
+    }
+  }
+`);
 
 /** BigCommerce connections type `edges` as a nullable list. */
 function edgeNodes(
@@ -109,21 +123,42 @@ async function getProductsByEntityIds(
   return restoreOrder(entityIds, edgeNodes(result.data.site.products.edges));
 }
 
-/** Best-selling products, used when the editor hasn't picked any. */
-async function getBestSellingProducts(
+/**
+ * Newest products, used when the editor hasn't picked any.
+ *
+ * Not `bestSellingProducts`: BigCommerce derives that from order history and
+ * answers `[]` on a store that has never taken an order — which is every
+ * fresh install of this starter. Newest still has something to show on day
+ * one.
+ */
+async function getNewestProducts(
   first = FALLBACK_COUNT
 ): Promise<FeaturedProduct[]> {
-  const result = await storefrontQuery(BestSellingFeaturedProductsQuery, {
+  const result = await storefrontQuery(NewestFeaturedProductsQuery, {
     variables: { first },
   });
   if (!result.ok) return [];
-  return edgeNodes(result.data.site.bestSellingProducts.edges);
+  return edgeNodes(result.data.site.newestProducts.edges);
+}
+
+/**
+ * Ids of the most recently added products — the same fallback, for callers
+ * that re-read each product in full (the homepage Featured Products block).
+ */
+export async function getNewestProductIds(first: number): Promise<number[]> {
+  const result = await storefrontQuery(NewestProductIdsQuery, {
+    variables: { first },
+  });
+  if (!result.ok) return [];
+  return (result.data.site.newestProducts.edges ?? []).map(
+    (edge) => edge.node.entityId
+  );
 }
 
 /**
  * Resolves the products for a Featured Products block. When `entityIds` are
- * provided (editor selection) they're fetched in order; otherwise it falls back
- * to BigCommerce best sellers.
+ * provided (editor selection) they're fetched in order; otherwise it falls
+ * back to the newest products.
  */
 export async function getFeaturedProducts(
   entityIds?: readonly number[]
@@ -131,5 +166,5 @@ export async function getFeaturedProducts(
   if (entityIds && entityIds.length > 0) {
     return getProductsByEntityIds(entityIds);
   }
-  return getBestSellingProducts();
+  return getNewestProducts();
 }

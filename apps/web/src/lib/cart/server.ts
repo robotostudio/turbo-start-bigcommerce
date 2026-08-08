@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-const CART_COOKIE = "shopify-cart-id";
+const CART_COOKIE = "bigcommerce-cart-id";
 const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
 export async function getCartId(): Promise<string | null> {

@@ -20,13 +20,19 @@ export function getOptionType(name: string): "color" | "size" | "default" {
   return "default";
 }
 
-/** A `MultipleChoiceOption` as the card queries it. */
+/**
+ * A `MultipleChoiceOption` as the card queries it. `edges` is nullable
+ * because gql.tada types every connection off the real schema as
+ * `edges: T[] | null`, so the generated payload types fit directly.
+ */
 export type BigCommerceProductOption = {
   displayName: string;
   values?: {
-    edges: readonly {
-      node: { label: string; hexColors?: readonly string[] | null };
-    }[];
+    edges?:
+      | readonly {
+          node: { label: string; hexColors?: readonly string[] | null };
+        }[]
+      | null;
   } | null;
 };
 

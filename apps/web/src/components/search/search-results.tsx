@@ -4,32 +4,41 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { cn } from "@workspace/ui/lib/utils";
 import { useState } from "react";
 
-import { CollectionCard } from "@/components/collection/collection-card";
-import { shopifyCollectionToCardProps } from "@/lib/collection-card";
-import type {
-  ShopifyCollectionLite,
-  ShopifyCollectionProduct,
-} from "@/lib/shopify/types";
+import {
+  CollectionCard,
+  type CollectionCardProps,
+} from "@/components/collection/collection-card";
+import type { BigCommerceCardProduct } from "@/lib/bigcommerce/product-card";
 import { SearchProductGrid } from "./search-product-grid";
+import type { SearchCollection } from "./use-product-search";
 
 type Tab = "products" | "collections";
 
 type SearchResultsProps = {
   related: string[];
-  products: ShopifyCollectionProduct[];
-  collections: ShopifyCollectionLite[];
+  products: BigCommerceCardProduct[];
+  collections: SearchCollection[];
   isSearching: boolean;
   onSelectTerm: (term: string) => void;
   /** Forwarded to `next/link`: replace the current history entry, don't push. */
   replace?: boolean;
 };
 
+/** `/collections/jackets/leather/` → `jackets/leather`, the card's link handle. */
+function categoryCardProps(collection: SearchCollection): CollectionCardProps {
+  return {
+    handle: collection.path.split("/").filter(Boolean).slice(1).join("/"),
+    title: collection.name,
+    imageUrl: collection.image?.url ?? null,
+  };
+}
+
 function CollectionsGrid({
   collections,
   isLoading,
   replace,
 }: {
-  collections: ShopifyCollectionLite[];
+  collections: SearchCollection[];
   isLoading: boolean;
   replace?: boolean;
 }) {
@@ -54,8 +63,8 @@ function CollectionsGrid({
     <div className="grid grid-cols-2 gap-x-1 gap-y-8 md:grid-cols-3">
       {collections.map((collection) => (
         <CollectionCard
-          key={collection.id}
-          {...shopifyCollectionToCardProps(collection)}
+          key={collection.entityId}
+          {...categoryCardProps(collection)}
           replace={replace}
         />
       ))}

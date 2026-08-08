@@ -5,14 +5,15 @@ import {
   variantIdFromSyntheticLineId,
 } from "@/lib/cart/intents";
 import type {
+  Cart,
   CartActionResult,
   CartError,
   CartIntent,
+  CartLineInput,
   CartSnapshot,
   CartWarning,
   LineMetadata,
 } from "@/lib/cart/types";
-import type { Cart, CartLineInput } from "@/lib/shopify/types";
 
 export type ExpectedTotal = { merchandiseId: string; quantity: number };
 
@@ -320,8 +321,13 @@ export class CartController {
       const seq = this.nextSeq++;
       this.inFlight++;
       this.refold();
+      // BigCommerce's update mutation requires the product ids even for a
+      // plain quantity change, so the line's merchandise id rides along.
+      const merchandiseId = this.serverTruth?.lines.edges.find(
+        (edge) => edge.node.id === lineId
+      )?.node.merchandise.id;
       const result = await this.callWithRetry(() =>
-        this.actions.updateLine(lineId, target)
+        this.actions.updateLine(lineId, target, merchandiseId)
       );
       this.inFlight--;
       if (result.ok) {

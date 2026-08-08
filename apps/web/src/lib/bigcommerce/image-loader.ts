@@ -49,8 +49,8 @@ function resizeUrl(src: string, size: string): string {
  * per `deviceSizes` width, so the responsive `srcset` stays correct.
  *
  * There is no quality knob: BigCommerce's renditions are addressed by size
- * alone, and appending Shopify's `?quality=` would only add a cache-busting
- * query string the CDN ignores. Non-BigCommerce URLs pass through untouched,
+ * alone, and a `?quality=` parameter would only add a cache-busting query
+ * string the CDN ignores. Non-BigCommerce URLs pass through untouched,
  * so the loader is safe to attach to any image.
  */
 export function bigcommerceImageLoader({

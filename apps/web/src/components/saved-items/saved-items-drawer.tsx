@@ -13,7 +13,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { ProductCard } from "@/components/product/product-card";
-import { collectionProductToCardProps } from "@/lib/shopify/product-card";
+import { productToCardProps } from "@/lib/bigcommerce/product-card";
 import { SavedEmptyState } from "./saved-empty-state";
 import { useSavedItems } from "./saved-items-context";
 import { useSavedProducts } from "./use-saved-products";
@@ -84,8 +84,8 @@ export function SavedItemsDrawer() {
                   ))
                 : products.map((product) => (
                     <ProductCard
-                      key={product.id}
-                      {...collectionProductToCardProps(product)}
+                      key={product.entityId}
+                      {...productToCardProps(product)}
                     />
                   ))}
             </div>

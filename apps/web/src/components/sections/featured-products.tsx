@@ -1,13 +1,18 @@
 import { Button } from "@workspace/ui/components/button";
 import Link from "next/link";
 
-import { ProductCard } from "@/components/product/product-card";
-import { collectionProductToCardProps } from "@/lib/shopify/product-card";
-import type { FeaturedProduct } from "@/lib/shopify/types";
+import {
+  ProductCard,
+  type ProductCardProps,
+} from "@/components/product/product-card";
 
 type FeaturedProductsProps = {
   heading?: string | null;
-  products: FeaturedProduct[];
+  /**
+   * Card props resolved server-side in the page: this block renders inside the
+   * client PageBuilder and cannot read the catalog itself.
+   */
+  products: ProductCardProps[];
 };
 
 export function FeaturedProducts({ heading, products }: FeaturedProductsProps) {
@@ -26,10 +31,7 @@ export function FeaturedProducts({ heading, products }: FeaturedProductsProps) {
 
       <div className="grid grid-cols-2 gap-1 md:grid-cols-4">
         {products.map((product) => (
-          <ProductCard
-            key={product.id}
-            {...collectionProductToCardProps(product)}
-          />
+          <ProductCard key={product.slug} {...product} />
         ))}
       </div>
     </section>

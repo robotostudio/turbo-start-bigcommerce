@@ -20,7 +20,7 @@ type SitemapRank = {
   readonly changeFrequency: ChangeFrequency;
 };
 
-/** A rank plus the prefix joined to each Sanity slug or Shopify handle. */
+/** A rank plus the prefix joined to each Sanity slug or commerce handle. */
 type SitemapSource = SitemapRank & { readonly pathPrefix: string };
 
 /**
@@ -39,12 +39,12 @@ const SANITY_SITEMAP_SOURCES = [
 })[];
 
 /**
- * Shopify-backed routes. These reuse the path queries that also drive
- * `generateStaticParams` and llms.txt rather than being folded into
- * `querySitemapData`. Results are fetched by mapping over this array, so they
- * stay index-aligned with it.
+ * Commerce-backed routes — product and collection documents synced into
+ * Sanity. These reuse the path queries that also drive `generateStaticParams`
+ * and llms.txt rather than being folded into `querySitemapData`. Results are
+ * fetched by mapping over this array, so they stay index-aligned with it.
  */
-const SHOPIFY_SITEMAP_SOURCES = [
+const COMMERCE_SITEMAP_SOURCES = [
   {
     query: queryProductPaths,
     pathPrefix: "/products/",
@@ -68,7 +68,7 @@ const STATIC_SITEMAP_ENTRIES = [
 const baseUrl = getBaseUrl();
 
 /**
- * Sanity sources carry `_updatedAt`; Shopify handles have no timestamp, so
+ * Sanity sources carry `_updatedAt`; commerce handles have no timestamp, so
  * they fall back to now — matching what each branch emitted previously.
  */
 function toEntry(
@@ -96,13 +96,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "Sanity sitemap data",
     "the sitemap lists static routes only",
     async () => {
-      const [sanityDocs, shopifyPaths] = await Promise.all([
+      const [sanityDocs, commercePaths] = await Promise.all([
         client.fetch(querySitemapData),
         Promise.all(
-          SHOPIFY_SITEMAP_SOURCES.map((source) => client.fetch(source.query))
+          COMMERCE_SITEMAP_SOURCES.map((source) => client.fetch(source.query))
         ),
       ]);
-      return { sanityDocs, shopifyPaths };
+      return { sanityDocs, commercePaths };
     },
     null
   );
@@ -111,7 +111,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return staticEntries;
   }
 
-  const { sanityDocs, shopifyPaths } = fetched;
+  const { sanityDocs, commercePaths } = fetched;
 
   return [
     ...staticEntries,
@@ -122,8 +122,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       )
     ),
 
-    ...SHOPIFY_SITEMAP_SOURCES.flatMap(({ pathPrefix, ...rank }, index) =>
-      (shopifyPaths[index] ?? [])
+    ...COMMERCE_SITEMAP_SOURCES.flatMap(({ pathPrefix, ...rank }, index) =>
+      (commercePaths[index] ?? [])
         .filter((handle): handle is string => handle !== null)
         .map((handle) => toEntry(`${pathPrefix}${handle}`, rank))
     ),

@@ -1,33 +1,21 @@
 import { NextResponse } from "next/server";
 
-import { storefrontQuery } from "@/lib/shopify/client";
-import {
-  ALL_COLLECTIONS_QUERY,
-  BEST_SELLING_PRODUCTS_QUERY,
-} from "@/lib/shopify/queries";
-import type {
-  AllCollectionsResponse,
-  BestSellingProductsResponse,
-} from "@/lib/shopify/types";
+import { getCategoryTree } from "@/lib/bigcommerce/catalog";
+import { getFeaturedProducts } from "@/lib/bigcommerce/featured";
+import { toSearchCategory } from "../query";
 
 const COLLECTIONS_LIMIT = 8;
-const BEST_SELLERS_LIMIT = 4;
 
 export async function GET() {
-  const [collectionsResult, bestSellersResult] = await Promise.all([
-    storefrontQuery<AllCollectionsResponse>(ALL_COLLECTIONS_QUERY, {
-      variables: { first: COLLECTIONS_LIMIT },
-    }),
-    storefrontQuery<BestSellingProductsResponse>(BEST_SELLING_PRODUCTS_QUERY, {
-      variables: { first: BEST_SELLERS_LIMIT },
-    }),
+  const [treeResult, bestSellers] = await Promise.all([
+    getCategoryTree(),
+    // No editor picks here: the empty search state wants plain best sellers.
+    getFeaturedProducts(),
   ]);
 
-  const collections = collectionsResult.ok
-    ? collectionsResult.data.collections.edges.map((edge) => edge.node)
-    : [];
-  const bestSellers = bestSellersResult.ok
-    ? bestSellersResult.data.products.edges.map((edge) => edge.node)
+  // Top-level categories only — they are the ones that carry an image.
+  const collections = treeResult.ok
+    ? treeResult.data.slice(0, COLLECTIONS_LIMIT).map(toSearchCategory)
     : [];
 
   return NextResponse.json({ collections, bestSellers });

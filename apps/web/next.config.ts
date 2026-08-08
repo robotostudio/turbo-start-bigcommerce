@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     // Skip optimization in dev to avoid optimizer fetch timeouts on large
-    // Shopify masters; Vercel optimizes normally in production.
+    // CDN masters; Vercel optimizes normally in production.
     unoptimized: process.env.NODE_ENV === "development",
     minimumCacheTTL: 31_536_000,
     formats: ["image/avif", "image/webp"],
@@ -30,10 +30,6 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "cdn.sanity.io",
         pathname: `/images/${env.NEXT_PUBLIC_SANITY_PROJECT_ID}/**`,
-      },
-      {
-        protocol: "https",
-        hostname: "cdn.shopify.com",
       },
       {
         // Hostname only, so the store hash stays out of committed config.

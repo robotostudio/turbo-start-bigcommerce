@@ -6,7 +6,7 @@ import type { QueryHomePageDataResult } from "@workspace/sanity/types";
 import { createDataAttribute } from "next-sanity";
 import { useCallback, useMemo } from "react";
 
-import type { FeaturedProduct } from "@/lib/shopify/types";
+import type { ProductCardProps } from "./product/product-card";
 import { CollectionBanner } from "./sections/collection-banner";
 import { CTABlock } from "./sections/cta";
 import { EditorialTwoUp } from "./sections/editorial-two-up";
@@ -30,11 +30,11 @@ export type PageBuilderProps = {
   readonly id: string;
   readonly type: string;
   /**
-   * Full Shopify product data for `featuredProducts` blocks, fetched
-   * server-side in the page and keyed by block `_key`. Blocks can't fetch
-   * Shopify themselves since this is a client component.
+   * Resolved product-card props for `featuredProducts` blocks, fetched
+   * server-side in the page and keyed by block `_key`. Blocks can't read the
+   * catalog themselves since this is a client component.
    */
-  readonly featuredProductsByKey?: Record<string, FeaturedProduct[]>;
+  readonly featuredProductsByKey?: Record<string, ProductCardProps[]>;
 };
 
 type SanityDataAttributeConfig = {
@@ -125,7 +125,7 @@ function useOptimisticPageBuilder(
 function useBlockRenderer(
   id: string,
   type: string,
-  featuredProductsByKey?: Record<string, FeaturedProduct[]>
+  featuredProductsByKey?: Record<string, ProductCardProps[]>
 ) {
   const createBlockDataAttribute = useCallback(
     (blockKey: string) =>
@@ -152,7 +152,7 @@ function useBlockRenderer(
         );
       }
 
-      // `featuredProducts` blocks receive their Shopify data (fetched
+      // `featuredProducts` blocks receive their catalog data (fetched
       // server-side) injected here, since a client block can't fetch it.
       const injectedProps =
         block._type === "featuredProducts"

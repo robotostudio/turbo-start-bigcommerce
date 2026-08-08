@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { storefrontQuery } from "@/lib/shopify/client";
-import { PRODUCT_BY_HANDLE_QUERY } from "@/lib/shopify/queries";
-import type { ProductByHandleResponse } from "@/lib/shopify/types";
+import { getProductByPath } from "@/lib/bigcommerce/catalog";
 
 export async function GET(
   _request: Request,
@@ -14,14 +12,11 @@ export async function GET(
     return NextResponse.json({ product: null }, { status: 400 });
   }
 
-  const result = await storefrontQuery<ProductByHandleResponse>(
-    PRODUCT_BY_HANDLE_QUERY,
-    { variables: { handle } }
-  );
+  const result = await getProductByPath([handle]);
 
   if (!result.ok) {
     return NextResponse.json({ product: null }, { status: 502 });
   }
 
-  return NextResponse.json({ product: result.data.product });
+  return NextResponse.json({ product: result.data.node });
 }

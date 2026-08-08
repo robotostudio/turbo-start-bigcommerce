@@ -206,7 +206,11 @@ describe("getProductByPath", () => {
 
     const result = await catalog.getProductByPath(["rye"]);
 
-    expect(result).toEqual({ ok: false, error: "boom", kind: "graphql" });
+    // toMatchObject, not toEqual: a failure result also carries `status` and
+    // the raw `errors` array, which the cart classifier keys on — it needs
+    // `path` to tell a missing cart from a missing product. What this test is
+    // about is that the failure passes through rather than being swallowed.
+    expect(result).toMatchObject({ ok: false, error: "boom", kind: "graphql" });
   });
 });
 

@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { Cart, CartLine } from "@/lib/shopify/types";
-import {
-  classifyTransportError,
-  classifyUserErrors,
-  detectSilentClamps,
-  mapShopifyWarning,
-  requestedFromInputs,
-} from "../classify";
+import type { Cart, CartLine } from "@/lib/cart/types";
+import { detectSilentClamps, requestedFromInputs } from "../classify";
 
 function line(id: string, merchandiseId: string, quantity: number): CartLine {
   return {
@@ -34,7 +28,6 @@ function line(id: string, merchandiseId: string, quantity: number): CartLine {
 function cartWith(...lines: CartLine[]): Cart {
   return {
     id: "cart-1",
-    checkoutUrl: "https://shop.example/checkout",
     totalQuantity: lines.reduce((sum, l) => sum + l.quantity, 0),
     lines: {
       edges: lines.map((node) => ({ node })),
@@ -47,79 +40,6 @@ function cartWith(...lines: CartLine[]): Cart {
     },
   };
 }
-
-describe("classifyTransportError", () => {
-  it("maps network kind to NETWORK", () => {
-    expect(classifyTransportError("fetch failed", "network").code).toBe(
-      "NETWORK"
-    );
-  });
-
-  it("detects cart-gone prose regardless of kind", () => {
-    expect(
-      classifyTransportError("The cart does not exist", "graphql").code
-    ).toBe("CART_NOT_FOUND");
-    expect(
-      classifyTransportError("Cart could not be found", "unknown").code
-    ).toBe("CART_NOT_FOUND");
-  });
-
-  it("falls back to UNKNOWN", () => {
-    expect(classifyTransportError("boom", "graphql").code).toBe("UNKNOWN");
-  });
-});
-
-describe("classifyUserErrors", () => {
-  it("returns null for empty errors", () => {
-    expect(classifyUserErrors([])).toBeNull();
-  });
-
-  it("maps completed-cart prose to CART_COMPLETED", () => {
-    expect(
-      classifyUserErrors([
-        { field: null, code: null, message: "Cart has already been completed" },
-      ])?.code
-    ).toBe("CART_COMPLETED");
-  });
-
-  it("maps variant-unavailable codes", () => {
-    expect(
-      classifyUserErrors([
-        { field: null, code: "MERCHANDISE_NOT_FOUND", message: "Gone" },
-      ])?.code
-    ).toBe("VARIANT_UNAVAILABLE");
-  });
-
-  it("falls back to SHOPIFY_USER_ERROR", () => {
-    expect(
-      classifyUserErrors([
-        { field: null, code: "SOMETHING_ELSE", message: "Nope" },
-      ])?.code
-    ).toBe("SHOPIFY_USER_ERROR");
-  });
-});
-
-describe("mapShopifyWarning", () => {
-  it("maps stock warnings to QUANTITY_CLAMPED with line target", () => {
-    expect(
-      mapShopifyWarning({
-        code: "MERCHANDISE_NOT_ENOUGH_STOCK",
-        target: "line-1",
-        message: "Not enough stock",
-      })
-    ).toEqual({
-      code: "QUANTITY_CLAMPED",
-      lineId: "line-1",
-      message: "Not enough stock",
-    });
-  });
-
-  it("maps unknown codes to OTHER", () => {
-    expect(
-      mapShopifyWarning({ code: "WEIRD", target: null, message: "m" }).code
-    ).toBe("OTHER");
-  });
-});
 
 describe("detectSilentClamps", () => {
   it("exact update: flags any quantity mismatch", () => {
@@ -183,7 +103,7 @@ describe("detectSilentClamps", () => {
     expect(warnings[0]?.code).toBe("LINE_DROPPED");
   });
 
-  it("dedupes against warnings Shopify already emitted", () => {
+  it("dedupes against warnings already recorded", () => {
     const cart = cartWith(line("line-1", "variant-1", 2));
     const warnings = detectSilentClamps(
       cart,

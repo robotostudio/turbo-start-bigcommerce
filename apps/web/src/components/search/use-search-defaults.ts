@@ -2,16 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import type {
-  ShopifyCollectionLite,
-  ShopifyCollectionProduct,
-} from "@/lib/shopify/types";
+import type { BigCommerceCardProduct } from "@/lib/bigcommerce/product-card";
+import type { SearchCollection } from "./use-product-search";
 
 const CACHE_STALE_TIME_MS = 5 * 60 * 1000;
 
 type SearchDefaultsResponse = {
-  collections: ShopifyCollectionLite[];
-  bestSellers: ShopifyCollectionProduct[];
+  collections: SearchCollection[];
+  bestSellers: BigCommerceCardProduct[];
 };
 
 async function fetchDefaults(): Promise<SearchDefaultsResponse> {
@@ -22,7 +20,7 @@ async function fetchDefaults(): Promise<SearchDefaultsResponse> {
   return response.json() as Promise<SearchDefaultsResponse>;
 }
 
-/** Lazily loads the empty-state data (top collections + best sellers). */
+/** Lazily loads the empty-state data (top categories + best sellers). */
 export function useSearchDefaults() {
   const { data, isLoading } = useQuery({
     queryKey: ["search-defaults"],

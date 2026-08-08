@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { useDebounce } from "@/hooks/use-debounce";
-import type { ShopifyCollectionProduct } from "@/lib/shopify/types";
+import type { BigCommerceCardProduct } from "@/lib/bigcommerce/product-card";
 import { readSearchQuery, searchUrlWithQuery } from "./paths";
 import { SearchEmptyState } from "./search-empty-state";
 import { SearchProductGrid } from "./search-product-grid";
@@ -13,7 +13,7 @@ const SEARCH_DEBOUNCE_MS = 250;
 const CACHE_STALE_TIME_MS = 30_000;
 
 type FullSearchResponse = {
-  products: ShopifyCollectionProduct[];
+  products: BigCommerceCardProduct[];
   totalCount: number;
 };
 

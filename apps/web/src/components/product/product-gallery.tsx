@@ -5,12 +5,21 @@ import { ZoomIn } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
-import type { ShopifyImage } from "@/lib/shopify/types";
 import { ProductLightbox } from "./product-lightbox";
-import { ShopifyImage as ShopifyImageEl } from "./shopify-image";
+import { StoreImage } from "./store-image";
+
+/**
+ * A gallery photo. BigCommerce's image connection carries no intrinsic
+ * dimensions — every rendition is addressed by the size segment in its path —
+ * so there is no width/height to thread through here.
+ */
+export type GalleryImage = {
+  url: string;
+  altText?: string | null;
+};
 
 type ProductGalleryProps = {
-  images: ShopifyImage[];
+  images: GalleryImage[];
   selectedVariantImageUrl?: string;
 };
 
@@ -101,7 +110,7 @@ function GalleryDesktop({
               type="button"
             >
               <div className="card-surface relative aspect-3/4 w-full overflow-hidden">
-                <ShopifyImageEl
+                <StoreImage
                   alt={image.altText ?? `Thumbnail ${index + 1}`}
                   className="object-cover"
                   fill
@@ -127,7 +136,7 @@ function GalleryDesktop({
             }}
             type="button"
           >
-            <ShopifyImageEl
+            <StoreImage
               alt={image.altText ?? "Product image"}
               className="object-cover"
               fill
@@ -233,7 +242,7 @@ function GalleryMobile({
             }}
             type="button"
           >
-            <ShopifyImageEl
+            <StoreImage
               alt={image.altText ?? "Product image"}
               className="object-cover"
               fill
@@ -258,7 +267,7 @@ function GalleryMobile({
               type="button"
             >
               <div className="card-surface relative h-16 w-12 overflow-hidden">
-                <ShopifyImageEl
+                <StoreImage
                   alt={image.altText ?? `Thumbnail ${index + 1}`}
                   className="object-cover"
                   fill
@@ -308,7 +317,7 @@ export function ProductGallery({
 
   // The optimized URL the visible on-page `next/image` already downloaded, so
   // the lightbox can reuse that cached resource instead of fetching the raw
-  // Shopify master on open. `null` when no view has it loaded (falls back to
+  // CDN master on open. `null` when no view has it loaded (falls back to
   // the raw URL in the lightbox).
   const getSourceSrc = (index: number): string | null => {
     for (const view of ["d", "m"] as const) {

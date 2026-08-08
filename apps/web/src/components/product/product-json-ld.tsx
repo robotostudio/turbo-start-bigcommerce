@@ -1,12 +1,15 @@
 import type { Offer, Product, WithContext } from "schema-dts";
 
 import { JsonLdScript } from "@/components/json-ld";
-import type { ShopifyProduct } from "@/lib/shopify/types";
+import type { CatalogProduct } from "@/lib/bigcommerce/catalog";
+import { nodes } from "@/lib/bigcommerce/catalog";
 import { getBaseUrl } from "@/utils";
 
 type ProductJsonLdProps = {
-  product: ShopifyProduct;
+  product: CatalogProduct;
   handle: string;
+  /** Plain-text body copy; the raw `description` is HTML. */
+  description: string;
 };
 
 // Prices are considered valid until the end of next year — Google requires
@@ -14,33 +17,42 @@ type ProductJsonLdProps = {
 // it stays a sensible future date without depending on request time.
 const PRICE_VALID_UNTIL = `${new Date().getFullYear() + 1}-12-31`;
 
-export function ProductJsonLd({ product, handle }: ProductJsonLdProps) {
+export function ProductJsonLd({
+  product,
+  handle,
+  description,
+}: ProductJsonLdProps) {
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}/products/${handle}`;
-  const variants = product.variants.edges.map((e) => e.node);
-  const firstImage = product.images.edges[0]?.node;
+  const variants = nodes(product.variants);
+  const firstImage = nodes(product.images)[0];
 
   const jsonLd: WithContext<Product> = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: product.title,
-    description: product.description,
+    name: product.name,
+    description,
     image: firstImage?.url,
-    brand: product.vendor
-      ? { "@type": "Brand", name: product.vendor }
+    brand: product.brand
+      ? { "@type": "Brand", name: product.brand.name }
       : undefined,
     offers: variants.map(
-      (v): Offer => ({
+      (variant): Offer => ({
         "@type": "Offer",
-        price: v.price.amount,
-        priceCurrency: v.price.currencyCode,
+        price: String(variant.prices?.price.value ?? 0),
+        priceCurrency:
+          variant.prices?.price.currencyCode ??
+          product.prices?.price.currencyCode,
         priceValidUntil: PRICE_VALID_UNTIL,
-        availability: v.availableForSale
-          ? "https://schema.org/InStock"
-          : "https://schema.org/OutOfStock",
+        // `aggregated` is null on a store that hides stock levels, so
+        // `isInStock` is the only authoritative signal here.
+        availability:
+          variant.isPurchasable && variant.inventory?.isInStock
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
         itemCondition: "https://schema.org/NewCondition",
         url,
-        sku: v.sku ?? undefined,
+        sku: variant.sku || undefined,
       })
     ),
   };

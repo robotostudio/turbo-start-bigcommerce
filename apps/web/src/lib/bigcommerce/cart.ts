@@ -1,5 +1,5 @@
 import { type BigCommerceMoney, toMoney } from "@/lib/bigcommerce/money";
-import type { Cart, CartLine } from "@/lib/shopify/types";
+import type { Cart, CartLine } from "@/lib/cart/types";
 
 /**
  * BigCommerce cart payload -> the internal cart type the cart engine and
@@ -43,13 +43,6 @@ export type BigCommerceCart = {
 };
 
 /**
- * BigCommerce has no cart-level checkout URL — it comes from a separate
- * `createCartRedirectUrls` mutation. At the flip, when `Cart` drops the field,
- * this alias becomes a no-op and the `Omit` can be deleted.
- */
-export type NormalizedCart = Omit<Cart, "checkoutUrl">;
-
-/**
  * BigCommerce's cart image field exposes no dimensions and the cart fragment
  * pins `url(width: 320)`. The only consumer renders with `fill`, so both are
  * nominal.
@@ -68,6 +61,23 @@ export function toMerchandiseId(item: {
   return item.variantEntityId == null
     ? String(item.productEntityId)
     : `${item.productEntityId}:${item.variantEntityId}`;
+}
+
+/**
+ * The inverse of `toMerchandiseId`, for feeding a merchandise id back into the
+ * line-item mutations. Returns null when the id is not one this module minted.
+ */
+export function fromMerchandiseId(
+  merchandiseId: string
+): { productEntityId: number; variantEntityId?: number } | null {
+  const [product, variant, extra] = merchandiseId.split(":");
+  if (extra !== undefined) return null;
+  const productEntityId = Number(product);
+  if (!Number.isInteger(productEntityId) || productEntityId <= 0) return null;
+  if (variant === undefined) return { productEntityId };
+  const variantEntityId = Number(variant);
+  if (!Number.isInteger(variantEntityId) || variantEntityId <= 0) return null;
+  return { productEntityId, variantEntityId };
 }
 
 /** `/products/wren-washed-cap/` and `/care-guide/` both yield a bare slug. */
@@ -107,7 +117,7 @@ function toLine(item: BigCommerceCartItem): CartLine {
   };
 }
 
-export function toInternalCart(cart: BigCommerceCart): NormalizedCart {
+export function toInternalCart(cart: BigCommerceCart): Cart {
   const lines = [
     ...cart.lineItems.physicalItems,
     ...cart.lineItems.digitalItems,

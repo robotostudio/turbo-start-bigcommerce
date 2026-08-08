@@ -6,16 +6,17 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { useCartActions } from "@/components/cart/cart-context";
-import { ShopifyImage as Image } from "@/components/product/shopify-image";
+import { StoreImage as Image } from "@/components/product/store-image";
 import { SavedItemButton } from "@/components/saved-items/saved-item-button";
-import { buildLineMetadata } from "@/lib/cart/metadata";
 import {
+  type BigCommerceCardImage,
   cardPricing,
   findCardVariant,
   resolveCardImages,
-} from "@/lib/shopify/product-card";
-import type { CardImageFields, MoneyV2 } from "@/lib/shopify/types";
-import { buildVariantUrl } from "@/lib/shopify/variant-utils";
+} from "@/lib/bigcommerce/product-card";
+import { buildLineMetadata } from "@/lib/cart/metadata";
+import type { MoneyV2 } from "@/lib/cart/types";
+import { buildVariantUrl, merchandiseId } from "./variant-utils";
 
 export type MerchBadge = "new" | "exclusive";
 export type StockStatus = "low" | "out" | null;
@@ -26,11 +27,18 @@ export type CardVariant = {
   price: MoneyV2;
   selectedOptions: { name: string; value: string }[];
   /** Per-variant photo; drives the card's image swap on color select. */
-  image?: CardImageFields | null;
+  image?: { url: string } | null;
 };
 
 export type ProductCardProps = {
   slug: string;
+  /**
+   * BigCommerce product entityId. The cart's merchandise id is
+   * `productEntityId:variantEntityId` — a variant id alone doesn't identify a
+   * purchasable. Omit it and the hover add-to-cart falls back to the bare
+   * variant id, which the cart rejects rather than mis-adds.
+   */
+  productId?: string;
   title: string;
   priceRange: { minVariantPrice: number; maxVariantPrice: number };
   currencyCode?: string;
@@ -53,12 +61,16 @@ export type ProductCardProps = {
   colors?: CardColor[];
   /** Initially selected color name (rendered as the taller, underlined swatch). */
   selectedColor?: string;
-  /** Shopify's own name for the color option, used to link into the PDP. */
+  /** BigCommerce's own name for the color option, used to link into the PDP. */
   colorOptionName?: string;
   /** Variants for resolving the color+size selection to a cart line. */
   variants?: CardVariant[];
-  /** Ordered gallery URLs; locates the hover partner for a color's photo. */
-  galleryUrls?: string[];
+  /**
+   * Ordered gallery images. Alt text, not just URLs: BigCommerce names the
+   * colourway in each photo's alt text, and that is what groups a colour's
+   * photos for the hover cross-fade.
+   */
+  gallery?: BigCommerceCardImage[];
   mini?: boolean;
   /** Forwarded to `next/link`: replace the current history entry, don't push. */
   replace?: boolean;
@@ -282,6 +294,7 @@ function AddToCartBar({
   selectedSize,
   sizes,
   onSelectSize,
+  productId,
   productTitle,
   productHandle,
   imageUrl,
@@ -291,6 +304,7 @@ function AddToCartBar({
   selectedSize: string | undefined;
   sizes: string[] | undefined;
   onSelectSize: (size: string) => void;
+  productId: string | undefined;
   productTitle: string;
   productHandle: string;
   imageUrl: string | null;
@@ -312,7 +326,7 @@ function AddToCartBar({
         : null,
     });
     openCart();
-    void addLine(variant.id, 1, metadata);
+    void addLine(merchandiseId(productId, variant.id), 1, metadata);
   }
 
   return (
@@ -435,6 +449,7 @@ function CardImage({
 
 export function ProductCard({
   slug,
+  productId,
   title,
   priceRange,
   currencyCode,
@@ -451,7 +466,7 @@ export function ProductCard({
   selectedColor: initialColor,
   colorOptionName,
   variants,
-  galleryUrls,
+  gallery,
   mini,
   replace,
 }: ProductCardProps) {
@@ -487,8 +502,9 @@ export function ProductCard({
       : `/products/${slug}`;
   const { primary, secondary } = resolveCardImages({
     selectedColor,
+    colors: colors?.map((color) => color.name),
     variants,
-    galleryUrls,
+    gallery,
     imageUrl,
     secondaryImageUrl,
   });
@@ -524,6 +540,7 @@ export function ProductCard({
             imageUrl={primary}
             onSelectSize={setSelectedSize}
             productHandle={slug}
+            productId={productId}
             productTitle={title}
             selectedColor={selectedColor}
             selectedSize={selectedSize}

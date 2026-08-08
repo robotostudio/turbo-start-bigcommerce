@@ -1,11 +1,11 @@
 "use client";
 
-import { Skeleton } from "@workspace/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 
 import { ProductCard } from "@/components/product/product-card";
-import { collectionProductToCardProps } from "@/lib/shopify/product-card";
-import type { FeaturedProduct } from "@/lib/shopify/types";
+import type { FeaturedProduct } from "@/lib/bigcommerce/featured";
+import { productToCardProps } from "@/lib/bigcommerce/product-card";
 
 async function fetchFeaturedProducts(): Promise<FeaturedProduct[]> {
   const res = await fetch("/api/featured-products");
@@ -40,8 +40,8 @@ export function CartRecommendations() {
   return (
     <div className="-mr-8 flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {products.map((product) => (
-        <div className="w-[340px] shrink-0" key={product.id}>
-          <ProductCard {...collectionProductToCardProps(product)} />
+        <div className="w-[340px] shrink-0" key={product.entityId}>
+          <ProductCard {...productToCardProps(product)} />
         </div>
       ))}
     </div>

@@ -16,7 +16,6 @@ import {
   InstagramIcon,
   LinkedinIcon,
   RobotoWordmark,
-  ShopifyIcon,
   VercelIcon,
   XIcon,
   YoutubeIcon,
@@ -144,12 +143,13 @@ function HostingCredits() {
       <span className="h-4 w-px bg-border" />
       <a
         className="flex items-center gap-1 hover:opacity-80"
-        href="https://shopify.com"
+        href="https://www.bigcommerce.com"
         rel="noopener noreferrer"
         target="_blank"
       >
-        Powered by
-        <ShopifyIcon className="h-4 w-auto" />
+        {/* Text, not a logo: the icon set has no BigCommerce wordmark and
+         * inventing artwork is worse than plain text. */}
+        Powered by BigCommerce
       </a>
     </div>
   );

@@ -40,13 +40,37 @@ export const storefrontUrl =
 
 export type StorefrontFailureKind = "network" | "graphql" | "unknown";
 
+/**
+ * A GraphQL error as BigCommerce reports it. `path` is the signal that
+ * separates a cart failure from a non-cart one, so it is surfaced raw rather
+ * than folded into the joined message.
+ */
+export type StorefrontGraphQLError = {
+  message: string;
+  /** Mutation root first, e.g. `["cart", "createCart"]`. Absent on a 400. */
+  path?: readonly (string | number)[];
+  locations?: readonly { line: number; column: number }[];
+};
+
 export type StorefrontQueryResult<T> =
   | { ok: true; data: T }
-  | { ok: false; error: string; kind: StorefrontFailureKind };
+  | {
+      ok: false;
+      error: string;
+      kind: StorefrontFailureKind;
+      /** HTTP status, when a response arrived at all. */
+      status?: number;
+      /** The raw `errors` array, when the failure was GraphQL-level. */
+      errors?: readonly StorefrontGraphQLError[];
+    };
 
 type GraphQLBody<T> = {
   data?: T | null;
-  errors?: { message?: string }[];
+  errors?: {
+    message?: string;
+    path?: readonly (string | number)[];
+    locations?: readonly { line: number; column: number }[];
+  }[];
 };
 
 /** 5xx and rate limiting are worth retrying; every other status is not. */
@@ -79,9 +103,9 @@ function logComplexity(headers: Headers, status: number): void {
 }
 
 /**
- * Typed Storefront API request. Returns the same discriminated union as
- * `lib/shopify/client.ts` under the same export name, so swapping the import
- * path is the whole migration for any call site that already handles it.
+ * Typed Storefront API request. Returns the discriminated union every call
+ * site already handles, under the export name they already import — the
+ * commerce flip swapped only the import path.
  *
  * Pass a `graphql()` document and both types are inferred from the schema.
  * `TVariables` is defaulted rather than required so that the existing
@@ -130,19 +154,29 @@ export async function storefrontQuery<
       ok: false,
       error: message,
       kind: isTransient(response.status) ? "network" : "unknown",
+      status: response.status,
     };
   }
 
   // BigCommerce answers 200 with a populated `errors` array for GraphQL-level
   // failures, so this is checked before the HTTP status.
-  const messages = (body.errors ?? [])
-    .map((graphQLError) => graphQLError.message)
-    .filter((message): message is string => Boolean(message));
+  const errors: StorefrontGraphQLError[] = (body.errors ?? []).flatMap(
+    (graphQLError) =>
+      graphQLError.message
+        ? [{ ...graphQLError, message: graphQLError.message }]
+        : []
+  );
 
-  if (messages.length > 0) {
-    const error = messages.join("; ");
+  if (errors.length > 0) {
+    const error = errors.map((graphQLError) => graphQLError.message).join("; ");
     logger.error(`Storefront API error: ${error}`);
-    return { ok: false, error, kind: "graphql" };
+    return {
+      ok: false,
+      error,
+      kind: "graphql",
+      status: response.status,
+      errors,
+    };
   }
 
   if (!response.ok) {
@@ -153,6 +187,7 @@ export async function storefrontQuery<
       ok: false,
       error,
       kind: isTransient(response.status) ? "network" : "graphql",
+      status: response.status,
     };
   }
 
@@ -161,6 +196,7 @@ export async function storefrontQuery<
       ok: false,
       error: "No data returned from Storefront API",
       kind: "unknown",
+      status: response.status,
     };
   }
 

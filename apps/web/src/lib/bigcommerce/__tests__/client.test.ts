@@ -69,6 +69,46 @@ describe("storefrontQuery", () => {
     expect(log.mock.calls[0]?.[0]).toContain("complexity=220/10000");
   });
 
+  it("surfaces the raw error array and HTTP status on a GraphQL failure", async () => {
+    mockFetch(
+      reply(
+        '{"data":{"cart":{"createCart":null}},"errors":[{"message":"Not Found: Cart does not exist","path":["cart","createCart"],"locations":[{"line":3,"column":5}]},{"message":"second"}]}'
+      )
+    );
+
+    const result = await storefrontQuery("mutation { noop }");
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    // The joined message survives for logs; `path` survives for the
+    // classifier, whose cart/non-cart split hangs off it.
+    expect(result.error).toBe("Not Found: Cart does not exist; second");
+    expect(result.status).toBe(200);
+    expect(result.errors).toEqual([
+      {
+        message: "Not Found: Cart does not exist",
+        path: ["cart", "createCart"],
+        locations: [{ line: 3, column: 5 }],
+      },
+      { message: "second" },
+    ]);
+  });
+
+  it("reports the HTTP status on a non-2xx response with no errors array", async () => {
+    mockFetch(reply("{}", 401));
+
+    const result = await storefrontQuery("query { site { id } }");
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.status).toBe(401);
+    expect(result.errors).toBeUndefined();
+  });
+
   const cases = [
     {
       name: "GraphQL errors, even on a 200",
