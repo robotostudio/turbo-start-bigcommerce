@@ -30,17 +30,35 @@ quietly fall back to another store.
 ```bash
 pnpm seed:bigcommerce
 pnpm seed:bigcommerce -- --verbose
+pnpm seed:bigcommerce -- --batch 8
+pnpm seed:bigcommerce -- --no-clean
 ```
+
+| Flag | What it does |
+|------|--------------|
+| `--verbose`, `-v` | Log every resource as it is written, not just the summary |
+| `--batch <n>` | How many products to write at once. Defaults to 4 |
+| `--no-clean` | Keep whatever the catalog file does not have, instead of deleting it |
+
+`--batch` is the knob to reach for when BigCommerce starts rate-limiting: turn
+it down, not up. Everything inside one product stays ordered whatever you set,
+because variant creation needs the option ids the option calls hand back.
+
+Prune is on by default and `--no-clean` turns it off, rather than `--clean`
+turning it on. That way round because pruning is what makes a second run
+converge instead of piling up — an opt-in flag would make the idempotency
+contract something you had to remember. `--no-clean` is for adding this catalog
+to a store that already holds products somebody wants to keep.
 
 The first run takes a few minutes, most of it BigCommerce pulling the 132
 images off the reference store's CDN. Later runs are much faster, since the
 images and variants are already there.
 
 Run it before `pnpm sync:bigcommerce`, which reads this catalog back out of
-BigCommerce and into Sanity. The seeded content in
-`seed/reference-dataset.ndjson` references those synced documents by id, so a
-dataset seeded without a sync has a homepage pointing at products that do not
-exist yet.
+BigCommerce and into Sanity, and before `pnpm seed:refs`, which points the
+seeded content at the ids your store minted. `pnpm seed --yes` runs all four in
+order. A dataset seeded without those last two steps has a homepage pointing at
+products that do not exist.
 
 ## Where the catalog comes from
 

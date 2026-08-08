@@ -10,7 +10,11 @@
  * Usage:
  *   pnpm --filter studio seed:bigcommerce
  *   pnpm --filter studio seed:bigcommerce -- --verbose
+ *   pnpm --filter studio seed:bigcommerce -- --batch 8
+ *   pnpm --filter studio seed:bigcommerce -- --no-clean
  */
+
+import { parseArgs } from "node:util";
 
 import { loadCatalog, validateCatalog } from "./catalog.js";
 import { getStore, log, pool } from "./client.js";
@@ -31,6 +35,32 @@ import type { Catalog, RunStats } from "./types.js";
  * because variant creation needs the option ids the option calls return.
  */
 const CONCURRENCY = 4;
+
+/**
+ * The three flags, with prune expressed as `--no-clean` rather than `--clean`.
+ *
+ * Prune is the default because it is what makes a second run converge instead
+ * of piling up, and a `--clean` that had to be asked for would make the
+ * idempotency contract opt-in. `--no-clean` is for the one case that wants the
+ * other behaviour: adding this catalog to a store that already holds products
+ * somebody means to keep.
+ */
+function options(): { verbose: boolean; clean: boolean; batch: number } {
+  const { values } = parseArgs({
+    options: {
+      verbose: { type: "boolean", short: "v", default: false },
+      "no-clean": { type: "boolean", default: false },
+      batch: { type: "string" },
+    },
+  });
+
+  const batch = values.batch === undefined ? CONCURRENCY : Number(values.batch);
+  if (!Number.isInteger(batch) || batch < 1) {
+    throw new Error(`--batch needs a positive whole number, got "${values.batch}"`);
+  }
+
+  return { verbose: values.verbose, clean: !values["no-clean"], batch };
+}
 
 async function counts(): Promise<{ products: number; categories: number }> {
   const [products, categories] = await Promise.all([
@@ -65,8 +95,7 @@ async function urlProblems(catalog: Catalog): Promise<string[]> {
 }
 
 async function main(): Promise<void> {
-  const verbose =
-    process.argv.includes("--verbose") || process.argv.includes("-v");
+  const { verbose, clean, batch } = options();
 
   const store = await getStore();
   log.info(
@@ -93,7 +122,11 @@ async function main(): Promise<void> {
 
   const stats: RunStats = { created: 0, updated: 0, deleted: 0, failed: 0 };
 
-  await pruneCatalog(catalog, stats);
+  if (clean) {
+    await pruneCatalog(catalog, stats);
+  } else {
+    log.info("--no-clean: leaving anything the catalog file does not have.");
+  }
 
   const categoryIds = await upsertCategories(catalog.categories, stats);
 
@@ -102,7 +135,7 @@ async function main(): Promise<void> {
   );
 
   const seededIds: number[] = [];
-  await pool(catalog.products, CONCURRENCY, async (def) => {
+  await pool(catalog.products, batch, async (def) => {
     try {
       seededIds.push(
         await upsertProduct(def, categoryIds, existing, stats, verbose)

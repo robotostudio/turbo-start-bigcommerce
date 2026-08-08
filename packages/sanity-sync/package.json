@@ -16,7 +16,8 @@
     "format:check": "biome format .",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
-    "reconcile": "tsx --env-file-if-exists=.env src/reconcile.ts"
+    "reconcile": "tsx --env-file-if-exists=.env src/reconcile.ts",
+    "seed-refs": "tsx --env-file-if-exists=.env src/seed-refs.ts"
   },
   "dependencies": {
     "@sanity/client": "catalog:",

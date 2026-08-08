@@ -32,10 +32,15 @@ pnpm check-types      # tsc --noEmit across all packages, plus gql.tada check
 pnpm test             # vitest run
 pnpm check-refs       # scan tracked files for references that must not survive
 
-# Seed — run in this order, it is load-bearing
+# Seed — all four steps, in the order they have to run
+pnpm seed --yes       # DESTRUCTIVE. Without --yes it prints its targets and stops
+pnpm verify           # credentials, channel, catalog and content agree
+
+# The steps, if you need one on its own
 pnpm seed:bigcommerce # catalog into BigCommerce, from a committed fixture
 pnpm seed:sanity      # content into Sanity — DESTRUCTIVE, wipes the dataset
 pnpm sync:bigcommerce # catalog back out of BigCommerce, into Sanity
+pnpm seed:refs --write # repoint the content at the ids this store minted; dry run without --write
 
 # Studio schema tooling (run from apps/studio)
 npx sanity schema extract --enforce-required-fields
@@ -43,11 +48,13 @@ npx sanity typegen generate
 npx sanity deploy
 ```
 
-The sync is not optional. `apps/studio/seed/reference-dataset.ndjson` carries no catalog
-documents — it holds **weak** references to the ones the sync writes, at
-`bigcommerceProduct-{entityId}` / `bigcommerceCategory-{entityId}`. Seed the content
-without syncing and the navbar, promo banner and homepage featured product all point at
-documents that do not exist yet. See `apps/studio/seed/README.md` for the full contract.
+Neither the sync nor `seed:refs` is optional. `apps/studio/seed/reference-dataset.ndjson`
+carries no catalog documents — it holds **weak** references to the ones the sync writes,
+named by slug (`bigcommerceProduct-wren-washed-cap`) rather than by id, because every
+store mints its own `entityId`s. `seed:refs` swaps each slug for the real id. Skip either
+step and the navbar, promo banner and homepage featured products point at documents that
+do not exist, which renders as nothing rather than as an error. See
+`apps/studio/seed/README.md` for the full contract.
 
 ## Architecture
 
