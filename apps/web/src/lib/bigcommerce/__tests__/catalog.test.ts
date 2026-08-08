@@ -339,7 +339,18 @@ describe("getCategoryByPath", () => {
     expect(result.data.node?.entityId).toBe(36);
     expect(catalog.nodes(result.data.node?.breadcrumbs)).toHaveLength(1);
     expect(catalog.nodes(result.data.node?.products)).toHaveLength(2);
-    expect(result.data.node?.products.collectionInfo?.totalItems).toBe(2);
+    expect(result.data.node?.products?.collectionInfo?.totalItems).toBe(2);
+  });
+
+  it("leaves the products connection out when the caller does not want it", async () => {
+    const { response } = fixture("category-top-level");
+    const fetchMock = mockResponse(response);
+
+    await catalog.getCategoryByPath(["jackets"], { withProducts: false });
+
+    // `@include(if:)` is what makes this document cost 1022 instead of 4724:
+    // BigCommerce charges on the selection it executes, not the one it parses.
+    expect(sentBody(fetchMock).variables.withProducts).toBe(false);
   });
 
   it("resolves a multi-segment category from the joined path", async () => {

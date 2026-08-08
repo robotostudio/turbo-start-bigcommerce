@@ -13,12 +13,11 @@ import { BreadcrumbJsonLd, CollectionJsonLd } from "@/components/json-ld";
 import {
   getCategoryByPath,
   getCategoryPaths,
-  getStoreSettings,
-  nodes,
   prerenderLimit,
   resolveSeo,
   toSegments,
 } from "@/lib/bigcommerce/catalog";
+import { searchCatalog } from "@/lib/bigcommerce/search";
 import { fetchOrFallback } from "@/lib/build-guard";
 import { getSEOMetadata } from "@/lib/seo";
 import { getBaseUrl } from "@/utils";
@@ -76,7 +75,10 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  const result = await getCategoryByPath(slug, { first: 1 });
+  // Metadata needs the category, never its products — and BigCommerce charges
+  // complexity on what a query executes, so leaving them out is 1022 instead of
+  // 4697 on every category page built.
+  const result = await getCategoryByPath(slug, { withProducts: false });
   if (!(result.ok && result.data.node)) return {};
 
   const category = result.data.node;
@@ -95,19 +97,16 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function CollectionPage({ params }: PageProps) {
   const { slug } = await params;
 
-  // Fetched alongside the category, not before it: whether this store's plan
-  // includes Product Filtering is what decides if the panel's "unavailable"
-  // message is true, and it is a store-level setting rather than a per-request
-  // one. Degrades to false if the read fails, which keeps the honest message.
-  const [result, settings] = await Promise.all([
-    getCategoryByPath(slug, { first: PAGE_SIZE }),
-    getStoreSettings(),
-  ]);
+  // Two hops, and they cannot be one: `searchProducts` scopes to a category by
+  // entity id, and a URL only carries the path. So the route resolves the path
+  // to a category first — without a page of products attached, which is what
+  // `withProducts: false` buys — and the listing read follows.
+  //
+  // This runs at build and revalidation time rather than per request (see
+  // `generateStaticParams` and `revalidate` above), and "Load more" pays
+  // nothing extra: the id resolved here is forwarded to the client.
+  const result = await getCategoryByPath(slug, { withProducts: false });
   if (!result.ok) notFound();
-
-  const filteringEnabled = settings.ok
-    ? (settings.data?.search?.productFilteringEnabled ?? false)
-    : false;
 
   // A renamed category keeps working: BigCommerce auto-creates the 301 and
   // `redirectBehavior: FOLLOW` hands back its canonical URL.
@@ -120,8 +119,22 @@ export default async function CollectionPage({ params }: PageProps) {
 
   const category = result.data.node;
   const handle = slug.join("/");
-  const products = nodes(category.products);
   const baseUrl = getBaseUrl();
+
+  // Facets and the plan flag ride along with the products rather than costing a
+  // second read: `searchProducts` returns them beside the results it filtered.
+  const listing = await searchCatalog({
+    categoryEntityId: category.entityId,
+    first: PAGE_SIZE,
+  });
+  const products = listing.ok ? listing.data.products : [];
+  const pageInfo = listing.ok
+    ? listing.data.pageInfo
+    : { hasNextPage: false, endCursor: null };
+  // Degrades to false if the read failed, which keeps the panel's message
+  // honest rather than promising filters nothing can supply.
+  const filteringEnabled = listing.ok ? listing.data.filteringEnabled : false;
+  const facets = listing.ok ? listing.data.facets : [];
 
   return (
     <div className="site-container py-8">
@@ -157,19 +170,15 @@ export default async function CollectionPage({ params }: PageProps) {
          * statically generated route; each fallback is the default view the
          * server already rendered, so nothing jumps on hydration. */}
         <div className="mb-8 flex flex-col gap-4">
-          {/* No facets: the listing reads from `Category.products`, which has
-           * no filter argument, and moving it to `searchProducts` costs about
-           * 1000 more complexity per request plus the
-           * `CategoryProductSort.DEFAULT` member the sort menu depends on —
-           * for nothing a shopper could see while this store's plan returns no
-           * facets at all. The panel renders its honest state instead, and the
-           * transformer and codec are already scoped by `categoryEntityId` for
-           * whoever has a store that can serve them. */}
+          {/* Both empty on a plan without Product Filtering, which is what the
+           * panel's "unavailable" state is for. Passed through rather than
+           * derived: the same read that returned these products returned the
+           * facets that describe them. */}
           <Suspense fallback={null}>
-            <FilterPanel filteringEnabled={filteringEnabled} />
+            <FilterPanel filteringEnabled={filteringEnabled} filters={facets} />
           </Suspense>
           <Suspense fallback={null}>
-            <ActiveFilters />
+            <ActiveFilters facets={facets} />
           </Suspense>
         </div>
 
@@ -177,8 +186,9 @@ export default async function CollectionPage({ params }: PageProps) {
           fallback={<ProductGrid density="comfortable" products={products} />}
         >
           <CollectionProducts
+            categoryEntityId={category.entityId}
             handle={handle}
-            initialPageInfo={category.products.pageInfo}
+            initialPageInfo={pageInfo}
             initialProducts={products}
           />
         </Suspense>

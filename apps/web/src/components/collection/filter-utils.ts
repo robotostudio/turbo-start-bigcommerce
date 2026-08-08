@@ -52,6 +52,22 @@ export const FILTER_PARAMS = {
   featured: FEATURED_PARAM,
 } as const;
 
+/**
+ * The `filter.*` subset of a URL, which is the whole of what the panel owns.
+ * Both listing surfaces need it to key a cache and to build a request; `sort`,
+ * `after`, `view` and whatever a campaign appended belong to somebody else and
+ * forwarding them to the API would be guessing.
+ */
+export function filterParamsOnly(
+  search: string | URLSearchParams
+): URLSearchParams {
+  const filters = new URLSearchParams();
+  for (const [key, value] of new URLSearchParams(search).entries()) {
+    if (key.startsWith(PREFIX)) filters.append(key, value);
+  }
+  return filters;
+}
+
 /** `filter.stock=in` is the only value that means anything. */
 export const IN_STOCK_VALUE = "in";
 /** `filter.shipping=free` likewise. */

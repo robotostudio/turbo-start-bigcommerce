@@ -4,7 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ActiveFilters } from "@/components/collection/active-filters";
-import type { Facet } from "@/components/collection/filter-utils";
+import {
+  type Facet,
+  filterParamsOnly,
+} from "@/components/collection/filter-utils";
 import { FilterPanel } from "@/components/collection/filter-panel";
 import {
   ListingControls,
@@ -33,21 +36,25 @@ const EMPTY: FullSearchResponse = {
   filteringEnabled: false,
 };
 
-/** The `filter.*` subset of a query string, which is all the panel owns. */
-function readFilterParams(search: string): URLSearchParams {
-  const filters = new URLSearchParams();
-  for (const [key, value] of new URLSearchParams(search).entries()) {
-    if (key.startsWith("filter.")) filters.append(key, value);
-  }
-  return filters;
+/**
+ * The listing state this page owns: every `filter.*` param plus `sort`. Both
+ * are written by controls that hand back a whole query string, so they are held
+ * together rather than as two states that would each have to preserve the
+ * other's params.
+ */
+function readListingParams(search: string): URLSearchParams {
+  const params = filterParamsOnly(search);
+  const sort = new URLSearchParams(search).get("sort");
+  if (sort) params.set("sort", sort);
+  return params;
 }
 
 async function fetchFullResults(
   query: string,
-  filterQs: string,
+  listingQs: string,
   signal: AbortSignal
 ): Promise<FullSearchResponse> {
-  const params = new URLSearchParams(filterQs);
+  const params = new URLSearchParams(listingQs);
   params.set("q", query);
 
   const response = await fetch(`/api/search/full?${params.toString()}`, {
@@ -70,23 +77,23 @@ export function SearchPageContent({
   const hasQuery = trimmed.length > 0;
 
   /**
-   * Filter state lives here for the same reason `query` does: this page treats
-   * the address bar as an output it writes with `replaceState`, and
-   * `useSearchParams` does not observe that. A panel reading the hook would
+   * Filter and sort state live here for the same reason `query` does: this page
+   * treats the address bar as an output it writes with `replaceState`, and
+   * `useSearchParams` does not observe that. A control reading the hook would
    * build its second pick from the params of its first.
    *
-   * Initialised from the live URL so a shared or bookmarked filtered search
-   * opens filtered.
+   * Initialised from the live URL so a shared or bookmarked filtered, sorted
+   * search opens that way.
    */
-  const [filterParams, setFilterParams] = useState(() =>
-    readFilterParams(
+  const [listingParams, setListingParams] = useState(() =>
+    readListingParams(
       typeof window === "undefined" ? "" : window.location.search
     )
   );
-  const filterQs = filterParams.toString();
+  const listingQs = listingParams.toString();
 
-  const onFilterNavigate = useCallback((qs: string) => {
-    setFilterParams(readFilterParams(qs));
+  const onListingNavigate = useCallback((qs: string) => {
+    setListingParams(readListingParams(qs));
   }, []);
 
   // Keep the address bar in sync WITHOUT a router navigation — a client nav to
@@ -95,14 +102,14 @@ export function SearchPageContent({
     // Rebuild from the live URL rather than from scratch: this page is a
     // share/ad landing target, so it routinely arrives carrying utm_* params
     // that a from-scratch URL would silently drop. `searchUrlWithQuery` keeps
-    // every param it is given, so the filter state written below survives a
+    // every param it is given, so the listing state written below survives a
     // later keystroke and vice versa.
     const live = window.location.search;
     const next = new URLSearchParams(live);
     for (const key of [...next.keys()]) {
-      if (key.startsWith("filter.")) next.delete(key);
+      if (key.startsWith("filter.") || key === "sort") next.delete(key);
     }
-    for (const [key, value] of filterParams.entries()) {
+    for (const [key, value] of listingParams.entries()) {
       next.append(key, value);
     }
 
@@ -110,13 +117,13 @@ export function SearchPageContent({
     if (url === `${window.location.pathname}${live}`) return;
 
     window.history.replaceState(null, "", url);
-  }, [trimmed, filterParams]);
+  }, [trimmed, listingParams]);
 
   const { data, isLoading } = useQuery({
-    // Filters are part of the key, or a facet pick would rewrite the URL and
-    // serve the previous result set out of the cache.
-    queryKey: ["search-full", trimmed, filterQs],
-    queryFn: ({ signal }) => fetchFullResults(trimmed, filterQs, signal),
+    // Filters and sort are part of the key, or a pick would rewrite the URL and
+    // serve the previous result set — in the previous order — out of the cache.
+    queryKey: ["search-full", trimmed, listingQs],
+    queryFn: ({ signal }) => fetchFullResults(trimmed, listingQs, signal),
     enabled: hasQuery,
     staleTime: CACHE_STALE_TIME_MS,
   });
@@ -156,22 +163,30 @@ export function SearchPageContent({
                     &rdquo;
                   </p>
                 )}
-                <ListingControls />
+                {/* Same overrides as the panel: the sort menu writes the same
+                 * address bar, and a router push here would reopen the drawer.
+                 * `hasSearchTerm` is what makes the default option read
+                 * "Relevance" rather than "Featured". */}
+                <ListingControls
+                  hasSearchTerm
+                  onNavigate={onListingNavigate}
+                  params={listingParams}
+                />
               </div>
 
               <div className="mb-8 flex flex-col gap-4">
                 <FilterPanel
                   filteringEnabled={results.filteringEnabled}
                   filters={results.facets}
-                  onNavigate={onFilterNavigate}
-                  params={filterParams}
+                  onNavigate={onListingNavigate}
+                  params={listingParams}
                 />
                 {/* Facets passed so a brand chip reads "Aster" rather than its
-                 * entity id. This is the one surface that has them. */}
+                 * entity id. */}
                 <ActiveFilters
                   facets={results.facets}
-                  onNavigate={onFilterNavigate}
-                  params={filterParams}
+                  onNavigate={onListingNavigate}
+                  params={listingParams}
                 />
               </div>
             </ListingControlsProvider>
