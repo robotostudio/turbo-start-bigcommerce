@@ -228,7 +228,10 @@ const updateLineSchema = z.object({
   lineId: idSchema,
   quantity: quantitySchema,
   merchandiseId: idSchema,
-  expectedVersion: z.number().int().positive().optional(),
+  // Not `.positive()`. A live cart starts at 1, but rejecting a hypothetical 0
+  // here would fail a legitimate write inside our own validator, which is a
+  // worse trade than passing a version BigCommerce would refuse itself.
+  expectedVersion: z.number().int().nonnegative().optional(),
 });
 
 function failure(code: CartErrorCode, message: string): CartActionResult {
