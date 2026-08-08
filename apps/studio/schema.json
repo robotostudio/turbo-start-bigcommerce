@@ -1915,6 +1915,14 @@
           },
           "optional": false
         },
+        "collections": {
+          "type": "objectAttribute",
+          "value": {
+            "type": "inline",
+            "name": "collectionLinks"
+          },
+          "optional": true
+        },
         "buttons": {
           "type": "objectAttribute",
           "value": {
