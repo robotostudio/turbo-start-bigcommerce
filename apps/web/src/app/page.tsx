@@ -2,13 +2,8 @@ import { sanityFetch } from "@workspace/sanity/live";
 import { queryHomePageData } from "@workspace/sanity/query";
 
 import { PageBuilder } from "@/components/pagebuilder";
-import {
-  getProductDetail,
-  getProductDetailById,
-} from "@/components/product/fetch-product";
+import { featuredCards } from "@/components/product/featured-cards";
 import type { ProductCardProps } from "@/components/product/product-card";
-import { getNewestProductIds } from "@/lib/bigcommerce/featured";
-import { productToCardProps } from "@/lib/bigcommerce/product-card";
 import { getSEOMetadata } from "@/lib/seo";
 
 async function fetchHomePageData() {
@@ -24,37 +19,6 @@ async function fetchHomePageData() {
  * the same cards render on both.
  */
 export const revalidate = 300;
-
-/** How many products a Featured Products block falls back to. */
-const FEATURED_FALLBACK_COUNT = 4;
-
-/**
- * Cards for one Featured Products block.
- *
- * The full `ProductDetail` read, not the lean card fragment, because these
- * cards carry swatches, sizes, badges and a hover add-to-cart — all of which
- * live on options, variants and metafields. One request per product; the block
- * shows four.
- *
- * ponytail: a handle-keyed batch read would make the picked case one request
- * instead of four. `site.products` takes entityIds only, so that needs Sanity
- * to carry the BigCommerce id — which is exactly what the schema swap adds.
- */
-async function featuredCards(handles: string[]): Promise<ProductCardProps[]> {
-  const products = await (handles.length > 0
-    ? Promise.all(
-        handles.map((handle) =>
-          getProductDetail([handle]).then((route) => route.node)
-        )
-      )
-    : getNewestProductIds(FEATURED_FALLBACK_COUNT).then((ids) =>
-        Promise.all(ids.map(getProductDetailById))
-      ));
-
-  return products.flatMap((product) =>
-    product ? [productToCardProps(product)] : []
-  );
-}
 
 export async function generateMetadata() {
   const { data: homePageData } = await fetchHomePageData();
