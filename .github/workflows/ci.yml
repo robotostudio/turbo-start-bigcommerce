@@ -50,8 +50,10 @@ jobs:
 
       - run: pnpm test
 
-      # Warns on leftovers from the platform this was ported off, fails on
-      # live-system identifiers. A later ticket flips this to strict by
-      # appending `--strict`.
+      # Fails on any leftover from the platform this was ported off, and on any
+      # live-system identifier. Strict since the tree reached zero; the prose
+      # that records how the port was decided is exempt by pathspec, and the
+      # `gid://shopify` literals in tests are exempt line by line because
+      # rejecting a legacy id is the assertion there.
       - name: Forbidden references
-        run: ./scripts/check-forbidden-refs.sh
+        run: ./scripts/check-forbidden-refs.sh --strict

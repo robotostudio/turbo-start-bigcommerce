@@ -212,7 +212,17 @@ Lake takes the change instantly and the deployed site keeps serving the old page
 
 `sanityFetch` caches every Sanity read with `revalidate: false` in production and tags it `sanity`, so
 nothing expires on a timer — a named tag has to be invalidated. `/api/revalidate` does that, and a Sanity
-webhook is what calls it.
+webhook is what calls it. This is not a freshness optimisation you can defer. With no webhook wired,
+Sanity content on a statically generated route is never refreshed rather than slowly refreshed, and
+`export const revalidate` will not save you: it re-runs the render without touching the Data Cache the
+read comes from.
+
+Catalog data behaves differently, which is what makes a half-stale page so confusing. BigCommerce reads
+are POSTs and Next never serves a POST from the fetch cache, so products and categories refresh on their
+own schedule. A hidden product can therefore disappear from the site within one regeneration window
+while a page edit published minutes earlier is still nowhere to be seen. Same page, two caches, one of
+which nobody invalidated. [CONTRIBUTING.md](CONTRIBUTING.md#build-from-a-cold-cache) has the build-time
+half of this and the command that gives you a genuinely clean build.
 
 1. Generate a secret and add it to the deployment as `SANITY_REVALIDATE_SECRET`:
 
@@ -289,6 +299,9 @@ Document types live in `apps/studio/schemaTypes/documents/`, objects in `apps/st
 | GraphQL rejects the token | You minted a vanilla storefront token instead of a private one, or minted it for a different channel than `BIGCOMMERCE_CHANNEL_ID`. |
 | Navbar and homepage link to nothing | You ran `pnpm seed:sanity` without `pnpm sync:bigcommerce` after it. Run the sync. |
 | Seed script fails | `BIGCOMMERCE_ADMIN_TOKEN` is missing a catalog write scope. |
+| Text looks corrupted — hundreds of invisible characters inside an eight-character nav label | That is Sanity's stega watermark, not damaged content. Leave preview mode using the bar at the bottom of the page. A browser profile can sit in preview mode from a session days ago and quietly watermark everything you test in it, so check that before you go looking at the data. |
+| A published edit never appears on the deployed site | The revalidation webhook is not wired. See [Wiring up content revalidation](#wiring-up-content-revalidation) — without it the page is never refreshed, not slowly refreshed. |
+| A build shipped stale content and every check passed | Next's Data Cache lives in `.next` and outlives `turbo run build --force`. Build from a cold cache: `rm -rf apps/web/.next && pnpm build`. |
 | Redirects not applying | They are fetched from Sanity at build time. Redeploy after adding one. |
 | Tailwind styles missing | Check `@import "tailwindcss"` is in your CSS entry point and the `@workspace/ui` transpile config. |
 

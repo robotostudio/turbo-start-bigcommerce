@@ -731,7 +731,7 @@ export const queryProductPaths = defineQuery(`
 // ── Category queries ──
 //
 // `queryCollectionByHandle` and its `modules` fragment are gone: they read the
-// Shopify-era collection document's editorial `hero` and `modules` arrays, and
+// fork's collection document's editorial `hero` and `modules` arrays, and
 // the category page has rendered from live BigCommerce since the flip. The
 // synced category document holds no such fields, and its only consumer was a
 // component with no importers.

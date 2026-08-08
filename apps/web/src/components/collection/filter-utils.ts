@@ -6,7 +6,7 @@
  * (see the comment there). What survives here is the read half — a chip list
  * and the two removers — so a `filter.*` param that arrives on a shared or
  * bookmarked URL is still visible and still clearable rather than applying
- * invisibly. The Shopify-shaped `parseFilterParams` that used to sit above
+ * invisibly. The fork's `parseFilterParams` that used to sit above
  * this is gone: it emitted `productVendor`/`tag`/`variantOption` filters,
  * which BigCommerce has no counterpart for.
  */

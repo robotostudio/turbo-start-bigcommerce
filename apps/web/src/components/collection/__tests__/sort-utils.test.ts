@@ -33,7 +33,7 @@ describe("toCategorySort", () => {
     expect(toCategorySort("FEATURED")).toBeUndefined();
   });
 
-  it("sends nothing for a hand-edited or Shopify-era value", () => {
+  it("sends nothing for a hand-edited or legacy value", () => {
     expect(toCategorySort("PRICE")).toBeUndefined();
     expect(toCategorySort("TITLE")).toBeUndefined();
     expect(toCategorySort("CREATED")).toBeUndefined();

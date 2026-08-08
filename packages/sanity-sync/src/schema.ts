@@ -40,7 +40,7 @@ const isDeleted = defineField({
  *
  * The members are the studio's own objects, referenced by name — this package
  * cannot import from the studio, and a registered type only needs its name
- * here. They mirror what the fork's Shopify product body allowed, so the
+ * here. They mirror what the fork's product body allowed, so the
  * hotspot renderer keeps working across the flip.
  */
 const editorialBody = defineField({

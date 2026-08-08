@@ -14,7 +14,7 @@
     "format:check": "turbo run format:check",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
-    "check-refs": "./scripts/check-forbidden-refs.sh",
+    "check-refs": "./scripts/check-forbidden-refs.sh --strict",
     "bigcommerce:schema": "pnpm --filter web bigcommerce:schema",
     "bigcommerce:smoke": "pnpm --filter web bigcommerce:smoke",
     "seed:sanity": "pnpm --filter studio seed:sanity",

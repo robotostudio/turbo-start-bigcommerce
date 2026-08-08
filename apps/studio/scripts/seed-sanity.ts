@@ -6,7 +6,7 @@
  *
  * Imports `seed/reference-dataset.ndjson` into whatever project and dataset
  * `apps/studio/.env` points at. That file is a copy of the dataset behind
- * https://turbo-start-shopify-web.vercel.app, so a seeded clone and the deployed
+ * the reference storefront, so a seeded clone and the deployed
  * reference render the same page — same hero, same featured products, same FAQ.
  *
  * The seed needs nothing but a write token for your own project. Images are not

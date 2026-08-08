@@ -1,6 +1,6 @@
 /**
  * PLP sort state. BigCommerce sorts a category with a single enum
- * (`CategoryProductSort`), so the Shopify-era `sort` + `reverse` pair collapses
+ * (`CategoryProductSort`), so the fork's `sort` + `reverse` pair collapses
  * to one URL param carrying the enum member verbatim: `?sort=LOWEST_PRICE`.
  */
 
