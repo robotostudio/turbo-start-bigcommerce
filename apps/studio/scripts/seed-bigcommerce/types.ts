@@ -66,6 +66,12 @@ export interface ProductDef {
   salePrice?: number;
   /** In the store's own weight unit. The file holds grams; `loadCatalog` converts. */
   weight: number;
+  /**
+   * Brand name. BigCommerce creates the brand on first use and links every
+   * later product with the same name to it, so there is no separate brand
+   * step. Omit it and the product is left unbranded.
+   */
+  brand?: string;
   /** Slugs of the categories this product belongs to. */
   categorySlugs: string[];
   images: ImageDef[];

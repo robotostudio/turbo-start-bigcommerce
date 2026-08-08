@@ -53,7 +53,39 @@ export type BigCommerceCardProduct = {
   metafields?: {
     edges?: readonly { node: { key: string; value: string } }[] | null;
   } | null;
+  reviewSummary?: {
+    numberOfReviews: number;
+    summationOfRatings: number;
+  } | null;
 };
+
+/** A product's star rating, or null when nobody has reviewed it. */
+export type CardRating = {
+  /** Mean score, 1-5, rounded to one decimal. */
+  average: number;
+  count: number;
+};
+
+/**
+ * Star rating for a product.
+ *
+ * BigCommerce publishes an `averageRating`, but it is marked alpha and
+ * explicitly not for production, so the mean is divided out of the summation
+ * and the count instead. Zero reviews returns null rather than a zero score:
+ * "unrated" and "rated zero" look identical in a star row and mean opposite
+ * things.
+ */
+export function cardRating(product: BigCommerceCardProduct): CardRating | null {
+  const summary = product.reviewSummary;
+  if (!summary || summary.numberOfReviews <= 0) return null;
+
+  return {
+    average:
+      Math.round((summary.summationOfRatings / summary.numberOfReviews) * 10) /
+      10,
+    count: summary.numberOfReviews,
+  };
+}
 
 /**
  * Card props plus the gallery `resolveCardImages` groups on. BigCommerce needs

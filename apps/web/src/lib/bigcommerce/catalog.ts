@@ -39,9 +39,10 @@ const PATHS_PAGE_SIZE = 50;
 /**
  * Grid/PLP shape. Carries options, variants and metafields so every card can
  * render swatches, sizes, badges, hover add-to-cart and the `?Color=`
- * preselect. Measured live at first: 12: complexity 4721 of the 10000
+ * preselect. Measured live at first: 12: complexity 4698 of the 10000
  * per-request budget — small enough to run on every PLP, load-more page and
- * search grid.
+ * search grid. The review summary costs 3 of that, measured by running the
+ * same query with and without it.
  */
 const ProductCard = graphql(`
   fragment ProductCard on Product {
@@ -55,9 +56,18 @@ const ProductCard = graphql(`
     inventory {
       isInStock
       hasVariantInventory
+      # Null on any store that tracks stock per variant, which is most of them
+      # — but it is what turns a card's stock badge from "in stock" into "only
+      # 3 left", so it stays for the stores that do populate it.
       aggregated {
         availableToSell
       }
+    }
+    # averageRating is flagged alpha and not for production use, so the average
+    # is divided out of these two instead.
+    reviewSummary {
+      numberOfReviews
+      summationOfRatings
     }
     defaultImage {
       url(width: 320)
@@ -166,7 +176,9 @@ const ProductCard = graphql(`
 const ProductDetail = graphql(`
   fragment ProductDetail on Product {
     entityId
-    sku
+    # No product-level sku: BigCommerce leaves it empty whenever the SKUs live
+    # on the variants, which is every product in this catalog. Read the variant
+    # sku instead — the JSON-LD and the cart lines already do.
     path
     name
     description
@@ -178,14 +190,19 @@ const ProductDetail = graphql(`
       status
       description
     }
+    # No aggregated roll-up here either. The PDP reads stock per variant, so it
+    # would be a null nothing renders. The card fragment keeps it because its
+    # stock badge does read it.
     inventory {
       isInStock
       isStockTracked
       hasVariantInventory
-      aggregated {
-        availableToSell
-        warningLevel
-      }
+    }
+    # averageRating is flagged alpha and not for production use, so the average
+    # is divided out of these two instead.
+    reviewSummary {
+      numberOfReviews
+      summationOfRatings
     }
     prices {
       price {
@@ -519,6 +536,30 @@ const CategoryTreeQuery = graphql(`
   }
 `);
 
+/**
+ * Store capabilities the storefront has to branch on.
+ *
+ * `productFilteringEnabled` is the one that matters: faceted search is a paid
+ * BigCommerce feature, and on a plan without it `searchProducts.filters`
+ * returns an empty list with HTTP 200 and no errors — indistinguishable from a
+ * catalog that genuinely has nothing to filter on. This flag tells the two
+ * apart, so the filter UI can say "your plan does not include this" instead of
+ * guessing. Verified on the sandbox: seven facets are configured and enabled in
+ * the store's own settings while this reads false.
+ */
+const StoreSettingsQuery = graphql(`
+  query StoreSettings {
+    site {
+      settings {
+        storeName
+        search {
+          productFilteringEnabled
+        }
+      }
+    }
+  }
+`);
+
 /** Paths only. Cheap enough to page through a whole catalog at build time. */
 const ProductPathsQuery = graphql(`
   query ProductPaths($first: Int!, $after: String) {
@@ -821,6 +862,23 @@ export async function getCategoryTree(): Promise<
   const result = await storefrontQuery(CategoryTreeQuery);
 
   return result.ok ? { ok: true, data: result.data.site.categoryTree } : result;
+}
+
+/** What this store's plan lets the storefront do. */
+export type CatalogStoreSettings = ResultOf<
+  typeof StoreSettingsQuery
+>["site"]["settings"];
+
+/**
+ * Store-level capability flags. Read it where the UI would otherwise have to
+ * guess why a feature came back empty.
+ */
+export async function getStoreSettings(): Promise<
+  StorefrontQueryResult<CatalogStoreSettings>
+> {
+  const result = await storefrontQuery(StoreSettingsQuery);
+
+  return result.ok ? { ok: true, data: result.data.site.settings } : result;
 }
 
 // ---------------------------------------------------------------------------

@@ -226,8 +226,8 @@ describe("getProductById", () => {
     if (!result.ok) return;
     expect(result.data?.entityId).toBe(189);
     expect(result.data?.path).toBe("/products/rye-leather-moto-jacket/");
-    // The parent product carries no SKU on this store; the variants do.
-    expect(result.data?.sku).toBe("");
+    // The parent product carries no SKU on this store, so the query no longer
+    // asks for one; the variants are where they live.
     expect(catalog.nodes(result.data?.variants)[0]?.sku).toBe("TS-P10-BLA-XS");
   });
 

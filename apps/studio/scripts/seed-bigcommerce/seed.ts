@@ -457,6 +457,10 @@ export async function upsertProduct(
     sale_price: def.salePrice ?? 0,
     weight: def.weight,
     categories,
+    // Two fields for one concept because BigCommerce takes them that way:
+    // `brand_name` creates-or-links by name, but it rejects an empty string, so
+    // unbranding a product has to go through the id.
+    ...(def.brand ? { brand_name: def.brand } : { brand_id: 0 }),
     custom_url: { url: productPath(def.slug), is_customized: true },
     inventory_tracking: def.variants.length > 0 ? "variant" : "none",
     is_visible: true,
