@@ -49,6 +49,9 @@ const logger = new Logger("CartActions");
 const CartFields = graphql(`
   fragment CartFields on Cart {
     entityId
+    # Bumped by BigCommerce on every write. Sent back on the update mutation to
+    # make it conditional; see updateCartLine.
+    version
     currencyCode
     baseAmount {
       value
@@ -225,6 +228,7 @@ const updateLineSchema = z.object({
   lineId: idSchema,
   quantity: quantitySchema,
   merchandiseId: idSchema,
+  expectedVersion: z.number().int().positive().optional(),
 });
 
 function failure(code: CartErrorCode, message: string): CartActionResult {
@@ -368,10 +372,27 @@ export async function addToCart(
   );
 }
 
+/**
+ * Writes an absolute quantity to a line, conditional on the cart not having
+ * moved since the caller last saw it.
+ *
+ * The quantity is absolute, not a delta, so a tab that loaded before another
+ * tab changed the cart does not increment — it asserts, and the quantity goes
+ * down with both tabs reporting success. `version` is BigCommerce's own
+ * compare-and-swap: it bumps on every write, and passing back the one the
+ * caller last saw makes the API reject the write outright rather than apply it.
+ * Verified against the live store: version 1 against a cart at version 2 comes
+ * back `Request conflict`, `updateCartLineItem: null`, and the quantity
+ * unchanged.
+ *
+ * A cart reporting no version cannot be asserted against, and the write stays
+ * unconditional there — the same behaviour as before this guard existed.
+ */
 export async function updateCartLine(
   lineId: string,
   quantity: number,
-  merchandiseId?: string
+  merchandiseId?: string,
+  expectedVersion?: number | null
 ): Promise<CartActionResult> {
   // BigCommerce's update mutation requires the product ids even for a plain
   // quantity change, so the merchandise id is not optional here — the
@@ -380,6 +401,7 @@ export async function updateCartLine(
     lineId,
     quantity,
     merchandiseId,
+    expectedVersion: expectedVersion ?? undefined,
   });
   if (!parsed.success) return invalidInput(parsed.error);
 
@@ -401,6 +423,7 @@ export async function updateCartLine(
       input: {
         cartEntityId: cartId,
         lineItemEntityId: parsed.data.lineId,
+        version: parsed.data.expectedVersion,
         data: { lineItem },
       },
     },

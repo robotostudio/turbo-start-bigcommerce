@@ -159,6 +159,8 @@ export function applyIntent(cart: Cart, intent: CartIntent): Cart {
 function syntheticCartShell(currencyCode: string): Cart {
   return {
     id: "optimistic-cart",
+    // No write has confirmed this cart, so there is no version to assert.
+    version: null,
     totalQuantity: 0,
     lines: {
       edges: [],

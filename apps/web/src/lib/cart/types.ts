@@ -55,6 +55,15 @@ export type CartLine = {
 
 export type Cart = {
   id: string;
+  /**
+   * BigCommerce's own cart version, incremented on every write. Passing it back
+   * on a mutation makes that write conditional: the API rejects it when the
+   * cart has moved since, which is what stops a stale tab asserting an
+   * out-of-date quantity over a newer one. Null on a cart that reports no
+   * version, and on an optimistic cart that no write has confirmed yet — there
+   * is nothing to assert in either case.
+   */
+  version: number | null;
   totalQuantity: number;
   lines: Connection<CartLine>;
   cost: {
@@ -117,6 +126,8 @@ export type CartErrorCode =
   | "INVALID_INPUT"
   | "CART_NOT_FOUND"
   | "CART_COMPLETED"
+  /** The cart moved under this tab; the write was refused, not applied. */
+  | "CART_CONFLICT"
   | "VARIANT_UNAVAILABLE"
   | "STOREFRONT_USER_ERROR"
   | "UNKNOWN";

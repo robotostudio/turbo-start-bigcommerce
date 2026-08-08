@@ -32,6 +32,8 @@ type BigCommerceCartItem = {
 
 export type BigCommerceCart = {
   entityId: string;
+  /** Nullable in BigCommerce's schema, and present on every cart it returns. */
+  version?: number | null;
   currencyCode: string;
   baseAmount: BigCommerceMoney;
   amount: BigCommerceMoney;
@@ -124,6 +126,7 @@ export function toInternalCart(cart: BigCommerceCart): Cart {
   ].map(toLine);
   return {
     id: cart.entityId,
+    version: cart.version ?? null,
     // BigCommerce's own count, which also spans gift certificates and custom
     // items. `finalize()` recomputes it from lines on the first fold, so it can
     // only differ on an untouched server cart.

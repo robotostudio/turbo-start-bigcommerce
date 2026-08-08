@@ -6,6 +6,7 @@ import {
 } from "@/lib/bigcommerce/classify";
 import type { CartErrorCode } from "@/lib/cart/types";
 import cartNotFound from "../__fixtures__/error-cart-not-found.json";
+import cartVersionConflict from "../__fixtures__/error-cart-version-conflict.json";
 import invalidQuantity from "../__fixtures__/error-invalid-quantity.json";
 import loginInvalid from "../__fixtures__/error-login-invalid-credentials.json";
 import missingOptions from "../__fixtures__/error-missing-required-options.json";
@@ -27,6 +28,11 @@ const CASES: {
     fixture: "error-cart-not-found",
     errors: cartNotFound.response.errors,
     code: "CART_NOT_FOUND",
+  },
+  {
+    fixture: "error-cart-version-conflict",
+    errors: cartVersionConflict.response.errors,
+    code: "CART_CONFLICT",
   },
   {
     fixture: "error-missing-required-options",

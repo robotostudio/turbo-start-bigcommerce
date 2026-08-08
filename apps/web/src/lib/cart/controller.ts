@@ -23,10 +23,19 @@ export type CartActions = {
     lines: CartLineInput[],
     expectedTotals?: ExpectedTotal[]
   ): Promise<CartActionResult>;
+  /**
+   * `expectedVersion` is the cart version this tab last saw confirmed. The
+   * quantity written is absolute, so without it a tab that loaded before
+   * another tab's change does not increment, it asserts, and the quantity goes
+   * down. BigCommerce rejects the write when the version has moved on. Null
+   * leaves the write unconditional, which is all a cart reporting no version
+   * allows.
+   */
   updateLine(
     lineId: string,
     quantity: number,
-    merchandiseId?: string
+    merchandiseId?: string,
+    expectedVersion?: number | null
   ): Promise<CartActionResult>;
   removeLine(lineId: string): Promise<CartActionResult>;
 };
@@ -56,6 +65,10 @@ type AddState = {
 };
 
 export const MAX_LINE_QUANTITY = 99;
+
+/** Shown where the refused change was made, so it reads next to the line. */
+export const CART_CONFLICT_MESSAGE =
+  "Your cart changed in another tab, so this change was not applied. The quantity shown is the latest.";
 
 const EMPTY_SNAPSHOT: CartSnapshot = {
   cart: null,
@@ -194,8 +207,13 @@ export class CartController {
       const seq = this.nextSeq++;
       this.inFlight++;
       this.refold();
-      const result = await this.callWithRetry(() =>
-        this.actions.updateLine(lineId, quantity, merchandiseId)
+      // A swap writes an absolute quantity too, off the same stale view, so it
+      // is conditional on the same version. Guarding only the stepper would
+      // leave the colour selector losing the other tab's change.
+      const result = await this.conditionalWrite(
+        lineId,
+        quantity,
+        merchandiseId
       );
       this.inFlight--;
       this.removeIntent(intent);
@@ -322,13 +340,14 @@ export class CartController {
       this.inFlight++;
       this.refold();
       // BigCommerce's update mutation requires the product ids even for a
-      // plain quantity change, so the line's merchandise id rides along.
+      // plain quantity change, so the line's merchandise id rides along. It is
+      // read here rather than at call time: this task runs on the `line:`
+      // chain behind any earlier write to the same line, so by now
+      // `serverTruth` holds whatever that write returned.
       const merchandiseId = this.serverTruth?.lines.edges.find(
         (edge) => edge.node.id === lineId
       )?.node.merchandise.id;
-      const result = await this.callWithRetry(() =>
-        this.actions.updateLine(lineId, target, merchandiseId)
-      );
+      const result = await this.conditionalWrite(lineId, target, merchandiseId);
       this.inFlight--;
       if (result.ok) {
         this.acceptCart(result.cart, seq);
@@ -370,6 +389,55 @@ export class CartController {
       await Promise.all(Array.from(this.chains.values()));
     }
     return this.getSnapshot().cart;
+  }
+
+  private lineQuantity(lineId: string): number | null {
+    return (
+      this.serverTruth?.lines.edges.find((edge) => edge.node.id === lineId)
+        ?.node.quantity ?? null
+    );
+  }
+
+  /**
+   * Writes an absolute quantity conditional on the cart version, and sends it
+   * a second time if the version was moved by this tab rather than another one.
+   *
+   * The version is cart-wide but adds and line writes run on separate chains,
+   * so one tab can have both in flight, and whichever BigCommerce serves second
+   * is holding a version its own sibling already superseded. Reporting that as
+   * "your cart changed in another tab" would be false and would drop an edit
+   * the shopper made, so it is sent again against the version the sibling
+   * returned.
+   *
+   * The retry is only safe while the line still holds the quantity this write
+   * was composed against. That is what separates the two cases: our own add
+   * moves the version and leaves the line alone, another tab's write moves the
+   * line. Where the line moved, the refusal stands.
+   */
+  private async conditionalWrite(
+    lineId: string,
+    quantity: number,
+    merchandiseId: string | undefined
+  ): Promise<CartActionResult> {
+    const sentVersion = this.serverTruth?.version ?? null;
+    const overwriting = this.lineQuantity(lineId);
+
+    const result = await this.callWithRetry(() =>
+      this.actions.updateLine(lineId, quantity, merchandiseId, sentVersion)
+    );
+    if (result.ok || result.error.code !== "CART_CONFLICT") return result;
+
+    const movedByUs = (this.serverTruth?.version ?? null) !== sentVersion;
+    if (!movedByUs || this.lineQuantity(lineId) !== overwriting) return result;
+
+    return this.callWithRetry(() =>
+      this.actions.updateLine(
+        lineId,
+        quantity,
+        merchandiseId,
+        this.serverTruth?.version
+      )
+    );
   }
 
   private expectedTotalFor(variantId: string, delta: number): ExpectedTotal {
@@ -539,13 +607,21 @@ export class CartController {
       intentKind,
       lineId,
       code: error.code,
-      message: error.message,
+      // BigCommerce words a rejected conditional write as "Request conflict",
+      // which is true and no use to a shopper. The log keeps its version.
+      message:
+        error.code === "CART_CONFLICT" ? CART_CONFLICT_MESSAGE : error.message,
       retryable: error.code === "NETWORK",
     };
     if (error.code === "CART_NOT_FOUND" || error.code === "CART_COMPLETED") {
       this.serverTruth = null;
       this.lastAcceptedSeq = this.nextSeq++;
       this.reap();
+    }
+    // A refused write means this tab is out of date, so the message alone
+    // would leave it out of date. Pull the truth it was refused against.
+    if (error.code === "CART_CONFLICT") {
+      this.refetch();
     }
   }
 
