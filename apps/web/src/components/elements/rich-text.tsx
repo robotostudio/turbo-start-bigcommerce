@@ -1,17 +1,16 @@
 import { Logger } from "@workspace/logger";
 import { cn } from "@workspace/ui/lib/utils";
-import Link from "next/link";
 import { PortableText, type PortableTextReactComponents } from "next-sanity";
 
 import type { SanityRichTextProps } from "@/types";
 import { parseChildrenToSlug } from "@/utils";
-import { sharedPortableTextTypes } from "./portable-text-types";
+import {
+  sharedPortableTextMarks,
+  sharedPortableTextTypes,
+} from "./portable-text-types";
 import { SanityImage } from "./sanity-image";
 
 const logger = new Logger("RichText");
-
-const linkClassName =
-  "font-medium text-foreground underline decoration-solid underline-offset-2";
 
 const components: Partial<PortableTextReactComponents> = {
   block: {
@@ -92,59 +91,7 @@ const components: Partial<PortableTextReactComponents> = {
       return <p>{children}</p>;
     },
   },
-  marks: {
-    code: ({ children }) => (
-      <code className="border border-border bg-muted px-1.5 py-0.5 text-foreground text-sm lg:whitespace-nowrap">
-        {children}
-      </code>
-    ),
-    customLink: ({ children, value }) => {
-      if (!value.href || value.href === "#") {
-        return <span className={linkClassName}>Link Broken</span>;
-      }
-      return (
-        <Link
-          aria-label={`Link to ${value?.href}`}
-          className={linkClassName}
-          href={value.href}
-          prefetch={false}
-          target={value.openInNewTab ? "_blank" : "_self"}
-        >
-          {children}
-        </Link>
-      );
-    },
-    linkInternal: ({ children, value }) => {
-      if (!value?.href) return <span>{children}</span>;
-      return (
-        <Link className={linkClassName} href={value.href} prefetch={false}>
-          {children}
-        </Link>
-      );
-    },
-    linkExternal: ({ children, value }) => {
-      if (!value?.href) return <span>{children}</span>;
-      return (
-        <Link
-          className={linkClassName}
-          href={value.href}
-          prefetch={false}
-          target={value.openInNewTab ? "_blank" : "_self"}
-          rel={value.openInNewTab ? "noopener noreferrer" : undefined}
-        >
-          {children}
-        </Link>
-      );
-    },
-    linkEmail: ({ children, value }) => {
-      if (!value?.href) return <span>{children}</span>;
-      return (
-        <a className={linkClassName} href={value.href}>
-          {children}
-        </a>
-      );
-    },
-  },
+  marks: sharedPortableTextMarks,
   types: {
     ...sharedPortableTextTypes,
     image: ({ value }) => {
