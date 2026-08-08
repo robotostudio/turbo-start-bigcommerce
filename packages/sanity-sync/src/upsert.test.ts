@@ -200,6 +200,20 @@ describe("image URLs", () => {
   });
 });
 
+describe("category parentage", () => {
+  it("carries parent_id through as parentEntityId", () => {
+    expect(toCategoryDocument(category).store.parentEntityId).toBe(36);
+  });
+
+  it("writes null for a top-level category, which REST reports as parent 0", () => {
+    // The explorer filters on !defined(store.parentEntityId). A stored 0 is
+    // defined, so every top-level category would drop out of it.
+    expect(
+      toCategoryDocument({ ...category, parent_id: 0 }).store.parentEntityId
+    ).toBeNull();
+  });
+});
+
 describe("the product unit shared by the sweep and the single-entity sync", () => {
   it("is the product plus every variant on it", () => {
     expect(productDocuments(product).map((d) => d._id)).toEqual([
