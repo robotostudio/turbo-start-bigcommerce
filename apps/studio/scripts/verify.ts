@@ -141,23 +141,26 @@ function pathProblems(
 }
 
 /**
- * Categories whose synced slug does not survive being used as a URL.
+ * Categories whose synced href does not survive being used as a URL.
  *
  * A synced slug is an identifier, not a path: `slugFromPath` joins every
  * segment with `-`, so Henleys under Tops stores `tops-henleys` while its
  * storefront path is `/collections/tops/henleys/`. `pathProblems` cannot see
  * that, because it flattens the catalog path before comparing — flattened
- * matches flattened and a link that 404s passes. This compares the href a
+ * matches flattened and a link that 404s passes. This compares the href a link
  * surface would build against the real path instead.
  *
- * Only top-level categories are checked, and that is the rule rather than a
- * convenience: they are the ones whose slug is a single segment, so they are
- * the ones `/collections/{slug}` is correct for. Anything nested is listed from
- * the live category tree instead, which carries the real path
- * (`categoryTreeToCollectionList` in `apps/web/src/lib/bigcommerce/catalog.ts`).
- * The check therefore goes red the moment a nested category reads as top-level
- * — which is exactly what a regression in the sync's parentage mapping looks
- * like, and what put a flattened link on `/collections.md` to begin with.
+ * `store.path` is what those surfaces project (`categoryHandle` in
+ * `packages/sanity/src/query.ts`), and the fallback here is the same one they
+ * use — so what this checks is the string an editor's picked link renders,
+ * whichever of the two it came from. Every category is checked, not only the
+ * top-level ones: before `store.path` existed, `/collections/{slug}` was
+ * correct for a single segment and wrong for everything below it, so the check
+ * had to exclude the nested ones it could not have passed.
+ *
+ * It therefore goes red on a dataset the sync has not re-run against, which is
+ * the honest answer: those documents carry no path and their nested links do
+ * 404 until it does.
  */
 function categoryHrefProblems(
   categories: SyncedDocument[],
@@ -167,22 +170,17 @@ function categoryHrefProblems(
     .filter(
       (document) =>
         document._type === "bigcommerceCategory" &&
-        // `== null`, not `=== null`: a GROQ projection drops an attribute the
-        // document does not carry rather than returning it as null, so a
-        // top-level category can arrive with the key absent. Missing it there
-        // would skip the one category the check exists to look at.
-        document.parentEntityId == null &&
-        document.slug
+        // A GROQ projection drops an attribute the document does not carry
+        // rather than returning it as null, so `path` is absent rather than
+        // null on anything the current sync has not written.
+        (document.path ?? document.slug)
     )
-    .filter(
-      (document) =>
-        catalogPaths.get(document.entityId) !==
-        `/collections/${document.slug}/`
-    )
-    .map((document) => {
-      const real = catalogPaths.get(document.entityId) ?? "no catalog path";
-      return `/collections/${document.slug} (really ${real})`;
-    });
+    .map((document) => ({
+      href: `/collections/${document.path ?? document.slug}`,
+      real: catalogPaths.get(document.entityId),
+    }))
+    .filter((link) => link.real !== `${link.href}/`)
+    .map((link) => `${link.href} (really ${link.real ?? "no catalog path"})`);
 }
 
 type SyncedDocument = {
@@ -190,7 +188,7 @@ type SyncedDocument = {
   _type: string;
   entityId: number | null;
   slug: string | null;
-  parentEntityId: number | null;
+  path: string | null;
   isDeleted: boolean | null;
 };
 
@@ -326,7 +324,7 @@ async function main() {
            _id, _type,
            "entityId": store.entityId,
            "slug": store.slug.current,
-           "parentEntityId": store.parentEntityId,
+           "path": store.path,
            "isDeleted": store.isDeleted
          }`
       ),
@@ -401,8 +399,8 @@ async function main() {
       "category links resolve",
       brokenHrefs.length === 0,
       brokenHrefs.length === 0
-        ? "every top-level category slug is its storefront path"
-        : `does not resolve: ${brokenHrefs.join(", ")}`
+        ? `every category link is its storefront path (${syncedCategoryIds.size} checked)`
+        : `does not resolve: ${brokenHrefs.join(", ")} — run \`pnpm sync:bigcommerce\``
     );
   }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   categoryDocumentId,
+  handleFromPath,
   productDocumentId,
   productDocuments,
   type RestCategory,
@@ -259,5 +260,40 @@ describe("slugs", () => {
     expect(slugFromPath("/turbo-start-care-guide-digital/")).toBe(
       "turbo-start-care-guide-digital"
     );
+  });
+});
+
+describe("category paths", () => {
+  it("keeps the segments a slug flattens", () => {
+    expect(handleFromPath("/collections/jackets/leather/")).toBe(
+      "jackets/leather"
+    );
+  });
+
+  it("is the slug unchanged for a top-level category", () => {
+    // AC2 of ROB-2576: a top-level href must not churn. The surfaces coalesce
+    // path over slug, so the two agreeing here is what makes that true.
+    expect(handleFromPath("/collections/shirts/")).toBe("shirts");
+    expect(handleFromPath("/collections/shirts/")).toBe(
+      slugFromPath("/collections/shirts/")
+    );
+  });
+
+  it("rebuilds the storefront path a link surface has to hit", () => {
+    // The whole mapping, end to end: what the sync stores is what
+    // `"/collections/" + coalesce(store.path, store.slug.current)` renders, and
+    // that has to be the path BigCommerce serves. Flatten it with `-` again and
+    // this is the assertion that fails.
+    const stored = toCategoryDocument(category).store;
+    expect(`/collections/${stored.path}/`).toBe(category.custom_url.url);
+  });
+
+  it("writes the path beside the slug, never instead of it", () => {
+    // `seed-refs.ts` matches documents by slug and its placeholder regex has no
+    // `/` in the class, so a path written into the slug takes the whole seed
+    // with it.
+    const { slug, path } = toCategoryDocument(category).store;
+    expect(slug).toEqual({ _type: "slug", current: "jackets-leather" });
+    expect(path).toBe("jackets/leather");
   });
 });

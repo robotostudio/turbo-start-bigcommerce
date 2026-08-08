@@ -7026,6 +7026,13 @@
               },
               "optional": true
             },
+            "path": {
+              "type": "objectAttribute",
+              "value": {
+                "type": "string"
+              },
+              "optional": true
+            },
             "descriptionHtml": {
               "type": "objectAttribute",
               "value": {
