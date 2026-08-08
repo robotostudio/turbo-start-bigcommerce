@@ -344,7 +344,18 @@ const exploreCategoriesBlock = /* groq */ `
       // is prerendered from those paths, so any category this block links but
       // that query drops is a card pointing at a 404 — the shape featured-cards.ts
       // rules out for products.
-      count(collections) > 0 => collections[@->store.isDeleted != true && @->store.isVisible == true]->{${categoryCardFields}},
+      //
+      // array::compact for the other half of the same problem: these references
+      // are weak, so the target may not exist at all rather than merely being
+      // tombstoned — which is the normal state of a fresh install between the
+      // content import and the first sync. The filter does not catch that one.
+      // A missing document makes store.isDeleted null, null != true is true, so
+      // the reference passes and the deref then yields null straight into the
+      // array. featuredProductsBlock compacts the identical shape for the
+      // identical reason. It stays after the isVisible clause: the clause is
+      // about what the merchant published, compact is about whether the target
+      // document exists, and neither answers the other's question.
+      count(collections) > 0 => array::compact(collections[@->store.isDeleted != true && @->store.isVisible == true]->{${categoryCardFields}}),
       // The parentEntityId clause is what makes "top-level" true rather than
       // accidental. Every synced category is flat today (ROB-2566), so it
       // filters nothing yet; the moment parentage lands in the sync, without it
