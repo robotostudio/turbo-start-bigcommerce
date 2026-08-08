@@ -4,6 +4,15 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Hand-triggerable from the Actions tab or `gh workflow run CI --ref main`.
+  # Added while diagnosing why no run had ever started: with only `push` and
+  # `pull_request`, the only way to test whether runs execute at all is to push
+  # again and hope, and a run that never appears looks the same as a run that
+  # was never triggered. This separates the two.
+  #
+  # GitHub only offers the trigger once the workflow carrying it is on the
+  # default branch, so this does nothing until it is merged to `main`.
+  workflow_dispatch:
 
 permissions:
   contents: read
