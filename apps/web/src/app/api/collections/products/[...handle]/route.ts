@@ -13,9 +13,13 @@ const DEFAULT_FIRST = 12;
  * The handle stays in the path so a request is self-describing in a log or a
  * cache key, but the read is by entity id, which the page resolved once and
  * forwards. Resolving the path again per "Load more" would spend a whole round
- * trip learning something the caller already knows — and it is what used to
- * break paging on nested categories, whose real path has more segments than
- * this single-segment route could carry.
+ * trip learning something the caller already knows.
+ *
+ * Catch-all, and last in the path, because a BigCommerce category handle is
+ * multi-segment: `tops/henleys` under a `[handle]` route matched nothing and
+ * answered 404, which blanked the grid on any sort or facet change (those run
+ * without the server's seeded page). A catch-all has to be the final segment,
+ * so `products` comes before it rather than after.
  *
  * A hand-edited id returns that category's products, which is what navigating
  * to that category does anyway. Anything that is not a positive integer is
@@ -38,7 +42,7 @@ export async function GET(request: NextRequest) {
   const after = sp.get("after");
   const firstParam = Number(sp.get("first") ?? DEFAULT_FIRST);
   const first =
-    Number.isFinite(firstParam) && firstParam > 0
+    Number.isInteger(firstParam) && firstParam > 0
       ? Math.min(firstParam, SEARCH_PAGE_LIMIT)
       : DEFAULT_FIRST;
 

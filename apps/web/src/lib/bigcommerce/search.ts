@@ -39,6 +39,14 @@ import { graphql } from "./graphql";
  * `revalidate = 300`, and load-more forwards the id it already has.
  */
 
+/**
+ * `$withFacets` is the same lever `$withProducts` is in `catalog.ts`, for the
+ * same reason: BigCommerce charges complexity on what a query *executes*, not
+ * on what it declares. Typeahead runs per keystroke and renders products and
+ * suggestions only, so it pays for neither the facet list nor the plan flag
+ * that exists to describe it: 6686 with them and 4664 without, measured on the
+ * seeded store at `first: 10`.
+ */
 const SearchProductsQuery = graphql(
   `
   query SearchProducts(
@@ -47,9 +55,10 @@ const SearchProductsQuery = graphql(
     $first: Int!
     $after: String
     $facetsFirst: Int!
+    $withFacets: Boolean!
   ) {
     site {
-      settings {
+      settings @include(if: $withFacets) {
         search {
           productFilteringEnabled
         }
@@ -70,7 +79,7 @@ const SearchProductsQuery = graphql(
               }
             }
           }
-          filters(first: $facetsFirst) {
+          filters(first: $facetsFirst) @include(if: $withFacets) {
             pageInfo {
               hasNextPage
             }
@@ -138,6 +147,12 @@ export type CatalogSearchOptions = {
   sort?: ListingSort;
   /** Facet selection from the URL codec. */
   filters?: SearchFiltersPayload;
+  /**
+   * Set false to leave the facet list and the plan flag out of the request.
+   * `facets` then reads empty and `filteringEnabled` false, which is what a
+   * caller that renders neither wants anyway.
+   */
+  facets?: boolean;
 };
 
 /**
@@ -159,6 +174,7 @@ export async function searchCatalog({
   after,
   sort,
   filters: selection,
+  facets = true,
 }: CatalogSearchOptions): Promise<StorefrontQueryResult<CatalogSearch>> {
   const filters: SearchProductsFilters = { ...selection };
   if (searchTerm) filters.searchTerm = searchTerm;
@@ -175,6 +191,7 @@ export async function searchCatalog({
       first: Math.min(first, SEARCH_PAGE_LIMIT),
       after: after ?? null,
       facetsFirst: FACET_LIST_PAGE_SIZE,
+      withFacets: facets,
     },
   });
 
@@ -199,7 +216,11 @@ export async function searchCatalog({
         hasNextPage: products.pageInfo.hasNextPage,
         endCursor: products.pageInfo.endCursor ?? null,
       },
-      facets: toFacets(facetConnection.edges, filteringEnabled),
+      // Absent, not empty, when the gate is off — and toFacets reads an empty
+      // list on a false flag as "this store's plan has no filtering" and warns.
+      facets: facetConnection
+        ? toFacets(facetConnection.edges, filteringEnabled)
+        : [],
       filteringEnabled,
       suggestions: suggestions.flatMap((suggestion) =>
         suggestion.results.map((suggestionResult) => suggestionResult.text)

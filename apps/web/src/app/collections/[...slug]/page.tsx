@@ -127,14 +127,16 @@ export default async function CollectionPage({ params }: PageProps) {
     categoryEntityId: category.entityId,
     first: PAGE_SIZE,
   });
-  const products = listing.ok ? listing.data.products : [];
-  const pageInfo = listing.ok
-    ? listing.data.pageInfo
-    : { hasNextPage: false, endCursor: null };
-  // Degrades to false if the read failed, which keeps the panel's message
-  // honest rather than promising filters nothing can supply.
-  const filteringEnabled = listing.ok ? listing.data.filteringEnabled : false;
-  const facets = listing.ok ? listing.data.facets : [];
+  // Throwing rather than degrading to an empty list, because this page is
+  // statically generated: a transient failure that rendered "No products found"
+  // would be baked and served for the whole `revalidate` window, and a shopper
+  // cannot tell it apart from a category that really is empty. Throwing leaves
+  // the last good page in place through a revalidation, and matches how the
+  // category read above already fails — `notFound()`, not a blank page.
+  if (!listing.ok) {
+    throw new Error(`Category listing read failed for ${handle}`);
+  }
+  const { products, pageInfo, filteringEnabled, facets } = listing.data;
 
   return (
     <div className="site-container py-8">

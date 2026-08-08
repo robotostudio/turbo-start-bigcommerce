@@ -44,6 +44,56 @@ function planGatedResponse(): unknown {
   ).response;
 }
 
+/**
+ * The same capture with the plan flag on and one brand facet grafted in.
+ *
+ * The sandbox is on a plan without Product Filtering, so there is no live
+ * response to capture for the other side of the gate — and every other test
+ * here reads `filteringEnabled: false` off the fallback. This is the one that
+ * exercises `toFacets` with an edge in it.
+ */
+function filteringEnabledResponse(): unknown {
+  const response = planGatedResponse() as {
+    data: {
+      site: {
+        settings?: unknown;
+        search: {
+          searchProducts: { filters: { edges: unknown[] } };
+        };
+      };
+    };
+  };
+
+  response.data.site.settings = {
+    search: { productFilteringEnabled: true },
+  };
+  response.data.site.search.searchProducts.filters.edges = [
+    {
+      node: {
+        __typename: "BrandSearchFilter",
+        displayName: "Brand",
+        isCollapsedByDefault: false,
+        displayProductCount: true,
+        brands: {
+          pageInfo: { hasNextPage: false },
+          edges: [
+            {
+              node: {
+                entityId: 12,
+                name: "Aster",
+                isSelected: false,
+                productCount: 3,
+              },
+            },
+          ],
+        },
+      },
+    },
+  ];
+
+  return response;
+}
+
 function mockResponse(body: unknown) {
   const fetchMock = vi.fn(
     (_url: string, _init: RequestInit): Promise<Response> =>
@@ -181,5 +231,77 @@ describe("searchCatalog request shape", () => {
     // `first: 51` is a hard 400 from BigCommerce — "Argument 'first' cannot
     // exceed 50" — so an over-large page is clamped rather than sent and lost.
     expect(sentVariables(fetchMock).first).toBe(50);
+  });
+});
+
+describe("searchCatalog on a store with product filtering", () => {
+  it("reports the facets and the flag rather than the plan-gated fallback", async () => {
+    mockResponse(filteringEnabledResponse());
+
+    const result = await search.searchCatalog({
+      searchTerm: "jacket",
+      first: 24,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.filteringEnabled).toBe(true);
+    expect(result.data.facets).toHaveLength(1);
+    const facet = result.data.facets[0];
+    if (facet?.kind !== "options") throw new Error("expected an options facet");
+    expect(facet.name).toBe("Brand");
+    expect(facet.options).toEqual([
+      {
+        paramKey: "filter.brand",
+        paramValue: "12",
+        label: "Aster",
+        productCount: 3,
+        isSelected: false,
+      },
+    ]);
+  });
+});
+
+describe("searchCatalog with the facet gate off", () => {
+  it("asks for neither the facet list nor the plan flag", async () => {
+    const fetchMock = mockResponse(planGatedResponse());
+
+    await search.searchCatalog({
+      searchTerm: "jacket",
+      first: 10,
+      facets: false,
+    });
+
+    expect(sentVariables(fetchMock).withFacets).toBe(false);
+  });
+
+  it("reads a response where the facet connection is absent, not empty", async () => {
+    // What `@include(if: false)` actually returns: the field is gone from the
+    // payload, so the parse cannot reach for `.edges` on it.
+    const response = planGatedResponse() as {
+      data: { site: { search: { searchProducts: Record<string, unknown> } } };
+    };
+    delete response.data.site.search.searchProducts.filters;
+    mockResponse(response);
+
+    const result = await search.searchCatalog({
+      searchTerm: "jacket",
+      first: 10,
+      facets: false,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.products).toHaveLength(5);
+    expect(result.data.facets).toEqual([]);
+    expect(result.data.filteringEnabled).toBe(false);
+  });
+
+  it("still asks for them by default", async () => {
+    const fetchMock = mockResponse(planGatedResponse());
+
+    await search.searchCatalog({ searchTerm: "jacket", first: 24 });
+
+    expect(sentVariables(fetchMock).withFacets).toBe(true);
   });
 });

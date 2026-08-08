@@ -26,7 +26,9 @@ export async function GET(request: Request) {
   }
 
   const [searchResult, treeResult] = await Promise.all([
-    searchCatalog({ searchTerm: query, first: LIMIT }),
+    // Typeahead renders products and related terms only, so it leaves the
+    // facet list and the plan flag out of the request it pays for per keystroke.
+    searchCatalog({ searchTerm: query, first: LIMIT, facets: false }),
     getCategoryTree(),
   ]);
 

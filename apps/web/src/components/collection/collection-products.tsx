@@ -62,7 +62,7 @@ export function CollectionProducts({
         if (pageParam) params.set("after", pageParam as string);
 
         const res = await fetch(
-          `/api/collections/${handle}/products?${params.toString()}`
+          `/api/collections/products/${handle}?${params.toString()}`
         );
         if (!res.ok) throw new Error("Failed to fetch products");
         return res.json() as Promise<CollectionPage>;
