@@ -1,5 +1,6 @@
 import { sanityFetch } from "@workspace/sanity/live";
 import { queryCollectionsIndexPageData } from "@workspace/sanity/query";
+import { connection } from "next/server";
 
 import { CollectionsContent } from "@/components/collections/collections-content";
 import { BreadcrumbJsonLd, CollectionJsonLd } from "@/components/json-ld";
@@ -49,6 +50,14 @@ export default async function CollectionsPage() {
   // the verdict the category listing page and `/collections.md` already reached
   // on the same failure.
   if (!treeResult.ok) {
+    // `connection()` first, so a build that cannot reach the store leaves this
+    // page to render on demand rather than failing the whole build. That is
+    // what the category routes already get for free: their
+    // `generateStaticParams` degrades to no paths, so nothing prerenders and
+    // every category renders on first request. This route has no params to
+    // enumerate, so the bail has to be explicit. At request time `connection()`
+    // resolves and the throw below is a live 5xx.
+    await connection();
     throw new Error(`Category tree read failed: ${treeResult.error}`);
   }
 

@@ -41,6 +41,10 @@ vi.mock("@workspace/env/client", () => ({
 vi.mock("@workspace/sanity/live", () => ({
   sanityFetch: () => Promise.resolve({ data: { title: "Collections" } }),
 }));
+// Stands in for the request scope. `connection()` aborts a build prerender and
+// resolves at request time; resolving is the request-time half, which is the
+// one where the failure has to reach the shopper as an error.
+vi.mock("next/server", () => ({ connection: () => Promise.resolve() }));
 vi.mock("@/components/json-ld", () => ({
   BreadcrumbJsonLd: () => null,
   CollectionJsonLd: () => null,
