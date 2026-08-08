@@ -15,11 +15,16 @@ const env = createEnv({
     /**
      * Shared with the Sanity webhook that drives `/api/revalidate`.
      *
-     * Optional on purpose: a clone with no webhook configured must still
-     * build. The route answers 503 when it is absent rather than accepting
-     * unsigned calls, so the failure is visible without being fatal.
+     * Required, like the two tokens above, because without it nothing
+     * invalidates the `sanity` cache tag and a deployment serves whatever was
+     * true at build time for as long as it runs. `sanityFetch` caches every
+     * Sanity read with `revalidate: false`, so it is never refreshed rather
+     * than slowly refreshed, and `export const revalidate` on a page does not
+     * help — it re-runs the render against the same cached read. A green build
+     * with old content is the failure mode, and required is how this file
+     * already stops that for every other secret.
      */
-    SANITY_REVALIDATE_SECRET: z.string().min(1).optional(),
+    SANITY_REVALIDATE_SECRET: z.string().min(1),
 
     /** BigCommerce GraphQL Storefront API.
      *  BIGCOMMERCE_STOREFRONT_TOKEN must be a *private* token. Vanilla tokens
