@@ -4,9 +4,75 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@workspace/ui/components/accordion";
+import Link from "next/link";
 import { PortableText, type PortableTextReactComponents } from "next-sanity";
 
 import { ProductHotspotsImage } from "@/components/product/product-hotspots";
+
+const linkClassName =
+  "font-medium text-foreground underline decoration-solid underline-offset-2";
+
+/**
+ * Link annotations, shared by `RichText` and by the accordion's nested
+ * `PortableText` below. `@portabletext/react` resolves components per render
+ * call — a nested render inherits nothing — so a nested body without these
+ * renders every annotation through `unknownMark`: a bare span, no href.
+ */
+export const sharedPortableTextMarks: NonNullable<
+  Partial<PortableTextReactComponents>["marks"]
+> = {
+  code: ({ children }) => (
+    <code className="border border-border bg-muted px-1.5 py-0.5 text-foreground text-sm lg:whitespace-nowrap">
+      {children}
+    </code>
+  ),
+  customLink: ({ children, value }) => {
+    if (!value.href || value.href === "#") {
+      return <span className={linkClassName}>Link Broken</span>;
+    }
+    return (
+      <Link
+        aria-label={`Link to ${value?.href}`}
+        className={linkClassName}
+        href={value.href}
+        prefetch={false}
+        target={value.openInNewTab ? "_blank" : "_self"}
+      >
+        {children}
+      </Link>
+    );
+  },
+  linkInternal: ({ children, value }) => {
+    if (!value?.href) return <span>{children}</span>;
+    return (
+      <Link className={linkClassName} href={value.href} prefetch={false}>
+        {children}
+      </Link>
+    );
+  },
+  linkExternal: ({ children, value }) => {
+    if (!value?.href) return <span>{children}</span>;
+    return (
+      <Link
+        className={linkClassName}
+        href={value.href}
+        prefetch={false}
+        rel={value.openInNewTab ? "noopener noreferrer" : undefined}
+        target={value.openInNewTab ? "_blank" : "_self"}
+      >
+        {children}
+      </Link>
+    );
+  },
+  linkEmail: ({ children, value }) => {
+    if (!value?.href) return <span>{children}</span>;
+    return (
+      <a className={linkClassName} href={value.href}>
+        {children}
+      </a>
+    );
+  },
+};
 
 /**
  * Instagram's share button includes the username, so `/p/<id>` and
@@ -69,7 +135,10 @@ export const sharedPortableTextTypes: NonNullable<
               <AccordionContent>
                 {group.body && (
                   <div className="prose prose-sm dark:prose-invert">
-                    <PortableText value={group.body} />
+                    <PortableText
+                      components={{ marks: sharedPortableTextMarks }}
+                      value={group.body}
+                    />
                   </div>
                 )}
               </AccordionContent>
