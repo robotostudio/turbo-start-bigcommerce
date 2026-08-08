@@ -1,5 +1,7 @@
 import { defineArrayMember, defineField } from "sanity";
 
+import { catalogReferenceOptions } from "@/schemaTypes/objects/bigcommerce/catalog-reference";
+
 export const collectionLinks = defineField({
   name: "collectionLinks",
   title: "Collection links",
@@ -13,6 +15,7 @@ export const collectionLinks = defineField({
       type: "reference",
       weak: true,
       to: [{ type: "bigcommerceCategory" }],
+      options: catalogReferenceOptions,
     }),
   ],
 });

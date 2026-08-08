@@ -1,5 +1,6 @@
 import { defineField, defineType } from "sanity";
 
+import { catalogReferenceOptions } from "@/schemaTypes/objects/bigcommerce/catalog-reference";
 import { createRadioListLayout, isValidUrl } from "@/utils/helper";
 
 const allLinkableTypes = [
@@ -59,7 +60,7 @@ export const customUrl = defineType({
       title: "Page",
       type: "reference",
       description: "Select an internal page",
-      options: { disableNew: true },
+      options: catalogReferenceOptions,
       hidden: ({ parent }) => parent?.type !== "internal",
       to: allLinkableTypes,
       /**
@@ -121,7 +122,7 @@ export const customUrl = defineType({
       // Weak for the same reason as every other reference into the synced
       // catalog: the documents arrive after the content that links to them.
       weak: true,
-      options: { disableNew: true },
+      options: catalogReferenceOptions,
       hidden: ({ parent }) => parent?.type !== "product",
       validation: (Rule) =>
         Rule.custom((value, { parent }) => {

@@ -1,5 +1,7 @@
 import { defineField } from "sanity";
 
+import { catalogReferenceOptions } from "@/schemaTypes/objects/bigcommerce/catalog-reference";
+
 export const notFoundPage = defineField({
   name: "notFoundPage",
   title: "404 page",
@@ -25,6 +27,7 @@ export const notFoundPage = defineField({
       description: "Collection products displayed on this page",
       weak: true,
       to: [{ type: "bigcommerceCategory" }],
+      options: catalogReferenceOptions,
     }),
     defineField({
       name: "colorTheme",

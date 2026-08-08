@@ -2,6 +2,7 @@ import { Columns2 } from "lucide-react";
 import { defineArrayMember, defineField, defineType } from "sanity";
 
 import { storeThumb } from "@/components/store-thumb";
+import { catalogReferenceOptions } from "@/schemaTypes/objects/bigcommerce/catalog-reference";
 
 const editorialItem = defineArrayMember({
   name: "editorialItem",
@@ -25,7 +26,7 @@ const editorialItem = defineArrayMember({
       // documents arrive from the sync, after the content import that
       // references them.
       weak: true,
-      options: { disableNew: true },
+      options: catalogReferenceOptions,
       description:
         "The collection this column links to — its image and name are used automatically",
       validation: (Rule) => Rule.required(),
