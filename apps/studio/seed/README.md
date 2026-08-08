@@ -64,6 +64,31 @@ Product images use the original upload path (`product_images/{image_file}`)
 rather than a sized rendition, so what lands in your store is the full-fidelity
 file rather than a thumbnail.
 
+### No reviews, on purpose
+
+The fixture seeds no product reviews, so a fresh store has none and the star
+row renders nowhere. That is the correct empty state, not a broken feature:
+`cardRating` returns null at zero reviews and the card renders nothing rather
+than an empty five-star row, which would read as a badly-rated product.
+
+Reviews stay out because seeding them is the one fixture that could deceive a
+real shopper. Everything else here is obviously sample data — a catalogue of
+invented products under an invented brand — but a fabricated five-star review
+sitting on a product a fork actually sells is a lie told to that fork's
+customers, and it would arrive silently with `pnpm seed:bigcommerce`.
+
+To see the stars, write one review against your own store and delete it after:
+
+```
+POST /v3/catalog/products/{id}/reviews
+{ "title": "...", "text": "...", "rating": 5, "status": "approved",
+  "name": "...", "email": "...", "date_reviewed": "2026-01-01T00:00:00+00:00" }
+```
+
+Two reviews with different scores are worth more than one: the card divides
+`summationOfRatings` by `numberOfReviews`, so a single review cannot tell you
+whether the mean is computed or merely echoed.
+
 ### Regenerating it
 
 Only needed to ship a different catalog. Point the seed at your own store,
