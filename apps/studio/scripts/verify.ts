@@ -167,7 +167,11 @@ function categoryHrefProblems(
     .filter(
       (document) =>
         document._type === "bigcommerceCategory" &&
-        document.parentEntityId === null &&
+        // `== null`, not `=== null`: a GROQ projection drops an attribute the
+        // document does not carry rather than returning it as null, so a
+        // top-level category can arrive with the key absent. Missing it there
+        // would skip the one category the check exists to look at.
+        document.parentEntityId == null &&
         document.slug
     )
     .filter(
