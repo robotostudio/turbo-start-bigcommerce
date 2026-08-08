@@ -15,6 +15,7 @@ import {
   ProductSelection,
   SelectedVariantGallery,
 } from "@/components/product/product-selection";
+import { RatingStars } from "@/components/product/rating-stars";
 import { RelatedProducts } from "@/components/product/related-products";
 import { SavedItemButton } from "@/components/saved-items/saved-item-button";
 import {
@@ -28,6 +29,7 @@ import {
 import { swatchHex } from "@/lib/bigcommerce/color";
 import { keyMetafields } from "@/lib/bigcommerce/metafields";
 import { toMoney } from "@/lib/bigcommerce/money";
+import { cardRating } from "@/lib/bigcommerce/product-card";
 import { cardVariants } from "@/lib/bigcommerce/variant-utils";
 import { fetchOrFallback } from "@/lib/build-guard";
 import type { MoneyV2, ProductOption } from "@/lib/cart/types";
@@ -202,6 +204,15 @@ export default async function ProductPage({ params }: PageProps) {
 
   const title = product.name;
   const vendor = product.brand?.name ?? null;
+  // Rendered because `ProductJsonLd` emits `aggregateRating` from the same
+  // call: Google's structured data policy is that markup describes what the
+  // page shows, and a rating in the head with nothing in the body is the case
+  // it names. Null for an unreviewed product, and then neither appears.
+  //
+  // Product-level, so it sits in the eyebrow rather than beside the price —
+  // the price is inside `ProductSelection` and changes with the variant, and a
+  // rating next to it would read as varying too.
+  const rating = cardRating(product);
   // Product `type` is BigCommerce's Physical/Digital flag, not a merchandising
   // category — the seed carries that as a metafield.
   const category = keyMetafields(product.metafields.edges).product_type;
@@ -227,13 +238,16 @@ export default async function ProductPage({ params }: PageProps) {
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)] xl:grid-cols-[minmax(0,1fr)_minmax(0,600px)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,760px)]">
           {/* Info column — sticky on desktop, uniform 32px rhythm */}
           <div className="flex min-w-0 max-w-2xl flex-col gap-8 self-start lg:sticky lg:top-24">
-            {/* Season / brand eyebrow + save */}
+            {/* Season / brand eyebrow + rating + save */}
             <div className="flex items-start justify-between gap-4">
-              {vendor ? (
-                <p className="text-muted-foreground text-sm">{vendor}</p>
-              ) : (
-                <span />
-              )}
+              {/* Always present, even when both children are absent, so the
+               * save button stays pinned right without a placeholder span. */}
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                {vendor && (
+                  <p className="text-muted-foreground text-sm">{vendor}</p>
+                )}
+                {rating && <RatingStars rating={rating} />}
+              </div>
               {/* 44px hitbox passed from here, not baked into SavedItemButton:
                * on a ProductCard it sits absolutely over the product link, and
                * an invisible 44px box there would eat clicks meant for the

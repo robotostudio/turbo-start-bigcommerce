@@ -2,11 +2,11 @@
 
 import { Badge } from "@workspace/ui/components/badge";
 import { cn } from "@workspace/ui/lib/utils";
-import { Star } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import { useCartActions } from "@/components/cart/cart-context";
+import { RatingStars } from "@/components/product/rating-stars";
 import { StoreImage as Image } from "@/components/product/store-image";
 import { SavedItemButton } from "@/components/saved-items/saved-item-button";
 import {
@@ -452,39 +452,6 @@ function CardImage({
         </div>
       )}
     </>
-  );
-}
-
-/**
- * Five stars filled to the nearest whole, with the review count.
- *
- * Only ever rendered for a product that has reviews: `cardRating` returns null
- * at zero rather than a zero score, and the caller checks. An empty five-star
- * row would read as a badly-rated product instead of an unreviewed one, which
- * is the opposite of the truth.
- */
-function RatingStars({ rating }: { rating: CardRating }) {
-  const filled = Math.round(rating.average);
-
-  return (
-    // `role="img"` so the five icons and the count are announced as one label
-    // rather than five meaningless graphics. A bare `aria-label` on a `p` is
-    // ignored — a paragraph has no role that accepts a name.
-    <p
-      aria-label={`Rated ${rating.average} out of 5 from ${rating.count} review${rating.count === 1 ? "" : "s"}`}
-      className="flex items-center gap-0.5 text-muted-foreground"
-      role="img"
-    >
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          aria-hidden="true"
-          className={cn("size-3.5", star <= filled && "fill-current")}
-          key={star}
-          strokeWidth={1.5}
-        />
-      ))}
-      <span className="ml-1 text-xs">({rating.count})</span>
-    </p>
   );
 }
 
