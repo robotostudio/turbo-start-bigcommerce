@@ -32,6 +32,18 @@ type PageProps = {
   params: Promise<{ slug: string[] }>;
 };
 
+/**
+ * Same reason as the PDP — the catalog read is a POST, so page-level ISR is the
+ * only thing that stops a prerendered category serving its build-time prices and
+ * product set forever.
+ *
+ * Five minutes, longer than the PDP's minute, because a category is a browse
+ * surface rather than a commit point: a stale card costs a shopper far less than
+ * a stale price on the page they buy from, and there are many more category
+ * pages, so the regeneration bill scales with this number.
+ */
+export const revalidate = 300;
+
 const PAGE_SIZE = 12;
 
 /** BigCommerce category descriptions are rich text; SEO wants prose. */

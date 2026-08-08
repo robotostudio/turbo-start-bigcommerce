@@ -18,12 +18,7 @@ import { generateSlugFromTitle } from "@/utils/slug-validation";
 
 const presentationOriginUrl = process.env.SANITY_STUDIO_PRESENTATION_URL;
 
-// Styled components
-const CopyButton = styled(Button)`
-  cursor: pointer;
-`;
-
-const GenerateButton = styled(Button)`
+const ClickableButton = styled(Button)`
   cursor: pointer;
 `;
 
@@ -114,7 +109,7 @@ function SlugInputField({
 
 function SlugGenerateButton({ onGenerate, disabled }: GenerateButtonProps) {
   return (
-    <GenerateButton
+    <ClickableButton
       disabled={disabled}
       fontSize={1}
       mode="ghost"
@@ -137,7 +132,7 @@ function UrlPreviewSection({ url, onCopy }: UrlPreviewProps) {
             <span>{url}</span>
           </Flex>
         </UrlPreview>
-        <CopyButton
+        <ClickableButton
           icon={CopyIcon}
           mode="ghost"
           onClick={onCopy}
@@ -169,44 +164,25 @@ export function PathnameFieldComponent(props: ObjectFieldProps<SlugValue>) {
   const document = useFormValue([]) as SanityDocument;
   const currentSlug = value?.current || "";
 
-  // Use centralized validation hook with document type for unified config
-  const { allErrors, allWarnings } = useSlugValidation({
+  const { errors, warnings } = useSlugValidation({
     slug: currentSlug,
     documentType: document?._type,
-    includeSanityValidation: true,
   });
 
-  // Memoize computed values for performance
-  const localizedPathname = useMemo(() => {
-    try {
-      // Simple path generation - just use the slug as the path
-      return currentSlug.startsWith("/") ? currentSlug : `/${currentSlug}`;
-    } catch {
-      return currentSlug || "/";
-    }
+  const fullUrl = useMemo(() => {
+    const pathname = currentSlug.startsWith("/")
+      ? currentSlug
+      : `/${currentSlug}`;
+    return `${presentationOriginUrl ?? ""}${pathname}`;
   }, [currentSlug]);
 
-  const fullUrl = useMemo(
-    () => `${presentationOriginUrl ?? ""}${localizedPathname}`,
-    [localizedPathname]
-  );
-
-  // Event handlers with error handling
   const handleChange = useCallback(
     (newValue?: string) => {
-      try {
-        const patch =
-          typeof newValue === "string"
-            ? set({
-                current: newValue,
-                _type: "slug",
-              })
-            : unset();
-
-        onChange(patch);
-      } catch {
-        // Silently handle errors - validation will show user-friendly messages
-      }
+      onChange(
+        typeof newValue === "string"
+          ? set({ current: newValue, _type: "slug" })
+          : unset()
+      );
     },
     [onChange]
   );
@@ -220,47 +196,28 @@ export function PathnameFieldComponent(props: ObjectFieldProps<SlugValue>) {
   );
 
   const handleGenerate = useCallback(() => {
-    try {
-      const documentTitle = document?.title as string | undefined;
-      const documentType = document?._type;
+    const documentTitle = document?.title as string | undefined;
+    const documentType = document?._type;
 
-      if (!(documentTitle?.trim() && documentType)) {
-        return;
-      }
+    if (!(documentTitle?.trim() && documentType)) {
+      return;
+    }
 
-      // Use unified slug generation with document type config
-      const generatedSlug = generateSlugFromTitle(
-        documentTitle,
-        documentType,
-        currentSlug
-      );
+    const generatedSlug = generateSlugFromTitle(
+      documentTitle,
+      documentType,
+      currentSlug
+    );
 
-      if (generatedSlug) {
-        handleChange(generatedSlug);
-      }
-    } catch {
-      // Silently handle errors
+    if (generatedSlug) {
+      handleChange(generatedSlug);
     }
   }, [document?.title, document?._type, currentSlug, handleChange]);
 
-  const handleCopyUrl = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(fullUrl);
-    } catch {
-      // Fallback for older browsers or when clipboard API fails
-      try {
-        const textArea = globalThis.document?.createElement("textarea");
-        if (textArea && globalThis.document?.body) {
-          textArea.value = fullUrl;
-          globalThis.document.body.appendChild(textArea);
-          textArea.select();
-          globalThis.document.execCommand?.("copy");
-          globalThis.document.body.removeChild(textArea);
-        }
-      } catch {
-        // Silently handle fallback errors
-      }
-    }
+  const handleCopyUrl = useCallback(() => {
+    // No execCommand fallback: the Studio is a modern-browser app served over
+    // HTTPS or localhost, which is exactly where the clipboard API is available.
+    navigator.clipboard.writeText(fullUrl);
   }, [fullUrl]);
 
   return (
@@ -302,7 +259,7 @@ export function PathnameFieldComponent(props: ObjectFieldProps<SlugValue>) {
         )}
       </Stack>
 
-      <ErrorStates errors={allErrors} warnings={allWarnings} />
+      <ErrorStates errors={errors} warnings={warnings} />
     </Stack>
   );
 }

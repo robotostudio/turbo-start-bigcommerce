@@ -33,6 +33,10 @@ export async function generateMetadata({
           slug: pageData?.slug,
           contentId: pageData?._id,
           contentType: pageData?._type,
+          // The Studio's "hide from search engines" toggle. It rides through on
+          // the query's bare `...` spread, so forgetting it here is silent —
+          // the editor ticks the box and the page still ships `index, follow`.
+          seoNoIndex: pageData?.seoNoIndex ?? false,
         }
       : {}
   );

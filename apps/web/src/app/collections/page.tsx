@@ -11,6 +11,14 @@ import { categoryToCardProps } from "@/lib/collection-card";
 import { getSEOMetadata } from "@/lib/seo";
 import { getBaseUrl } from "@/utils";
 
+/**
+ * The category tree is a BigCommerce read, and BigCommerce reads are POSTs that
+ * Next never serves from the fetch cache — so without this the index freezes at
+ * build time and a category the merchant creates never appears. Matched to the
+ * category pages it links to; both are browse surfaces.
+ */
+export const revalidate = 300;
+
 export async function generateMetadata() {
   const { data } = await sanityFetch({
     query: queryCollectionsIndexPageData,

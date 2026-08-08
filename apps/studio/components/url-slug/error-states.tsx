@@ -1,6 +1,6 @@
 import { AccessDeniedIcon, WarningOutlineIcon } from "@sanity/icons";
 import { Badge, Flex, Stack, Text } from "@sanity/ui";
-import { memo, useMemo } from "react";
+import { memo } from "react";
 
 type ErrorStateItemProps = {
   type: "error" | "warning";
@@ -13,23 +13,15 @@ type ErrorStatesProps = {
   warnings?: string[];
 };
 
-// Memoized individual error state component for performance
 const ErrorStateItem = memo(function ErrorStateItemComponent({
   type,
   message,
   id,
 }: ErrorStateItemProps) {
   const isErrorType = type === "error";
-
-  // Memoize icon and styling to prevent re-renders
-  const { IconComponent, badgeTone, ariaLabel } = useMemo(
-    () => ({
-      IconComponent: isErrorType ? AccessDeniedIcon : WarningOutlineIcon,
-      badgeTone: isErrorType ? ("critical" as const) : ("caution" as const),
-      ariaLabel: isErrorType ? "Error" : "Warning",
-    }),
-    [isErrorType]
-  );
+  const IconComponent = isErrorType ? AccessDeniedIcon : WarningOutlineIcon;
+  const badgeTone = isErrorType ? ("critical" as const) : ("caution" as const);
+  const ariaLabel = isErrorType ? "Error" : "Warning";
 
   return (
     <Badge
@@ -59,35 +51,20 @@ function generateErrorId(message: string, index: number): string {
   return `${message.slice(0, 10).replace(/\s+/g, "-").toLowerCase()}-${index}`;
 }
 
-// Memoized main component for performance
+// `useSlugValidation` already dedupes, so this renders what it is given.
 export const ErrorStates = memo(function ErrorStatesComponent({
   errors = [],
   warnings = [],
 }: ErrorStatesProps) {
-  // Memoize the unique arrays to prevent unnecessary re-renders
-  const { errorItems, warningItems, hasIssues } = useMemo(() => {
-    const uniqueErrors = Array.from(new Set(errors));
-    const uniqueWarnings = Array.from(new Set(warnings));
-    const hasAnyIssues = uniqueErrors.length > 0 || uniqueWarnings.length > 0;
-
-    return {
-      errorItems: uniqueErrors,
-      warningItems: uniqueWarnings,
-      hasIssues: hasAnyIssues,
-    };
-  }, [errors, warnings]);
-
-  // Early return if no issues
-  if (!hasIssues) {
+  if (errors.length === 0 && warnings.length === 0) {
     return null;
   }
 
   return (
     <Stack aria-label="Validation messages" role="region" space={4}>
-      {/* Critical errors */}
-      {errorItems.length > 0 && (
+      {errors.length > 0 && (
         <Stack aria-label="Errors" role="group" space={2}>
-          {errorItems.map((error, index) => (
+          {errors.map((error, index) => (
             <ErrorStateItem
               id={generateErrorId(error, index)}
               key={error}
@@ -98,10 +75,9 @@ export const ErrorStates = memo(function ErrorStatesComponent({
         </Stack>
       )}
 
-      {/* Warnings */}
-      {warningItems.length > 0 && (
+      {warnings.length > 0 && (
         <Stack aria-label="Warnings" role="group" space={2}>
-          {warningItems.map((warning, index) => (
+          {warnings.map((warning, index) => (
             <ErrorStateItem
               id={generateErrorId(warning, index)}
               key={warning}

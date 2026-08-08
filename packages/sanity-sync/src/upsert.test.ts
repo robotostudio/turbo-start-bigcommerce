@@ -10,6 +10,7 @@ import {
   slugFromPath,
   softDeleteMutations,
   staleMutations,
+  stencilImageUrl,
   toCategoryDocument,
   toProductDocument,
   toVariantDocument,
@@ -161,6 +162,41 @@ describe("rule 2: soft-delete with a flag", () => {
     const patch = (mutations[0] as { patch: { set: Record<string, unknown> } })
       .patch;
     expect(Object.keys(patch.set)).toEqual(["store.isDeleted"]);
+  });
+});
+
+describe("image URLs", () => {
+  it("stores the sized stencil path, not the multi-megabyte original", () => {
+    // Admin REST hands back the original upload. Next's optimizer 500s on it.
+    expect(
+      stencilImageUrl(
+        "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/i/14045__14045.png"
+      )
+    ).toBe(
+      "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/i/14045__14045.png"
+    );
+  });
+
+  it("keeps an empty image absent rather than storing a bare host", () => {
+    expect(stencilImageUrl("")).toBeNull();
+  });
+
+  it("passes through a URL that is already sized", () => {
+    const sized =
+      "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/i/14045__14045.png";
+    expect(stencilImageUrl(sized)).toBe(sized);
+  });
+
+  it("is what toCategoryDocument writes", () => {
+    expect(
+      toCategoryDocument({
+        ...category,
+        image_url:
+          "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/n/47466__47466.png",
+      }).store.imageUrl
+    ).toBe(
+      "https://cdn11.bigcommerce.com/s-8jbhprizry/images/stencil/640w/n/47466__47466.png"
+    );
   });
 });
 

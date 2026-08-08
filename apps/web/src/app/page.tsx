@@ -17,6 +17,14 @@ async function fetchHomePageData() {
   });
 }
 
+/**
+ * Featured Products blocks read live prices out of BigCommerce, and that read is
+ * a POST — which Next never serves from the fetch cache — so without this the
+ * home page ships its build-time prices forever. Matched to the category pages;
+ * the same cards render on both.
+ */
+export const revalidate = 300;
+
 /** How many products a Featured Products block falls back to. */
 const FEATURED_FALLBACK_COUNT = 4;
 

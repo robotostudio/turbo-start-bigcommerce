@@ -75,6 +75,56 @@ export function slugFromPath(path: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Image URLs
+// ---------------------------------------------------------------------------
+
+/**
+ * Matches `url(width: 640)`, which is what `apps/web/src/lib/bigcommerce`
+ * already asks the Storefront API for. 1280w is not a safe alternative: the
+ * same asset comes back 4.8 MB there, which is the size that started this.
+ */
+const STENCIL_WIDTH = 640;
+
+/**
+ * Admin REST returns the **original upload** path for two of the three images
+ * this package stores: `category.image_url`
+ * (`/product_images/i/14045__14045.png`) and `variant.image_url`
+ * (`/product_images/attribute_rule_images/21_source_….png`). Only
+ * `product.images[].url_standard` already arrives sized.
+ *
+ * Those originals run 2.1–6.0 MB on this store, and Next's image optimizer
+ * answers 500 on them at every allowed width. Measured against a production
+ * server on the real URLs: the original 500s after a flat 7.0s at both w=640
+ * and w=1920 — the fetch timeout `apps/web/next.config.ts` already documents —
+ * while the sized URL answers 200 in ~4s. Two homepage category tiles rendered
+ * broken in production because of it, and every variant swatch had the same
+ * fault waiting.
+ *
+ * The CDN serves any `product_images` asset resized under `images/stencil/{n}w`,
+ * so the sized URL is derivable from what Admin REST already hands back. That
+ * keeps this package speaking Admin REST and nothing else. Verified on all 10
+ * sandbox categories and on variant images: every original 200s at 640w,
+ * 2.1–6.0 MB becoming 0.27–1.15 MB.
+ *
+ * Product URLs contain no `/product_images/` segment, so this is a no-op on
+ * them — confirmed, and they were already serving 200.
+ *
+ * ponytail: a string swap on a CDN path convention rather than a documented
+ * API. If BigCommerce ever moves the stencil path, read `image.url(width:)`
+ * from Storefront GraphQL instead — correct, but it puts a second API surface
+ * and a storefront token into a package that has so far needed neither.
+ */
+export function stencilImageUrl(imageUrl: string | null): string | null {
+  if (!imageUrl) {
+    return null;
+  }
+  return imageUrl.replace(
+    "/product_images/",
+    `/images/stencil/${STENCIL_WIDTH}w/`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // BigCommerce Admin REST shapes — only the fields the sync stores
 // ---------------------------------------------------------------------------
 
@@ -188,7 +238,7 @@ export function toVariantDocument(variant: RestVariant): SyncedDocument {
       // missing data — so stock comes from the Admin REST inventory level.
       inventoryLevel: variant.inventory_level,
       purchasingDisabled: variant.purchasing_disabled,
-      imageUrl: variant.image_url,
+      imageUrl: stencilImageUrl(variant.image_url),
       isDeleted: false,
       optionValues: (variant.option_values ?? []).map((value) => ({
         _key: `option-${value.id}`,
@@ -211,7 +261,7 @@ export function toCategoryDocument(category: RestCategory): SyncedDocument {
       parentEntityId: category.parent_id || null,
       isVisible: category.is_visible,
       isDeleted: false,
-      imageUrl: category.image_url || null,
+      imageUrl: stencilImageUrl(category.image_url),
     },
   };
 }

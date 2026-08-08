@@ -46,6 +46,18 @@ type PageProps = {
 };
 
 /**
+ * Without this the prerendered PDP serves the price and stock captured at build
+ * time, forever. The catalog read is a POST, which Next never serves from the
+ * fetch cache, so page-level ISR is the only thing that refreshes commerce data.
+ *
+ * One minute, and shorter than the category pages, because the PDP is where a
+ * shopper commits: a wrong price or an "in stock" badge on a sold-out item fails
+ * visibly and immediately. There are also far fewer PDPs than category pages, so
+ * the regeneration cost of a short window is bounded.
+ */
+export const revalidate = 60;
+
+/**
  * Catch-all, not `[handle]`: a BigCommerce storefront path is whatever the
  * merchant made it, and `site.route` resolves the whole thing in one lookup.
  */
