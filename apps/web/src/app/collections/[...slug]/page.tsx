@@ -153,11 +153,21 @@ export default async function CollectionPage({ params }: PageProps) {
           <ListingControls />
         </div>
 
+        {/* `useSearchParams` consumers need Suspense boundaries on a
+         * statically generated route; each fallback is the default view the
+         * server already rendered, so nothing jumps on hydration. */}
         <div className="mb-8 flex flex-col gap-4">
-          <FilterPanel filteringEnabled={filteringEnabled} filters={[]} />
-          {/* `useSearchParams` consumers need Suspense boundaries on a
-           * statically generated route; each fallback is the default view the
-           * server already rendered, so nothing jumps on hydration. */}
+          {/* No facets: the listing reads from `Category.products`, which has
+           * no filter argument, and moving it to `searchProducts` costs about
+           * 1000 more complexity per request plus the
+           * `CategoryProductSort.DEFAULT` member the sort menu depends on —
+           * for nothing a shopper could see while this store's plan returns no
+           * facets at all. The panel renders its honest state instead, and the
+           * transformer and codec are already scoped by `categoryEntityId` for
+           * whoever has a store that can serve them. */}
+          <Suspense fallback={null}>
+            <FilterPanel filteringEnabled={filteringEnabled} />
+          </Suspense>
           <Suspense fallback={null}>
             <ActiveFilters />
           </Suspense>
