@@ -63,17 +63,28 @@ async function fetchCollectionMarkdown(
  *
  * It also drops a hidden category for free, where the Sanity mirror needed an
  * explicit `isVisible` clause to do it: BigCommerce leaves one out of the tree.
+ *
+ * A failed tree read throws rather than degrading to an empty list. The caller
+ * turns that into a 503, which is uncached and self-correcting; an empty index
+ * is a 200 this route tells the CDN to hold for a minute and reuse for five,
+ * and it is indistinguishable from a store with no categories, so the agent
+ * reading it has no way to know it should come back. Same verdict the
+ * collections page reached when a failed `searchCatalog` was degrading to an
+ * empty product grid under `revalidate = 300`.
  */
 async function fetchCollectionsIndexMarkdown(): Promise<string> {
   const [indexRes, treeResult] = await Promise.all([
     sanityFetch({ query: queryCollectionsIndexPageData, ...PUBLISHED }),
     getCategoryTree(),
   ]);
+  if (!treeResult.ok) {
+    throw new Error(`category tree read failed: ${treeResult.error}`);
+  }
   const index = indexRes.data ?? { title: "Collections" };
-  const collections = categoryTreeToCollectionList(
-    treeResult.ok ? treeResult.data : []
+  return collectionsIndexToMarkdown(
+    index,
+    categoryTreeToCollectionList(treeResult.data)
   );
-  return collectionsIndexToMarkdown(index, collections);
 }
 
 async function fetchBlogIndexMarkdown(): Promise<string | null> {
