@@ -145,7 +145,7 @@ describe("getProductByPath", () => {
   // No ticket 05 fixture captured a stale path — every route capture ran with
   // the schema default of IGNORE and came back `redirect: null`. The response
   // shape is `Route`, though, so a static redirect is this and nothing more.
-  it("returns the canonical URL when a stale path redirects", async () => {
+  it("sends a stale path to the canonical page on this storefront", async () => {
     mockResponse({
       data: {
         site: {
@@ -153,6 +153,7 @@ describe("getProductByPath", () => {
             redirect: {
               toUrl:
                 "https://store-testhash-42.mybigcommerce.com/products/rye-leather-moto-jacket/",
+              to: { __typename: "ProductRedirect" },
             },
             node: null,
           },
@@ -165,7 +166,33 @@ describe("getProductByPath", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.data.node).toBeNull();
-    expect(result.data.redirectTo).toContain("/rye-leather-moto-jacket/");
+    // The path, not BigCommerce's absolute URL: this app renders the product
+    // itself, and redirecting to the host in `toUrl` leaves the storefront.
+    expect(result.data.redirectTo).toBe("/products/rye-leather-moto-jacket/");
+  });
+
+  // The one kind that is not an entity this app renders. A merchant can point
+  // it anywhere, including off-domain, so the URL survives whole.
+  it("keeps a manual redirect's URL as the merchant wrote it", async () => {
+    mockResponse({
+      data: {
+        site: {
+          route: {
+            redirect: {
+              toUrl: "https://example.com/lookbook",
+              to: { __typename: "ManualRedirect" },
+            },
+            node: null,
+          },
+        },
+      },
+    });
+
+    const result = await catalog.getProductByPath(["old-moto-jacket"]);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.redirectTo).toBe("https://example.com/lookbook");
   });
 
   it("ignores a redirect that points back at the requested path", async () => {
@@ -176,6 +203,7 @@ describe("getProductByPath", () => {
             redirect: {
               toUrl:
                 "https://store-testhash-42.mybigcommerce.com/products/rye-leather-moto-jacket/",
+              to: { __typename: "ProductRedirect" },
             },
             node: null,
           },
