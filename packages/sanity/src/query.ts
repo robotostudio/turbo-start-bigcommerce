@@ -332,11 +332,18 @@ const exploreCategoriesBlock = /* groq */ `
     // field count(null) > 0 evaluates to null, which select() treats as no match
     // and falls through — verified against the live dataset, not assumed.
     "collections": select(
-      // A picked category the sync has since tombstoned drops out, and if every
-      // pick is dead the block renders nothing rather than reverting to the
-      // automatic row. Same call as the hotspot spot-drop and featured-cards.ts:
-      // showing an editor four categories they did not choose, because the ones
-      // they did choose quietly died, is worse than showing none.
+      // A picked category the sync has since tombstoned or the merchant has
+      // hidden drops out, and if every pick is dead the block renders nothing
+      // rather than reverting to the automatic row. Same call as the hotspot
+      // spot-drop and featured-cards.ts: showing an editor four categories they
+      // did not choose, because the ones they did choose quietly died, is worse
+      // than showing none.
+      //
+      // isVisible is spelled == true rather than != false to match
+      // queryCollectionPaths, and that parity is the point: /collections/[...slug]
+      // is prerendered from those paths, so any category this block links but
+      // that query drops is a card pointing at a 404 — the shape featured-cards.ts
+      // rules out for products.
       //
       // array::compact for the other half of the same problem: these references
       // are weak, so the target may not exist at all rather than merely being
@@ -345,8 +352,10 @@ const exploreCategoriesBlock = /* groq */ `
       // A missing document makes store.isDeleted null, null != true is true, so
       // the reference passes and the deref then yields null straight into the
       // array. featuredProductsBlock compacts the identical shape for the
-      // identical reason.
-      count(collections) > 0 => array::compact(collections[@->store.isDeleted != true]->{${categoryCardFields}}),
+      // identical reason. It stays after the isVisible clause: the clause is
+      // about what the merchant published, compact is about whether the target
+      // document exists, and neither answers the other's question.
+      count(collections) > 0 => array::compact(collections[@->store.isDeleted != true && @->store.isVisible == true]->{${categoryCardFields}}),
       // The parentEntityId clause is what makes "top-level" true rather than
       // accidental. Every synced category is flat today (ROB-2566), so it
       // filters nothing yet; the moment parentage lands in the sync, without it
@@ -361,6 +370,7 @@ const exploreCategoriesBlock = /* groq */ `
         _type == "bigcommerceCategory"
         && defined(store.slug.current)
         && store.isDeleted != true
+        && store.isVisible == true
         && !defined(store.parentEntityId)
       ] | order(store.title asc) [0...4]{${categoryCardFields}}
     )
@@ -831,8 +841,15 @@ export const queryCollectionsIndexPageData = defineQuery(`
   }
 `);
 
+/**
+ * The markdown mirror of the collections index — its only consumer is
+ * `/api/markdown`, since the HTML index at `app/collections/page.tsx` reads the
+ * live category tree instead. It still emits links, so it carries the same
+ * visibility rule as `queryCollectionPaths`: a category this lists but that
+ * query drops is a link to a path `/collections/[...slug]` will not resolve.
+ */
 export const queryAllCollections = defineQuery(`
-  *[_type == "bigcommerceCategory" && defined(store.slug.current) && store.isDeleted != true]{
+  *[_type == "bigcommerceCategory" && defined(store.slug.current) && store.isDeleted != true && store.isVisible == true]{
     _id,
     _createdAt,
     "title": store.title,
