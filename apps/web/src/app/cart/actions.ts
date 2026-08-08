@@ -14,7 +14,7 @@ import {
   getProductByPath,
 } from "@/lib/bigcommerce/catalog";
 import { classifyStorefrontFailure } from "@/lib/bigcommerce/classify";
-import { storefrontQuery } from "@/lib/bigcommerce/client";
+import { cartQuery } from "@/lib/cart/query";
 import { swatchHex } from "@/lib/bigcommerce/color";
 import { graphql } from "@/lib/bigcommerce/graphql";
 import { toMoney } from "@/lib/bigcommerce/money";
@@ -308,9 +308,7 @@ export async function createCart(
     return failure("INVALID_INPUT", "Unrecognised merchandise id");
   }
 
-  const result = await storefrontQuery(CreateCartMutation, {
-    variables: { input: { lineItems } },
-  });
+  const result = await cartQuery(CreateCartMutation, { input: { lineItems } });
   if (!result.ok) {
     return settleTransportFailure("createCart", result);
   }
@@ -343,8 +341,8 @@ export async function addToCart(
     return failure("INVALID_INPUT", "Unrecognised merchandise id");
   }
 
-  const result = await storefrontQuery(AddCartLineItemsMutation, {
-    variables: { input: { cartEntityId: cartId, data: { lineItems } } },
+  const result = await cartQuery(AddCartLineItemsMutation, {
+    input: { cartEntityId: cartId, data: { lineItems } },
   });
   if (!result.ok) {
     return settleTransportFailure("addToCart", result);
@@ -403,14 +401,12 @@ export async function updateCartLine(
     return failure("INVALID_INPUT", "Unrecognised merchandise id");
   }
 
-  const result = await storefrontQuery(UpdateCartLineItemMutation, {
-    variables: {
-      input: {
-        cartEntityId: cartId,
-        lineItemEntityId: parsed.data.lineId,
-        version: parsed.data.expectedVersion,
-        data: { lineItem },
-      },
+  const result = await cartQuery(UpdateCartLineItemMutation, {
+    input: {
+      cartEntityId: cartId,
+      lineItemEntityId: parsed.data.lineId,
+      version: parsed.data.expectedVersion,
+      data: { lineItem },
     },
   });
   if (!result.ok) {
@@ -444,10 +440,8 @@ export async function removeCartLine(
     return failure("CART_NOT_FOUND", "No cart found");
   }
 
-  const result = await storefrontQuery(DeleteCartLineItemMutation, {
-    variables: {
-      input: { cartEntityId: cartId, lineItemEntityId: parsed.data },
-    },
+  const result = await cartQuery(DeleteCartLineItemMutation, {
+    input: { cartEntityId: cartId, lineItemEntityId: parsed.data },
   });
   if (!result.ok) {
     return settleTransportFailure("removeCartLine", result);
@@ -473,9 +467,7 @@ export async function getCart(): Promise<Cart | null> {
     return null;
   }
 
-  const result = await storefrontQuery(GetCartQuery, {
-    variables: { entityId: cartId },
-  });
+  const result = await cartQuery(GetCartQuery, { entityId: cartId });
 
   if (!result.ok) {
     logger.error(`Failed to fetch cart: ${result.error}`);

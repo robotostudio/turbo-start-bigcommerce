@@ -53,7 +53,26 @@ export type StorefrontGraphQLError = {
 };
 
 export type StorefrontQueryResult<T> =
-  | { ok: true; data: T }
+  | {
+      ok: true;
+      data: T;
+      /**
+       * The customer access token, when BigCommerce issued one on this
+       * response. Only `login` does.
+       *
+       * It arrives as a `SHOP_TOKEN` Set-Cookie rather than in the body.
+       * `LoginResult.customerAccessToken` is documented as server-to-server
+       * only, and measured against this store it is refused outright: *"Customer
+       * access token was requested in the body, but it's only returned for
+       * server-to-server requests. For browser requests it's set as an httpOnly
+       * cookie instead."* That is with the private token this starter mandates,
+       * so the body field is reachable only with a customer-impersonation
+       * token — a second, far more powerful credential that can act as any
+       * customer by id. Reading the cookie needs no new secret, so it is the
+       * cheaper and narrower of the two.
+       */
+      customerToken?: string;
+    }
   | {
       ok: false;
       error: string;
@@ -76,6 +95,27 @@ type GraphQLBody<T> = {
 /** 5xx and rate limiting are worth retrying; every other status is not. */
 function isTransient(status: number): boolean {
   return status >= SERVER_ERROR || status === TOO_MANY_REQUESTS;
+}
+
+/** The cookie BigCommerce puts the customer access token in. */
+const SHOP_TOKEN_COOKIE = "SHOP_TOKEN=";
+
+/**
+ * The customer access token out of the response's Set-Cookie, if there is one.
+ *
+ * `login` answers with three cookies — `SHOP_TOKEN`, `SHOP_SESSION_TOKEN` and
+ * `SHOP_SESSION_ROTATION_TOKEN`. Only the first is the access token the
+ * `X-Bc-Customer-Access-Token` header wants; the other two belong to
+ * BigCommerce's own hosted storefront session, which this app does not run.
+ */
+function readShopToken(response: Response): string | undefined {
+  const value = response.headers
+    .getSetCookie()
+    .find((cookie) => cookie.startsWith(SHOP_TOKEN_COOKIE))
+    ?.split(";")[0]
+    ?.slice(SHOP_TOKEN_COOKIE.length);
+
+  return value ? value : undefined;
 }
 
 /**
@@ -117,18 +157,29 @@ export async function storefrontQuery<
   TVariables = Record<string, unknown>,
 >(
   document: TadaDocumentNode<TResult, TVariables> | string,
-  options?: { variables?: TVariables }
+  options?: { variables?: TVariables; customerToken?: string | null }
 ): Promise<StorefrontQueryResult<TResult>> {
   let response: Response;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${env.BIGCOMMERCE_STOREFRONT_TOKEN}`,
+    "User-Agent": "turbo-start-bigcommerce",
+  };
+
+  if (options?.customerToken) {
+    headers["X-Bc-Customer-Access-Token"] = options.customerToken;
+    // Without this an expired or revoked token is ignored silently and the
+    // request answers as an anonymous one. For a cart that means a null cart
+    // and a shopper looking at an empty basket, with nothing in the response
+    // saying why. Erroring makes a dead session say so.
+    headers["X-Bc-Error-On-Invalid-Customer-Access-Token"] = "true";
+  }
 
   try {
     response = await fetch(storefrontUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.BIGCOMMERCE_STOREFRONT_TOKEN}`,
-        "User-Agent": "turbo-start-bigcommerce",
-      },
+      headers,
       body: JSON.stringify({
         query: typeof document === "string" ? document : print(document),
         variables: options?.variables,
@@ -200,5 +251,5 @@ export async function storefrontQuery<
     };
   }
 
-  return { ok: true, data: body.data };
+  return { ok: true, data: body.data, customerToken: readShopToken(response) };
 }

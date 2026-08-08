@@ -37,6 +37,10 @@ vi.mock("@/lib/cart/server", () => ({
   setCartId: vi.fn(),
   clearCartId: vi.fn(),
 }));
+// Cart calls now carry the signed-in customer, so they read this cookie too.
+vi.mock("@/lib/customer/server", () => ({
+  getCustomerToken: () => Promise.resolve(null),
+}));
 
 const { updateCartLine } = await import("@/app/cart/actions");
 

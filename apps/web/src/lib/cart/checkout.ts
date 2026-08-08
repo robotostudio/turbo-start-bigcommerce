@@ -1,8 +1,8 @@
 import { Logger } from "@workspace/logger";
 
 import { classifyStorefrontFailure } from "@/lib/bigcommerce/classify";
-import { storefrontQuery } from "@/lib/bigcommerce/client";
 import { graphql } from "@/lib/bigcommerce/graphql";
+import { cartQuery } from "@/lib/cart/query";
 import { clearCartId, getCartId } from "@/lib/cart/server";
 import type { CheckoutRedirect } from "@/lib/cart/types";
 
@@ -43,11 +43,18 @@ const CartExistsQuery = graphql(`
  * unambiguous signal available — the redirect mutation gives none. A request
  * that fails for any other reason is not evidence of anything, so it reads as
  * "still there" and nothing gets thrown away.
+ *
+ * It goes through `cartQuery` rather than `storefrontQuery` for a reason worth
+ * spelling out, because getting it wrong deletes live baskets. A cart assigned
+ * to a signed-in customer reads as null anonymously, exactly like a cart that
+ * never existed. The mint above fails the same way — measured: minting a
+ * redirect URL for an assigned cart without the customer token returns
+ * `redirectUrls: null`, with the token it returns the URL. So an anonymous
+ * check here would confirm "gone" for every signed-in shopper who clicked
+ * checkout, and clear the cookie on a cart that was fine.
  */
 async function cartIsGone(cartId: string): Promise<boolean> {
-  const result = await storefrontQuery(CartExistsQuery, {
-    variables: { entityId: cartId },
-  });
+  const result = await cartQuery(CartExistsQuery, { entityId: cartId });
   return result.ok && result.data.site.cart === null;
 }
 
@@ -73,8 +80,8 @@ export async function redirectToCheckout(): Promise<CheckoutRedirect> {
     return { ok: false, message: "Your cart is empty." };
   }
 
-  const result = await storefrontQuery(CreateCartRedirectUrlsMutation, {
-    variables: { input: { cartEntityId: cartId } },
+  const result = await cartQuery(CreateCartRedirectUrlsMutation, {
+    input: { cartEntityId: cartId },
   });
 
   if (!result.ok) {

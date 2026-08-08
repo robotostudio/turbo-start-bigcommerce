@@ -21,6 +21,13 @@ vi.mock("@/lib/cart/server", () => ({
   clearCartId: () => clearCartId(),
 }));
 
+// Checkout carries the signed-in customer now: an assigned cart mints no
+// redirect URL without it, and reads back as null.
+const customerToken = vi.fn<() => Promise<string | null>>();
+vi.mock("@/lib/customer/server", () => ({
+  getCustomerToken: () => customerToken(),
+}));
+
 const storefrontQuery = vi.fn();
 vi.mock("@/lib/bigcommerce/client", () => ({
   storefrontQuery: (...args: unknown[]) => storefrontQuery(...args),
@@ -41,6 +48,7 @@ const minted = (url: string) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   cartId.mockResolvedValue("cart-1");
+  customerToken.mockResolvedValue(null);
 });
 
 describe("redirectToCheckout", () => {
@@ -75,6 +83,7 @@ describe("redirectToCheckout", () => {
 
     expect(storefrontQuery).toHaveBeenCalledWith(expect.anything(), {
       variables: { input: { cartEntityId: "cart-42" } },
+      customerToken: null,
     });
   });
 
