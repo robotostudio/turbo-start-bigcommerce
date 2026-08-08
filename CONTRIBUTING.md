@@ -66,8 +66,10 @@ Keep commit messages concise and focused on the "why" rather than the "what".
    pnpm format:check   # Formatting passes
    pnpm lint            # No lint errors
    pnpm check-types     # No type errors
-   pnpm build           # Build succeeds
+   rm -rf apps/web/.next && pnpm build   # Build succeeds, from a cold cache
    ```
+
+   The `rm -rf` is not superstition. See [Verifying your work](#verifying-your-work).
 
 4. **Write a clear PR description** with:
    - What changed and why
@@ -75,6 +77,46 @@ Keep commit messages concise and focused on the "why" rather than the "what".
    - Screenshots for UI changes
 
 5. **Address review feedback** promptly. If a suggestion doesn't apply, explain why.
+
+## Verifying your work
+
+Three habits, each of which exists because skipping it cost someone an afternoon.
+
+### Build from a cold cache
+
+`turbo run build --force` is not a clean build. Turbo re-runs the build task, but Next's Data Cache
+lives in `.next/cache` and survives it — so the build genuinely executes, resolves its Sanity reads out
+of a cache that may be hours old, and bakes stale content into a green build. Every gate passes. The
+output is wrong.
+
+```bash
+rm -rf apps/web/.next && pnpm build
+```
+
+Sanity reads are cached with `revalidate: false` and invalidated by tag, so nothing about them expires
+on a timer. BigCommerce reads are POSTs, which Next never caches, so those refresh on their own. A page
+can be half fresh and half frozen and look completely normal.
+
+### A test that would pass with the fix reverted is not testing the fix
+
+Before trusting a check, ask what it would do against the broken code. If the answer is "pass", it is
+measuring something else.
+
+Most of the time this means manufacturing the failure state rather than waiting for it. Verifying a
+cache fix straight after a rebuild proves nothing, because the page is already correct before the fix
+runs — you have to cache the page first, then change the data underneath it, then look. Verifying a sort
+by reading the URL proves nothing either; read the rendered order.
+
+The related discipline for mappers is fixture-first: capture the real API response, commit it, then
+write the code that consumes it. A mapper tested against a fixture you wrote from memory passes against
+your assumptions rather than the API.
+
+### When a repo fact and a runtime fact disagree, suspect the cache before the data
+
+Committed seed files, live datasets and rendered pages are three different things, and they drift in
+that order. If the dataset says one thing and the page says another, the page is stale far more often
+than the dataset is wrong — check what is cached between them before you go looking for a bug in the
+data.
 
 ## Project Structure
 
