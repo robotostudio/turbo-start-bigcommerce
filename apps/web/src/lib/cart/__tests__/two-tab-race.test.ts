@@ -330,6 +330,36 @@ describe("two tabs on one cart", () => {
     expect(tabA.getSnapshot().error?.code).toBe("CART_CONFLICT");
   });
 
+  it("refuses the retry when another tab moved the variant, not the quantity", async () => {
+    const store = createSharedStore([makeLine("line-1", "variant-1", 2)]);
+    const tabA = openTab(store);
+    const tabB = openTab(store);
+
+    // Tab B swaps to a third variant and leaves the quantity alone, so the
+    // line has moved in a way a quantity check cannot see.
+    tabB.swapLineVariant("line-1", "variant-3", 2);
+    await tabB.settle();
+    expect(store.merchandiseOf("line-1")).toBe("variant-3");
+
+    // Tab A swaps to its own variant and adds something, so its own version
+    // moves too and the retry becomes eligible on the version test alone.
+    const release = store.holdUpdates();
+    tabA.swapLineVariant("line-1", "variant-2", 2);
+    await tabA.addLine("variant-9", 1, {
+      productTitle: "Other",
+      productHandle: "other",
+      variantTitle: "L",
+      price: usd("20.00"),
+      image: null,
+      selectedOptions: [],
+    });
+    release();
+    await tabA.settle();
+
+    expect(store.merchandiseOf("line-1")).toBe("variant-3");
+    expect(tabA.getSnapshot().error?.code).toBe("CART_CONFLICT");
+  });
+
   it("writes unconditionally against a cart that reports no version", async () => {
     const store = createSharedStore([makeLine("line-1", "variant-1", 2)], {
       versioned: false,

@@ -1,6 +1,7 @@
 import { fold } from "@/lib/cart/engine";
 import {
   CART_CONFLICT_KEY,
+  CART_READ_KEY,
   isSyntheticLineId,
   variantIdFromSyntheticLineId,
 } from "@/lib/cart/intents";
@@ -257,11 +258,18 @@ export class CartController {
   }
 
   refetch(): void {
-    this.enqueue(CART_CONFLICT_KEY, async () => {
-      const seq = this.nextSeq++;
+    this.enqueue(CART_READ_KEY, async () => {
+      // A sequence number taken now would say this read is newer than anything
+      // that started before it, which is the wrong question for a read. What
+      // matters is whether anything landed while it was in flight: a write's
+      // response carries the cart as of the write, so it is newer than a read
+      // issued earlier, whatever order the two were started in. Reads share no
+      // chain with writes, so this is the only thing ordering them.
+      const truthAtRequest = this.lastAcceptedSeq;
       try {
         const cart = await this.actions.getCart();
-        this.acceptCart(cart, seq);
+        if (this.lastAcceptedSeq !== truthAtRequest) return;
+        this.acceptCart(cart, this.nextSeq++);
         this.refold();
       } catch {
         // keep current truth on failed refetch
@@ -385,17 +393,31 @@ export class CartController {
     for (const variantId of Array.from(this.addStates.keys())) {
       this.flushAdd(variantId);
     }
-    while (this.chains.size > 0) {
-      await Promise.all(Array.from(this.chains.values()));
+    // Mutations only. A refetch writes nothing, so waiting on one gates
+    // checkout on a read: if that read never comes back, and nothing here can
+    // tell the difference between slow and never, the button spins forever
+    // with no error to show. Cart creation stays waited on — it shares
+    // CART_CONFLICT_KEY with the adds and is very much a write.
+    while (true) {
+      const writes = Array.from(this.chains)
+        .filter(([key]) => key !== CART_READ_KEY)
+        .map(([, chain]) => chain);
+      if (writes.length === 0) break;
+      await Promise.all(writes);
     }
     return this.getSnapshot().cart;
   }
 
-  private lineQuantity(lineId: string): number | null {
-    return (
-      this.serverTruth?.lines.edges.find((edge) => edge.node.id === lineId)
-        ?.node.quantity ?? null
-    );
+  /**
+   * Everything a line write overwrites, as the server last confirmed it. Both
+   * halves matter: a write asserts a quantity *and* a variant, so a line that
+   * kept its quantity while another tab changed its variant has still moved.
+   */
+  private lineSignature(lineId: string): string | null {
+    const line = this.serverTruth?.lines.edges.find(
+      (edge) => edge.node.id === lineId
+    )?.node;
+    return line ? `${line.quantity}:${line.merchandise.id}` : null;
   }
 
   /**
@@ -409,10 +431,11 @@ export class CartController {
    * the shopper made, so it is sent again against the version the sibling
    * returned.
    *
-   * The retry is only safe while the line still holds the quantity this write
-   * was composed against. That is what separates the two cases: our own add
-   * moves the version and leaves the line alone, another tab's write moves the
-   * line. Where the line moved, the refusal stands.
+   * The retry is only safe while the line still looks exactly as it did when
+   * this write was composed, quantity and variant both. That is what separates
+   * the two cases: our own add moves the version and leaves the line alone,
+   * another tab's write moves the line. Where the line moved, the refusal
+   * stands.
    */
   private async conditionalWrite(
     lineId: string,
@@ -420,7 +443,7 @@ export class CartController {
     merchandiseId: string | undefined
   ): Promise<CartActionResult> {
     const sentVersion = this.serverTruth?.version ?? null;
-    const overwriting = this.lineQuantity(lineId);
+    const overwriting = this.lineSignature(lineId);
 
     const result = await this.callWithRetry(() =>
       this.actions.updateLine(lineId, quantity, merchandiseId, sentVersion)
@@ -428,7 +451,7 @@ export class CartController {
     if (result.ok || result.error.code !== "CART_CONFLICT") return result;
 
     const movedByUs = (this.serverTruth?.version ?? null) !== sentVersion;
-    if (!movedByUs || this.lineQuantity(lineId) !== overwriting) return result;
+    if (!movedByUs || this.lineSignature(lineId) !== overwriting) return result;
 
     return this.callWithRetry(() =>
       this.actions.updateLine(

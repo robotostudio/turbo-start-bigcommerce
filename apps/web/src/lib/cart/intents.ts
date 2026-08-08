@@ -4,6 +4,14 @@ export const SYNTHETIC_LINE_PREFIX = "optimistic-";
 
 export const CART_CONFLICT_KEY = "cart";
 
+/**
+ * Refetches queue against each other but nothing else. Deliberately not
+ * `CART_CONFLICT_KEY`: that one also carries cart creation, which is a write
+ * and has to be drained before checkout, so the two cannot share a key that
+ * `settle()` is allowed to skip.
+ */
+export const CART_READ_KEY = "cart:read";
+
 export function syntheticLineId(variantId: string): string {
   return `${SYNTHETIC_LINE_PREFIX}${variantId}`;
 }
