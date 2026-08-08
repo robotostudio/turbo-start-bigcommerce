@@ -34,6 +34,10 @@ export type StorefrontFailure = {
  */
 const RULES: readonly { match: RegExp; code: CartErrorCode }[] = [
   { match: /^Not Found: Cart\b/i, code: "CART_NOT_FOUND" },
+  // How a rejected `version` arrives: the write is refused, the mutation
+  // payload is null and the cart is untouched. Only a conditional write can
+  // produce it, so it always means the cart moved under the caller.
+  { match: /^Request conflict:/i, code: "CART_CONFLICT" },
   {
     match: /^Not Found: Provided (?:product|variant) ID\b/i,
     code: "VARIANT_UNAVAILABLE",

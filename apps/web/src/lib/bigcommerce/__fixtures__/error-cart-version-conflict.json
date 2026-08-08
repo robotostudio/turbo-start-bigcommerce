@@ -1,0 +1,41 @@
+{
+  "query": "mutation ($input: UpdateCartLineItemInput!) { cart { updateCartLineItem(input: $input) { cart {\n      version lineItems { totalQuantity physicalItems { quantity } } } } } }",
+  "variables": {
+    "input": {
+      "cartEntityId": "35ad08bf-578e-4f28-94e4-884e7cbe77aa",
+      "lineItemEntityId": "dc5265a1-29f0-4aec-abbf-d06cef710a4c",
+      "version": 1,
+      "data": {
+        "lineItem": {
+          "quantity": 3,
+          "productEntityId": 190,
+          "variantEntityId": 232
+        }
+      }
+    }
+  },
+  "status": 200,
+  "note": "A conditional write refused. The cart was created at version 1, raised to version 2 by an unconditional write, and this asserts version 1 against it — the stale-tab case in ROB-2558. The write is not applied: a read afterwards still showed quantity 4, and the same mutation with version 2 succeeded. `version` is the only way to provoke this, so the prefix means one thing.",
+  "response": {
+    "data": {
+      "cart": {
+        "updateCartLineItem": null
+      }
+    },
+    "errors": [
+      {
+        "message": "Request conflict: The request cannot be processed due to a possible conflict. Please review the changes and try again.",
+        "path": [
+          "cart",
+          "updateCartLineItem"
+        ],
+        "locations": [
+          {
+            "line": 1,
+            "column": 54
+          }
+        ]
+      }
+    ]
+  }
+}

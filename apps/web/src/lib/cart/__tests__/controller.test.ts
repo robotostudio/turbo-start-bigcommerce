@@ -46,6 +46,7 @@ function makeLine(
 function makeCart(lines: CartLine[], id = "cart-1"): Cart {
   return {
     id,
+    version: 1,
     totalQuantity: lines.reduce((sum, l) => sum + l.quantity, 0),
     lines: {
       edges: lines.map((node) => ({ node })),
