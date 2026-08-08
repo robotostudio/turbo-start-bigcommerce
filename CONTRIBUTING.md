@@ -97,6 +97,25 @@ Sanity reads are cached with `revalidate: false` and invalidated by tag, so noth
 on a timer. BigCommerce reads are POSTs, which Next never caches, so those refresh on their own. A page
 can be half fresh and half frozen and look completely normal.
 
+### Kill the old server by port, not by name
+
+A cold build only reaches a browser through a server that restarted. `pkill -f "next start"` matches
+nothing — once running, the process renames itself to `next-server (<version>)`, so the pattern you
+started it with no longer describes it. The old process survives, the new `pnpm start` exits with
+`EADDRINUSE` into a log nobody reads, and port 3000 keeps answering 200 from the build you just deleted.
+
+```bash
+kill $(lsof -nP -iTCP:3000 -sTCP:LISTEN -t)   # unquoted: there may be more than one
+rm -rf apps/web/.next
+npx turbo run build --force
+pnpm --filter web start
+```
+
+Then read the log for `EADDRINUSE` before believing anything on the page. Two signatures mean you are
+talking to a survivor rather than your build: a change you know shipped is absent, or a page 500s with
+`ChunkLoadError` — the old server asking for chunks out of the `.next` you removed. Neither is a bug in
+your work.
+
 ### A test that would pass with the fix reverted is not testing the fix
 
 Before trusting a check, ask what it would do against the broken code. If the answer is "pass", it is

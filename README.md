@@ -302,6 +302,7 @@ Document types live in `apps/studio/schemaTypes/documents/`, objects in `apps/st
 | Text looks corrupted — hundreds of invisible characters inside an eight-character nav label | That is Sanity's stega watermark, not damaged content. Leave preview mode using the bar at the bottom of the page. A browser profile can sit in preview mode from a session days ago and quietly watermark everything you test in it, so check that before you go looking at the data. |
 | A published edit never appears on the deployed site | The revalidation webhook is not wired. See [Wiring up content revalidation](#wiring-up-content-revalidation) — without it the page is never refreshed, not slowly refreshed. |
 | A build shipped stale content and every check passed | Next's Data Cache lives in `.next` and outlives `turbo run build --force`. Build from a cold cache: `rm -rf apps/web/.next && pnpm build`. |
+| You rebuilt, the page is unchanged — or 500s with `ChunkLoadError` | The old server is still on the port, serving the build you deleted. `pkill -f "next start"` misses it: the process renames itself to `next-server (<version>)`. Kill it by port instead — `kill $(lsof -nP -iTCP:3000 -sTCP:LISTEN -t)`, unquoted so more than one PID still works — and check the new server's log for `EADDRINUSE`. |
 | Redirects not applying | They are fetched from Sanity at build time. Redeploy after adding one. |
 | Tailwind styles missing | Check `@import "tailwindcss"` is in your CSS entry point and the `@workspace/ui` transpile config. |
 
