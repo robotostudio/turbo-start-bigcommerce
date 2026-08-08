@@ -13,6 +13,7 @@ import { BreadcrumbJsonLd, CollectionJsonLd } from "@/components/json-ld";
 import {
   getCategoryByPath,
   getCategoryPaths,
+  getStoreSettings,
   nodes,
   prerenderLimit,
   resolveSeo,
@@ -94,8 +95,19 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function CollectionPage({ params }: PageProps) {
   const { slug } = await params;
 
-  const result = await getCategoryByPath(slug, { first: PAGE_SIZE });
+  // Fetched alongside the category, not before it: whether this store's plan
+  // includes Product Filtering is what decides if the panel's "unavailable"
+  // message is true, and it is a store-level setting rather than a per-request
+  // one. Degrades to false if the read fails, which keeps the honest message.
+  const [result, settings] = await Promise.all([
+    getCategoryByPath(slug, { first: PAGE_SIZE }),
+    getStoreSettings(),
+  ]);
   if (!result.ok) notFound();
+
+  const filteringEnabled = settings.ok
+    ? (settings.data?.search?.productFilteringEnabled ?? false)
+    : false;
 
   // A renamed category keeps working: BigCommerce auto-creates the 301 and
   // `redirectBehavior: FOLLOW` hands back its canonical URL.
@@ -142,7 +154,7 @@ export default async function CollectionPage({ params }: PageProps) {
         </div>
 
         <div className="mb-8 flex flex-col gap-4">
-          <FilterPanel filters={[]} />
+          <FilterPanel filteringEnabled={filteringEnabled} filters={[]} />
           {/* `useSearchParams` consumers need Suspense boundaries on a
            * statically generated route; each fallback is the default view the
            * server already rendered, so nothing jumps on hydration. */}

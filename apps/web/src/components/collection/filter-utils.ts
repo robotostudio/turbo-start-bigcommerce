@@ -11,6 +11,32 @@
  * which BigCommerce has no counterpart for.
  */
 
+/**
+ * What the filter panel should show, given the store's own setting and the
+ * facets the Storefront API actually returned.
+ *
+ * Separated from the component because the interesting branch is the one this
+ * store cannot reach: `site.settings.search.productFilteringEnabled` is `false`
+ * on this plan, so rendering alone can never exercise `"controls"`. A pure
+ * function can.
+ *
+ * The three states are genuinely different and collapsing any two of them is
+ * how the panel ended up lying in the first place:
+ *
+ * - `"unavailable"` — the merchant's plan does not include Product Filtering.
+ *   Nothing they do in their catalog will produce facets.
+ * - `"none"` — filtering is on, but this query matched no facets. A real empty
+ *   result, not a capability problem.
+ * - `"controls"` — filtering is on and facets came back. Render them.
+ */
+export function filterPanelState(
+  filteringEnabled: boolean,
+  facetCount: number
+): "unavailable" | "none" | "controls" {
+  if (!filteringEnabled) return "unavailable";
+  return facetCount > 0 ? "controls" : "none";
+}
+
 /** Price bucket labels, e.g. "-50" → "Under $50". */
 const PRICE_BUCKET_LABELS: Record<string, string> = {
   "-50": "Under $50",

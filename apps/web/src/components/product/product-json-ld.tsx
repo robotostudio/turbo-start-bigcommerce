@@ -3,6 +3,7 @@ import type { Offer, Product, WithContext } from "schema-dts";
 import { JsonLdScript } from "@/components/json-ld";
 import type { CatalogProduct } from "@/lib/bigcommerce/catalog";
 import { nodes } from "@/lib/bigcommerce/catalog";
+import { cardRating } from "@/lib/bigcommerce/product-card";
 import { getBaseUrl } from "@/utils";
 
 type ProductJsonLdProps = {
@@ -26,6 +27,11 @@ export function ProductJsonLd({
   const url = `${baseUrl}/products/${handle}`;
   const variants = nodes(product.variants);
   const firstImage = nodes(product.images)[0];
+  // Null for an unrated product, and the field is then omitted entirely.
+  // Google rejects an `aggregateRating` with a zero `reviewCount`, so emitting
+  // one for a product with no reviews would invalidate the whole block rather
+  // than add to it.
+  const rating = cardRating(product);
 
   const jsonLd: WithContext<Product> = {
     "@context": "https://schema.org",
@@ -35,6 +41,13 @@ export function ProductJsonLd({
     image: firstImage?.url,
     brand: product.brand
       ? { "@type": "Brand", name: product.brand.name }
+      : undefined,
+    aggregateRating: rating
+      ? {
+          "@type": "AggregateRating",
+          ratingValue: rating.average,
+          reviewCount: rating.count,
+        }
       : undefined,
     offers: variants.map(
       (variant): Offer => ({

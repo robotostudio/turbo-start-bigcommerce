@@ -2,6 +2,7 @@
 
 import { Badge } from "@workspace/ui/components/badge";
 import { cn } from "@workspace/ui/lib/utils";
+import { Star } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -10,6 +11,7 @@ import { StoreImage as Image } from "@/components/product/store-image";
 import { SavedItemButton } from "@/components/saved-items/saved-item-button";
 import {
   type BigCommerceCardImage,
+  type CardRating,
   cardPricing,
   findCardVariant,
   resolveCardImages,
@@ -46,6 +48,12 @@ export type ProductCardProps = {
   /** Second image, cross-faded in on hover. */
   secondaryImageUrl?: string | null;
   vendor?: string | null;
+  /**
+   * Mean score and review count. Null for an unrated product — `cardRating`
+   * distinguishes "no reviews" from "rated zero" and this must not collapse
+   * them: an empty five-star row reads as a bad product, not an unreviewed one.
+   */
+  rating?: CardRating | null;
   /** Color/variant name shown under the title (e.g. "Navy"). */
   variantName?: string | null;
   /** Merch flag rendered as a badge over the image. */
@@ -447,6 +455,39 @@ function CardImage({
   );
 }
 
+/**
+ * Five stars filled to the nearest whole, with the review count.
+ *
+ * Only ever rendered for a product that has reviews: `cardRating` returns null
+ * at zero rather than a zero score, and the caller checks. An empty five-star
+ * row would read as a badly-rated product instead of an unreviewed one, which
+ * is the opposite of the truth.
+ */
+function RatingStars({ rating }: { rating: CardRating }) {
+  const filled = Math.round(rating.average);
+
+  return (
+    // `role="img"` so the five icons and the count are announced as one label
+    // rather than five meaningless graphics. A bare `aria-label` on a `p` is
+    // ignored — a paragraph has no role that accepts a name.
+    <p
+      aria-label={`Rated ${rating.average} out of 5 from ${rating.count} review${rating.count === 1 ? "" : "s"}`}
+      className="flex items-center gap-0.5 text-muted-foreground"
+      role="img"
+    >
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          aria-hidden="true"
+          className={cn("size-3.5", star <= filled && "fill-current")}
+          key={star}
+          strokeWidth={1.5}
+        />
+      ))}
+      <span className="ml-1 text-xs">({rating.count})</span>
+    </p>
+  );
+}
+
 export function ProductCard({
   slug,
   productId,
@@ -456,6 +497,7 @@ export function ProductCard({
   imageUrl,
   secondaryImageUrl,
   vendor,
+  rating,
   variantName,
   badge,
   compareAtPrice,
@@ -494,7 +536,10 @@ export function ProductCard({
     );
   }
 
-  const subtitle = selectedColor ?? variantName ?? vendor;
+  // `vendor` used to be the third branch of this chain and so never rendered:
+  // every product in a colour-carrying catalog satisfies one of the first two.
+  // It gets its own line below.
+  const subtitle = selectedColor ?? variantName;
   // Carry the chosen color into the PDP so the selection survives navigation.
   const href =
     selectedColor && colorOptionName
@@ -558,12 +603,22 @@ export function ProductCard({
       <div className="mt-2 px-1 flex items-start justify-between gap-2">
         <Link className="flex flex-col gap-2" href={href} replace={replace}>
           <div className="flex flex-col gap-0.5">
+            {/* Brand eyebrow, matching the PDP. Plain text, not a link:
+             * BigCommerce returns `brand.path` as an empty string on this
+             * store, and inventing a slug from the name to point at a route
+             * that may not exist is worse than not linking. */}
+            {vendor && (
+              <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                {vendor}
+              </p>
+            )}
             <h3 className="font-medium text-base text-foreground leading-tight">
               {title}
             </h3>
             {subtitle && (
               <p className="text-base text-muted-foreground">{subtitle}</p>
             )}
+            {rating && <RatingStars rating={rating} />}
           </div>
           <p className="font-medium text-base text-foreground">
             {price}

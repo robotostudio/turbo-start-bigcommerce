@@ -380,6 +380,7 @@ export function productToCardProps(
     compareAtPrice: compareAtPrice(prices),
     stockStatus: cardStockStatus(product, variants),
     badge: badgeFromTags(productTags(product.metafields)),
+    rating: cardRating(product),
     variantName: colors[0]?.name ?? null,
     colors,
     selectedColor: colors[0]?.name,
