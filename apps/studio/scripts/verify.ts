@@ -140,11 +140,57 @@ function pathProblems(
     .map((entity) => entity.custom_url?.url ?? `${entity.name} (no URL)`);
 }
 
+/**
+ * Categories whose synced slug does not survive being used as a URL.
+ *
+ * A synced slug is an identifier, not a path: `slugFromPath` joins every
+ * segment with `-`, so Henleys under Tops stores `tops-henleys` while its
+ * storefront path is `/collections/tops/henleys/`. `pathProblems` cannot see
+ * that, because it flattens the catalog path before comparing — flattened
+ * matches flattened and a link that 404s passes. This compares the href a
+ * surface would build against the real path instead.
+ *
+ * Only top-level categories are checked, and that is the rule rather than a
+ * convenience: they are the ones whose slug is a single segment, so they are
+ * the ones `/collections/{slug}` is correct for. Anything nested is listed from
+ * the live category tree instead, which carries the real path
+ * (`categoryTreeToCollectionList` in `apps/web/src/lib/bigcommerce/catalog.ts`).
+ * The check therefore goes red the moment a nested category reads as top-level
+ * — which is exactly what a regression in the sync's parentage mapping looks
+ * like, and what put a flattened link on `/collections.md` to begin with.
+ */
+function categoryHrefProblems(
+  categories: SyncedDocument[],
+  catalogPaths: Map<number | null, string | undefined>
+): string[] {
+  return categories
+    .filter(
+      (document) =>
+        document._type === "bigcommerceCategory" &&
+        // `== null`, not `=== null`: a GROQ projection drops an attribute the
+        // document does not carry rather than returning it as null, so a
+        // top-level category can arrive with the key absent. Missing it there
+        // would skip the one category the check exists to look at.
+        document.parentEntityId == null &&
+        document.slug
+    )
+    .filter(
+      (document) =>
+        catalogPaths.get(document.entityId) !==
+        `/collections/${document.slug}/`
+    )
+    .map((document) => {
+      const real = catalogPaths.get(document.entityId) ?? "no catalog path";
+      return `/collections/${document.slug} (really ${real})`;
+    });
+}
+
 type SyncedDocument = {
   _id: string;
   _type: string;
   entityId: number | null;
   slug: string | null;
+  parentEntityId: number | null;
   isDeleted: boolean | null;
 };
 
@@ -280,6 +326,7 @@ async function main() {
            _id, _type,
            "entityId": store.entityId,
            "slug": store.slug.current,
+           "parentEntityId": store.parentEntityId,
            "isDeleted": store.isDeleted
          }`
       ),
@@ -297,24 +344,35 @@ async function main() {
 
   // --- Catalog and content agree ---------------------------------------------
   const live = synced.filter((document) => !document.isDeleted);
-  const syncedProductIds = new Set(
-    live
-      .filter((document) => document._type === "bigcommerceProduct")
-      .map((document) => document.entityId)
-  );
+  const syncedIds = (type: string) =>
+    new Set(
+      live
+        .filter((document) => document._type === type)
+        .map((document) => document.entityId)
+    );
+  const syncedProductIds = syncedIds("bigcommerceProduct");
+  const syncedCategoryIds = syncedIds("bigcommerceCategory");
   if (blocked) {
     record("catalog synced into sanity", false, `not checked — ${blocked}`);
     record("storefront paths match", false, `not checked — ${blocked}`);
+    record("category links resolve", false, `not checked — ${blocked}`);
   } else {
-    const unsynced = adminProducts.filter(
-      (product) => !syncedProductIds.has(product.id)
-    );
+    // Categories as well as products. They were left out while only the
+    // homepage read them, and the omission outlived the reason: the navbar
+    // dropdown, the explorer and the editorial two-up all reference category
+    // documents now, and one the sync never wrote renders as nothing at all.
+    const unsynced = [
+      ...adminProducts.filter((product) => !syncedProductIds.has(product.id)),
+      ...adminCategories.filter(
+        (category) => !syncedCategoryIds.has(category.id)
+      ),
+    ];
     record(
       "catalog synced into sanity",
       unsynced.length === 0,
       unsynced.length === 0
-        ? `${syncedProductIds.size} product document(s) match the catalog`
-        : `no document for: ${unsynced.map((p) => p.name).join(", ")} — run \`pnpm sync:bigcommerce\``
+        ? `${syncedProductIds.size} product and ${syncedCategoryIds.size} category document(s) match the catalog`
+        : `no document for: ${unsynced.map((e) => e.name).join(", ")} — run \`pnpm sync:bigcommerce\``
     );
 
     const bySlug = new Set(
@@ -333,6 +391,18 @@ async function main() {
       staleSlugs.length === 0
         ? "every catalog path has a document under the same slug"
         : `no document for: ${staleSlugs.join(", ")}`
+    );
+
+    const catalogPaths = new Map(
+      adminCategories.map((c) => [c.id, c.custom_url?.url])
+    );
+    const brokenHrefs = categoryHrefProblems(live, catalogPaths);
+    record(
+      "category links resolve",
+      brokenHrefs.length === 0,
+      brokenHrefs.length === 0
+        ? "every top-level category slug is its storefront path"
+        : `does not resolve: ${brokenHrefs.join(", ")}`
     );
   }
 

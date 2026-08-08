@@ -469,6 +469,23 @@ describe("getCategoryTree", () => {
       "henleys",
     ]);
   });
+
+  it("lists a nested category at its real path, not a flattened slug", async () => {
+    const { response } = fixture("category-tree");
+    mockResponse(response);
+
+    const result = await catalog.getCategoryTree();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const list = catalog.categoryTreeToCollectionList(result.data);
+
+    expect(list).toHaveLength(11);
+    // `tops-henleys` is what the synced Sanity slug carries and what
+    // `/collections/[...slug]` 404s on. The tree's own path is the answer.
+    expect(list).toContainEqual({ title: "Henleys", slug: "tops/henleys" });
+    expect(list.map((item) => item.slug)).not.toContain("tops-henleys");
+  });
 });
 
 describe("getProductPaths", () => {

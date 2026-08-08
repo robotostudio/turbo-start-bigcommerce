@@ -2,7 +2,6 @@ import { Logger } from "@workspace/logger";
 import { sanityFetch } from "@workspace/sanity/live";
 import {
   queryAllBlogDataForSearch,
-  queryAllCollections,
   queryBlogIndexPageData,
   queryBlogSlugPageData,
   queryCollectionsIndexPageData,
@@ -11,7 +10,12 @@ import {
   querySlugPageData,
 } from "@workspace/sanity/query";
 
-import { getCategoryByPath, getProductByPath } from "@/lib/bigcommerce/catalog";
+import {
+  categoryTreeToCollectionList,
+  getCategoryByPath,
+  getCategoryTree,
+  getProductByPath,
+} from "@/lib/bigcommerce/catalog";
 import {
   categoryToMarkdown,
   productToMarkdown,
@@ -20,7 +24,6 @@ import {
   type BlogListItem,
   blogIndexToMarkdown,
   blogPostToMarkdown,
-  type CollectionListItem,
   collectionsIndexToMarkdown,
   pageToMarkdown,
 } from "@/lib/markdown/documents";
@@ -50,14 +53,38 @@ async function fetchCollectionMarkdown(
   return categoryToMarkdown(result.data.node);
 }
 
+/**
+ * The heading is editorial and stays in Sanity; the categories come from the
+ * live tree, which is the same read `app/collections/page.tsx` renders the HTML
+ * index from. One read, so the two cannot disagree — and they did: the synced
+ * Sanity document flattens a nested category's path into its slug, so listing
+ * from it linked Henleys at `/collections/tops-henleys`, one segment that
+ * `/collections/[...slug]` cannot resolve. The tree carries the real path.
+ *
+ * It also drops a hidden category for free, where the Sanity mirror needed an
+ * explicit `isVisible` clause to do it: BigCommerce leaves one out of the tree.
+ *
+ * A failed tree read throws rather than degrading to an empty list. The caller
+ * turns that into a 503, which is uncached and self-correcting; an empty index
+ * is a 200 this route tells the CDN to hold for a minute and reuse for five,
+ * and it is indistinguishable from a store with no categories, so the agent
+ * reading it has no way to know it should come back. Same verdict the
+ * collections page reached when a failed `searchCatalog` was degrading to an
+ * empty product grid under `revalidate = 300`.
+ */
 async function fetchCollectionsIndexMarkdown(): Promise<string> {
-  const [indexRes, collectionsRes] = await Promise.all([
+  const [indexRes, treeResult] = await Promise.all([
     sanityFetch({ query: queryCollectionsIndexPageData, ...PUBLISHED }),
-    sanityFetch({ query: queryAllCollections, ...PUBLISHED }),
+    getCategoryTree(),
   ]);
+  if (!treeResult.ok) {
+    throw new Error(`category tree read failed: ${treeResult.error}`);
+  }
   const index = indexRes.data ?? { title: "Collections" };
-  const collections = (collectionsRes.data ?? []) as CollectionListItem[];
-  return collectionsIndexToMarkdown(index, collections);
+  return collectionsIndexToMarkdown(
+    index,
+    categoryTreeToCollectionList(treeResult.data)
+  );
 }
 
 async function fetchBlogIndexMarkdown(): Promise<string | null> {

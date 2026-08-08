@@ -734,6 +734,28 @@ export function flattenCategoryTree(
 }
 
 /**
+ * Every category as a `{title, slug}` row, for the index surfaces that render a
+ * flat list of links — `/collections.md` today, and anything else that has to
+ * name a category by route rather than by document.
+ *
+ * `slug` carries every segment below `/collections`, because BigCommerce
+ * category paths are multi-segment: Henleys under Tops is `tops/henleys`, and
+ * `/collections/[...slug]` resolves those segments against the live catalog.
+ * The synced Sanity document is not a substitute here — `slugFromPath` in
+ * `packages/sanity-sync/src/upsert.ts` joins the same segments with `-`, so
+ * `store.slug.current` reads `tops-henleys`, which is an identifier rather than
+ * a path and 404s the moment it is used as one.
+ */
+export function categoryTreeToCollectionList(
+  tree: readonly CategoryTreeNode[]
+): { title: string; slug: string }[] {
+  return flattenCategoryTree(tree).map((item) => ({
+    title: item.name,
+    slug: toSegments(item.path).join("/"),
+  }));
+}
+
+/**
  * Where a resolved redirect should actually send the shopper.
  *
  * `toUrl` is absolute and on BigCommerce's own canonical domain, which is not
