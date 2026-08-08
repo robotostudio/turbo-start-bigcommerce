@@ -339,11 +339,12 @@ const exploreCategoriesBlock = /* groq */ `
       // did not choose, because the ones they did choose quietly died, is worse
       // than showing none.
       //
-      // isVisible is spelled == true rather than != false to match
-      // queryCollectionPaths, and that parity is the point: /collections/[...slug]
-      // is prerendered from those paths, so any category this block links but
-      // that query drops is a card pointing at a 404 — the shape featured-cards.ts
-      // rules out for products.
+      // isVisible is spelled == true rather than != false, and the strictness
+      // is the point: /collections/[...slug] resolves against live BigCommerce,
+      // which omits a hidden category from its tree, so a card this block links
+      // on a null flag is a card pointing at a 404 — the shape featured-cards.ts
+      // rules out for products. queryAllCollections filters identically for the
+      // same reason.
       //
       // array::compact for the other half of the same problem: these references
       // are weak, so the target may not exist at all rather than merely being
@@ -573,67 +574,10 @@ export const queryGenericPageOGData = defineQuery(`
   }
 `);
 
-export const queryProductOGData = defineQuery(`
-  *[_type == "bigcommerceProduct" && _id == $id][0]{
-    _id,
-    _type,
-    "title": select(
-      defined(seo.title) => seo.title,
-      store.title
-    ),
-    "description": select(
-      defined(seo.description) => seo.description,
-      store.descriptionHtml
-    ),
-    "image": select(
-      defined(seo.image.asset) => seo.image.asset->url + "?w=1200&h=630&dpr=2&fit=crop",
-      defined(store.previewImageUrl) => store.previewImageUrl
-    ),
-    "price": coalesce(store.salePrice, store.price),
-    // Variants are their own synced documents joined on the product's entityId,
-    // not an array of references — BigCommerce webhook payloads are unordered,
-    // so the sync stores the join key rather than a reference array. The
-    // was/now pair keeps the OG card's discount maths unchanged: a synced
-    // variant marked down carries the pre-markdown figure in \`price\`.
-    "variants": *[
-      _type == "bigcommerceProductVariant"
-      && store.productEntityId == ^.store.entityId
-      && store.isDeleted != true
-    ]{
-      "price": coalesce(store.salePrice, store.price),
-      "compareAtPrice": store.price
-    },
-    "dominantColor": seo.image.asset->metadata.palette.dominant.background,
-    "seoImage": seo.image.asset->url + "?w=1200&h=630&dpr=2&fit=max",
-    "logo": *[_type == "settings"][0].logo.asset->url + "?w=80&h=40&dpr=3&fit=max&q=100",
-    "siteTitle": *[_type == "settings"][0].siteTitle,
-    "date": coalesce(store.createdAt, _createdAt)
-  }
-`);
-
-export const queryCollectionOGData = defineQuery(`
-  *[_type == "bigcommerceCategory" && _id == $id][0]{
-    _id,
-    _type,
-    "title": select(
-      defined(seo.title) => seo.title,
-      store.title
-    ),
-    "description": select(
-      defined(seo.description) => seo.description,
-      store.descriptionHtml
-    ),
-    "image": select(
-      defined(seo.image.asset) => seo.image.asset->url + "?w=1200&h=630&dpr=2&fit=crop",
-      defined(store.imageUrl) => store.imageUrl
-    ),
-    "dominantColor": seo.image.asset->metadata.palette.dominant.background,
-    "seoImage": seo.image.asset->url + "?w=1200&h=630&dpr=2&fit=max",
-    "logo": *[_type == "settings"][0].logo.asset->url + "?w=80&h=40&dpr=3&fit=max&q=100",
-    "siteTitle": *[_type == "settings"][0].siteTitle,
-    "date": coalesce(store.createdAt, _createdAt)
-  }
-`);
+// Products and categories have no Open Graph query: their cards read the live
+// catalog. A snapshot here would be a second copy of the price, stale by
+// however long it has been since the last reconcile sweep, on the one surface
+// where a wrong figure is cached by other people's servers.
 
 export const queryPromoBannerData = defineQuery(`
   *[_type == "promoBanner" && _id == "promoBanner"][0]{
@@ -774,43 +718,14 @@ export const queryRedirectBySource = defineQuery(`
   }
 `);
 
-// ── Product fragments ──
-
-// Same members as `richTextFragment`, different field name. See
-// `editorialMembersFragment`.
-const productBodyFragment = /* groq */ `
-  body[]{
-    ...,
-    ${editorialMembersFragment}
-  }
-` as const;
-
-/**
- * A synced product's editorial body.
- *
- * `store.isDeleted != true` replaces the fork's `store.status == "active"`:
- * the sync flags a vanished entity rather than removing it, and there is no
- * `status` field to compare against.
- */
-export const queryProductByHandle = defineQuery(`
-  *[_type == "bigcommerceProduct" && store.slug.current == $handle && store.isDeleted != true][0]{
-    _id,
-    _type,
-    "slug": store.slug.current,
-    "title": store.title,
-    ${productBodyFragment}
-  }
-`);
-
-/**
- * Sitemap fodder, so it filters on visibility as well as deletion. The fork's
- * `store.status == "active"` collapsed both ideas into one field; the sync
- * keeps them apart, and a merchant who unpublishes a product without deleting
- * it should drop out of the sitemap on the next crawl.
- */
-export const queryProductPaths = defineQuery(`
-  *[_type == "bigcommerceProduct" && defined(store.slug.current) && store.isDeleted != true && store.isVisible == true].store.slug.current
-`);
+// ── Product queries ──
+//
+// There are none. The PDP renders from live BigCommerce, and nothing else
+// reads a product out of Sanity: `queryProductByHandle` and its editorial
+// `body` fragment went with the synced document's editorial fields, and
+// `queryProductPaths` went to `getProductPaths` — one enumeration behind
+// `generateStaticParams`, the sitemap and llms.txt instead of two that can
+// disagree.
 
 // ── Category queries ──
 //
@@ -819,11 +734,6 @@ export const queryProductPaths = defineQuery(`
 // the category page has rendered from live BigCommerce since the flip. The
 // synced category document holds no such fields, and its only consumer was a
 // component with no importers.
-
-/** Same visibility rule as `queryProductPaths` — both feed the sitemap. */
-export const queryCollectionPaths = defineQuery(`
-  *[_type == "bigcommerceCategory" && defined(store.slug.current) && store.isDeleted != true && store.isVisible == true].store.slug.current
-`);
 
 export const queryCollectionsIndexPageData = defineQuery(`
   *[_type == "collectionsIndex"][0]{
@@ -845,8 +755,8 @@ export const queryCollectionsIndexPageData = defineQuery(`
  * The markdown mirror of the collections index — its only consumer is
  * `/api/markdown`, since the HTML index at `app/collections/page.tsx` reads the
  * live category tree instead. It still emits links, so it carries the same
- * visibility rule as `queryCollectionPaths`: a category this lists but that
- * query drops is a link to a path `/collections/[...slug]` will not resolve.
+ * visibility rule as `exploreCategoriesBlock`: a category BigCommerce has
+ * hidden is a link to a path `/collections/[...slug]` will not resolve.
  */
 export const queryAllCollections = defineQuery(`
   *[_type == "bigcommerceCategory" && defined(store.slug.current) && store.isDeleted != true && store.isVisible == true]{

@@ -1,14 +1,17 @@
 "use client";
 
-import type { QueryProductByHandleResult } from "@workspace/sanity/types";
+import type { QueryBlogSlugPageDataResult } from "@workspace/sanity/types";
 import { useState } from "react";
 
 import { SanityImage } from "@/components/elements/sanity-image";
 import { ProductCard } from "./product-card";
 
+// Typed off the blog body rather than the product one: both accept the same
+// editorial members and share a projection, and the product's own query is
+// gone — the PDP renders from live BigCommerce.
 type HotspotData = NonNullable<
   Extract<
-    NonNullable<NonNullable<QueryProductByHandleResult>["body"]>[number],
+    NonNullable<NonNullable<QueryBlogSlugPageDataResult>["richText"]>[number],
     { _type: "imageWithProductHotspots" }
   >["productHotspots"]
 >;

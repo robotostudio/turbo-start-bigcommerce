@@ -95,6 +95,11 @@ export async function generateMetadata({ params }: PageProps) {
     title: seo.title,
     description: seo.description,
     slug: `/products/${slug.join("/")}`,
+    // Keys the Open Graph card, which re-reads the product live. The entity id
+    // rather than the path: a merchant rename leaves a scraped card pointing at
+    // an id that still resolves.
+    contentType: "product",
+    contentId: String(product.entityId),
   });
 }
 

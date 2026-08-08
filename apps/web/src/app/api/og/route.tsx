@@ -1,22 +1,29 @@
-/** biome-ignore-all lint/performance/noImgElement: this is a edge runtime function */
+/** biome-ignore-all lint/performance/noImgElement: satori renders these, not a browser */
 import { env } from "@workspace/env/client";
 import { ImageResponse } from "next/og";
 import type { ImageResponseOptions } from "next/server";
 import type { CSSProperties, ReactNode } from "react";
 
+import { getCategoryByPath, getProductById } from "@/lib/bigcommerce/catalog";
+import { bigcommerceImageLoader } from "@/lib/bigcommerce/image-loader";
+import {
+  cardPricing,
+  productToCardProps,
+} from "@/lib/bigcommerce/product-card";
 import type { Maybe } from "@/types";
 import { getBaseUrl } from "@/utils";
 import { getOgMetaData } from "./og-config";
 import {
   getBlogPageOGData,
-  getCollectionOGData,
   getGenericPageOGData,
   getHomePageOGData,
-  getProductOGData,
   getSlugPageOGData,
+  getStoreOGData,
 } from "./og-data";
 
-export const runtime = "edge";
+// Not edge: the catalog client is `server-only` and reads validated server env,
+// neither of which the edge bundle carries. `ImageResponse` renders the same on
+// Node, and the hour of caching is a response header rather than a runtime.
 
 const errorContent = (
   <div tw="flex flex-col w-full h-full items-center justify-center">
@@ -37,56 +44,33 @@ type BrandedRenderProps = {
 
 type ProductRenderProps = BrandedRenderProps & {
   title?: Maybe<string>;
+  /** Preformatted, e.g. "£120.00". */
   price?: Maybe<string>;
+  /** The compare-at price, struck through — only set on a real markdown. */
+  strikePrice?: Maybe<string>;
   /** Preformatted markdown label, e.g. "-16%". */
   discount?: Maybe<string>;
+  /** Swatch hexes in catalog order; a colour the merchant left unstyled is null. */
+  swatches?: readonly (string | null)[];
 };
-
-type OgVariant = { price: number | null; compareAtPrice: number | null };
 
 // Normal pages (home / page / collection) all use this single static full-bleed
 // image. Only products (and blogs) use a dynamic image.
 const OG_STATIC_IMAGE = `${getBaseUrl()}/opengraph.png`;
 
-// Sanity stores product prices as bare numbers (store.priceRange.minVariantPrice)
-// without a currency code, so we format with the store's currency here
-// (configurable per store via NEXT_PUBLIC_STORE_CURRENCY, defaults to GBP).
+// Only reached when BigCommerce omits a currency code on a price, which it
+// does not do for a live catalog — the fallback keeps the card formatting
+// rather than throwing inside `Intl`.
 const OG_CURRENCY = env.NEXT_PUBLIC_STORE_CURRENCY;
 
-const formatOgPrice = (price: Maybe<number>): string | undefined => {
-  if (price === null || price === undefined) return;
-  return new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency: OG_CURRENCY,
-  }).format(price);
-};
+/** The image width the card renders at, asked of the CDN rather than upscaled. */
+const OG_IMAGE_WIDTH = 1200;
 
-/**
- * Markdown label for the cheapest variant (the one whose price the OG shows via
- * `minVariantPrice`). Returns e.g. "-16%", or undefined when it isn't on sale.
- */
-const resolveDiscount = (
-  variants: Maybe<Array<OgVariant | null>>
-): string | undefined => {
-  let price: number | undefined;
-  let compareAtPrice: number | null = null;
-  for (const variant of variants ?? []) {
-    if (!variant || variant.price === null) continue;
-    if (price === undefined || variant.price < price) {
-      price = variant.price;
-      compareAtPrice = variant.compareAtPrice;
-    }
-  }
-  if (
-    price === undefined ||
-    compareAtPrice === null ||
-    compareAtPrice <= price
-  ) {
-    return;
-  }
-  const percent = Math.round(((compareAtPrice - price) / compareAtPrice) * 100);
-  return percent > 0 ? `-${percent}%` : undefined;
-};
+/** How many swatches fit beside the price before the bar starts crowding. */
+const OG_SWATCH_LIMIT = 5;
+
+const catalogImageUrl = (src: Maybe<string>): string | undefined =>
+  src ? bigcommerceImageLoader({ src, width: OG_IMAGE_WIDTH }) : undefined;
 
 // Floating bar: inset from the image edges (no radius, no shadow — the float
 // comes from the inset margins).
@@ -301,12 +285,38 @@ const DiscountBadge = ({ label }: { label: string }) => (
   </div>
 );
 
+/**
+ * Colour swatches, as the product card draws them: one dot per colour, the
+ * merchant's own hex. A colour with no swatch hex renders as the same unfilled
+ * chip the card shows, so the count still reads true.
+ */
+const SwatchRow = ({ hexes }: { hexes: readonly (string | null)[] }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    {hexes.map((hex, index) => (
+      <div
+        // Two colourways can share a hex, so the index is the only stable key.
+        key={`${hex ?? "none"}-${index}`}
+        style={{
+          display: "flex",
+          width: 14,
+          height: 14,
+          borderRadius: 7,
+          backgroundColor: hex ?? "transparent",
+          border: `1px solid ${hex ? "#d4d4d8" : "#a1a1aa"}`,
+        }}
+      />
+    ))}
+  </div>
+);
+
 const productOgRender = ({
   image,
   siteTitle,
   title,
   price,
+  strikePrice,
   discount,
+  swatches,
 }: ProductRenderProps) => (
   <FullBleed image={image}>
     <div style={barStyle}>
@@ -335,7 +345,21 @@ const productOgRender = ({
           </span>
         ) : null}
         {price ? <span style={{ flexShrink: 0 }}>{price}</span> : null}
+        {strikePrice ? (
+          <span
+            style={{
+              flexShrink: 0,
+              color: "#71717a",
+              textDecoration: "line-through",
+            }}
+          >
+            {strikePrice}
+          </span>
+        ) : null}
         {discount ? <DiscountBadge label={discount} /> : null}
+        {swatches && swatches.length > 0 ? (
+          <SwatchRow hexes={swatches} />
+        ) : null}
       </div>
     </div>
   </FullBleed>
@@ -455,39 +479,68 @@ const getBlogPageContent = async ({ id }: ContentProps) => {
   });
 };
 
+/**
+ * The bespoke product card. `id` is a BigCommerce `entityId`, and every figure
+ * on the card — price, compare-at, markdown percentage, swatch hexes, image —
+ * comes out of the one live product read, mapped by the same
+ * `productToCardProps` the storefront's own card uses. That shared mapper is
+ * what keeps the two from drifting apart on what "on sale" means.
+ */
 const getProductContent = async ({ id }: ContentProps) => {
-  if (!id) {
+  const entityId = Number(id);
+  if (!Number.isInteger(entityId)) {
     return;
   }
-  const [result, err] = await getProductOGData(id);
-  if (err || !result) {
+  const [result, [settings]] = await Promise.all([
+    getProductById(entityId),
+    getStoreOGData(),
+  ]);
+  if (!(result.ok && result.data)) {
     return;
   }
-  // Everything is sourced from Sanity (BigCommerce data synced into store.*).
-  // Swatches went with the name-to-hex table: BigCommerce carries hexes on the
-  // option values themselves, which the synced store.* shape doesn't hold yet.
+
+  const card = productToCardProps(result.data);
+  const { price, strikePrice, salePercent } = cardPricing(
+    card.priceRange,
+    card.compareAtPrice,
+    card.currencyCode ?? OG_CURRENCY
+  );
+
   return productOgRender({
-    image: result.seoImage ?? result.image,
-    siteTitle: result.siteTitle,
-    title: result.title,
-    price: formatOgPrice(result.price),
-    discount: resolveDiscount(result.variants),
+    image: catalogImageUrl(card.imageUrl),
+    siteTitle: settings?.siteTitle,
+    title: card.title,
+    price,
+    strikePrice,
+    discount: salePercent > 0 ? `-${salePercent}%` : undefined,
+    swatches: (card.colors ?? [])
+      .slice(0, OG_SWATCH_LIMIT)
+      .map((color) => color.hex ?? null),
   });
 };
 
+/**
+ * `id` is the category's storefront path segments, joined — the same value the
+ * route itself resolves on, so a nested category needs no special case.
+ */
 const getCollectionContent = async ({ id }: ContentProps) => {
   if (!id) {
     return;
   }
-  const [result, err] = await getCollectionOGData(id);
-  if (err || !result) {
+  const [result, [settings]] = await Promise.all([
+    // No product page: the card shows the category's own image and name, and
+    // asking for one costs 4724 complexity against 1022.
+    getCategoryByPath(id.split("/"), { withProducts: false }),
+    getStoreOGData(),
+  ]);
+  if (!(result.ok && result.data.node)) {
     return;
   }
   // Collections are dynamic — use the collection's own image (full-bleed).
   return brandedPageRender({
-    image: result.seoImage ?? result.image,
-    siteTitle: result.siteTitle,
-    title: result.title,
+    image: catalogImageUrl(result.data.node.defaultImage?.url),
+    siteTitle: settings?.siteTitle,
+    title: result.data.node.name,
   });
 };
 

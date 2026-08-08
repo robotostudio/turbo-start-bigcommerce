@@ -1,10 +1,9 @@
 import { client } from "@workspace/sanity/client";
 import {
   queryBlogPageOGData,
-  queryCollectionOGData,
   queryGenericPageOGData,
   queryHomePageOGData,
-  queryProductOGData,
+  querySettingsData,
   querySlugPageOGData,
 } from "@workspace/sanity/query";
 
@@ -26,10 +25,11 @@ export async function getGenericPageOGData(id: string) {
   return await handleErrors(client.fetch(queryGenericPageOGData, { id }));
 }
 
-export async function getProductOGData(id: string) {
-  return await handleErrors(client.fetch(queryProductOGData, { id }));
-}
-
-export async function getCollectionOGData(id: string) {
-  return await handleErrors(client.fetch(queryCollectionOGData, { id }));
+/**
+ * Products and categories have no Sanity document to read, so their cards
+ * fetch BigCommerce directly and come here only for the store name that sits
+ * in the bar — the one part of a catalog card that is editorial.
+ */
+export async function getStoreOGData() {
+  return await handleErrors(client.fetch(querySettingsData));
 }
