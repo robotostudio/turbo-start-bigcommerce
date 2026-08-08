@@ -14,46 +14,86 @@ clone the real pages.
 
 ## Run them in this order
 
+`pnpm seed --yes` runs all four and is the one to use. Separately, they are:
+
 ```bash
 pnpm seed:bigcommerce   # catalog into BigCommerce
 pnpm seed:sanity        # content into Sanity  (destructive: wipes the dataset)
 pnpm sync:bigcommerce   # catalog back out of BigCommerce, into Sanity
+pnpm seed:refs          # point the content at the ids this store minted
 ```
 
-The sync is not optional. `reference-dataset.ndjson` no longer carries product
-or category documents — it references the ones the sync writes, by the ids the
-sync assigns (`bigcommerceProduct-{entityId}`, `bigcommerceCategory-{entityId}`).
-Seed the content without syncing and the navbar, the promo banner and the
-homepage's featured product all point at documents that do not exist yet.
+Neither of the last two is optional. `reference-dataset.ndjson` no longer
+carries product or category documents — it references the ones the sync
+writes. Seed the content without syncing and the navbar, the promo banner and
+the homepage's featured product all point at documents that do not exist yet.
 
 Those references are deliberately **weak**. A strong reference to a document
 outside the import set is rejected outright — `sanity dataset import` fails at
 "Strengthening references" — so weak is what lets content and catalog be
 seeded from two independent sources and still meet up.
 
+### Why the ids in this file are not ids
+
+The sync writes `bigcommerceProduct-{entityId}`, and `entityId` is whatever
+BigCommerce handed that product when it was created. Every store counts from
+its own starting point, so the crewneck that is 181 on the store this content
+was captured from is some other number on yours, and a committed id would be
+right on exactly one store and dangling on every other one. A dangling weak
+reference renders as nothing — no error, no gap in the log, just an empty
+navbar.
+
+So this file names catalog documents by **slug** instead:
+`bigcommerceProduct-bramley-wool-crewneck`, `bigcommerceCategory-shirts`.
+Those strings are placeholders, not ids. `pnpm seed:refs` reads the synced
+documents, looks each slug up among them, and rewrites the reference to the
+real id.
+
+It rewrites only references whose tail is not a number, which is what makes a
+second run cost nothing: once a reference points at `bigcommerceProduct-47` it
+no longer matches, so re-running after a re-seed touches only what the re-seed
+put back. Run it without `--write` to see the patches first.
+
 ### The contract the sync has to meet
 
-This file references 6 categories and 4 products. For the demo pages to render,
+This file references 6 categories and 5 products. For the demo pages to render,
 the sync must write, for each:
 
 | | |
 |---|---|
 | `_id` | `bigcommerceCategory-{entityId}` / `bigcommerceProduct-{entityId}` |
 | `_type` | `bigcommerceCategory` / `bigcommerceProduct` |
+| `store.slug.current` | the storefront path, minus its route prefix |
 
 `entityId` is BigCommerce's own catalog id — the `category_id` and `id` the
-Admin API returns, which the Storefront API calls `entityId`. Both halves
-matter. The id alone resolves the reference, but a GROQ query filtered on
-`_type` still returns nothing if the document was written under a different
-one, and the page renders empty with no error to explain why.
+Admin API returns, which the Storefront API calls `entityId`. All three matter.
+The id is what the rewritten reference points at; the slug is how `seed:refs`
+finds it; and a GROQ query filtered on `_type` still returns nothing if the
+document was written under a different one, so the page renders empty with no
+error to explain why.
 
 `pnpm seed:sanity` deletes every document in the target dataset before it
 imports, catalog documents included. Run the sync after the seed, never before.
 
 ## `bigcommerce-catalog.json`
 
-12 products, 61 variants, 10 categories, GBP. Prices, compare-at prices,
+12 products, 61 variants, 11 categories, GBP. Prices, compare-at prices,
 options with swatch hexes, per-variant SKUs and stock, 132 images.
+
+### Badges come from the tags metafield
+
+BigCommerce has no tag field, so the catalog carries tags as a comma-separated
+`tags` metafield in the `turbo_start` namespace, and the card reads the badge
+off it: `new` wins, then `online-exclusive`, then no badge at all. Four
+products are tagged `new`, two `online-exclusive`, and six neither, so all
+three states are on screen in the seeded store — and the homepage's four
+featured products cover three of them on their own.
+
+That distribution is the point. Tagging everything `new` is not a nicer demo,
+it is the same demo as tagging nothing: one badge everywhere reads as a
+default, and the `online-exclusive` branch never runs where anyone can see it.
+A test in `apps/web/src/lib/bigcommerce/__tests__/product-card.test.ts` reads
+this file and fails if the three states stop appearing.
 
 Weights are in **grams**. `loadCatalog()` converts them into whatever unit the
 target store is set to, so a store configured in kilograms does not end up with
@@ -130,14 +170,20 @@ Roboto Studio's Sanity org.
    keeping any sibling `hotspot`, `crop` and `alt` on the image object.
 5. Mark every reference to a `bigcommerceProduct-*` / `bigcommerceCategory-*`
    document `"_weak": true`.
-6. Write the result here and run `pnpm seed:sanity` against a scratch dataset
+6. Replace the `entityId` in each of those references with the document's slug:
+   `bigcommerceProduct-183` becomes
+   `bigcommerceProduct-aster-denim-coach-jacket`. The slugs are in the export,
+   on `store.slug.current` of the catalog documents you dropped in step 3.
+7. Write the result here and run `pnpm seed:sanity` against a scratch dataset
    before you commit it.
 
-Steps 4 and 5 are not optional. The importer refuses an asset document that
+Steps 4, 5 and 6 are not optional. The importer refuses an asset document that
 names a different project — it fails with "references a different project ID
 than the specified target" — and rewriting the reference to a URL is the
 documented way round it. A strong reference to a catalog document fails the
-same import at a different step.
+same import at a different step. And an id left in place is the failure that
+does not announce itself: it resolves on the store you exported from and
+nowhere else.
 
 Only 11 of the reference project's 22 image assets are reachable from a
 document. The other 11 are orphans and are deliberately not carried over.

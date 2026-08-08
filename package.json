@@ -17,9 +17,12 @@
     "check-refs": "./scripts/check-forbidden-refs.sh --strict",
     "bigcommerce:schema": "pnpm --filter web bigcommerce:schema",
     "bigcommerce:smoke": "pnpm --filter web bigcommerce:smoke",
+    "seed": "tsx --env-file-if-exists=apps/studio/.env apps/studio/scripts/seed.ts",
     "seed:sanity": "pnpm --filter studio seed:sanity",
     "seed:bigcommerce": "pnpm --filter studio seed:bigcommerce",
-    "sync:bigcommerce": "pnpm --filter studio sync:bigcommerce"
+    "seed:refs": "pnpm --filter @workspace/sanity-sync seed-refs",
+    "sync:bigcommerce": "pnpm --filter studio sync:bigcommerce",
+    "verify": "tsx --env-file-if-exists=apps/studio/.env --env-file-if-exists=apps/web/.env.local apps/studio/scripts/verify.ts"
   },
   "dependencies": {
     "@workspace/env": "workspace:*"

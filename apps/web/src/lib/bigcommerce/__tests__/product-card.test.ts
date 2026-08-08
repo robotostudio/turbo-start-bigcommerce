@@ -1,10 +1,13 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import type { CardVariant } from "@/components/product/product-card";
 import {
+  badgeFromTags,
   cardPricing,
   findCardVariant,
   productToCardProps,
+  productTags,
   resolveCardImages,
 } from "@/lib/bigcommerce/product-card";
 import { getCardOptions } from "@/lib/bigcommerce/options";
@@ -349,5 +352,61 @@ describe("getCardOptions", () => {
     ]);
     expect(sizes).toHaveLength(5);
     expect(product.variants.edges).toHaveLength(10);
+  });
+});
+
+/**
+ * The badge is the one card element the seed can silently neuter. Nothing
+ * fails if every seeded product carries the same tag — `badgeFromTags` keeps
+ * working, the cards keep rendering — but the demo then shows one badge
+ * everywhere and never the other, which is a default wearing a badge's
+ * clothes. Read straight off the committed catalog, so a hand-edit that
+ * flattens the distribution fails here rather than in a screenshot.
+ */
+describe("the seeded catalog exercises the badge conventions", () => {
+  const catalog = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../../../../studio/seed/bigcommerce-catalog.json",
+        import.meta.url
+      ),
+      "utf8"
+    )
+  ) as {
+    products: {
+      slug: string;
+      metafields: { namespace: string; key: string; value: string }[];
+    }[];
+  };
+
+  /**
+   * `PRODUCT_METAFIELD_NAMESPACE` by value, not by import: `metafields.ts` is
+   * `server-only` and this suite is the card's, which is a client module.
+   */
+  const NAMESPACE = "turbo_start";
+
+  /** The seed writes REST metafields; the storefront reads them as a connection. */
+  const badges = catalog.products.map((product) =>
+    badgeFromTags(
+      productTags({
+        edges: product.metafields
+          .filter((field) => field.namespace === NAMESPACE)
+          .map((field) => ({ node: { key: field.key, value: field.value } })),
+      })
+    )
+  );
+
+  it("renders all three badge states somewhere in the catalog", () => {
+    expect(new Set(badges)).toEqual(new Set(["new", "exclusive", null]));
+  });
+
+  it("keeps every product's tags in the namespace the storefront queries", () => {
+    for (const product of catalog.products) {
+      expect(
+        product.metafields.some(
+          (field) => field.namespace === NAMESPACE && field.key === "tags"
+        )
+      ).toBe(true);
+    }
   });
 });

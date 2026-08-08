@@ -112,17 +112,27 @@ The GraphQL schema is committed at `apps/web/src/lib/bigcommerce/schema.graphql`
 
 ### 5. Seed the demo content
 
-Three commands, and the order matters:
+```bash
+pnpm seed --yes   # the whole thing
+pnpm verify       # check it before you run the app
+```
+
+`pnpm seed` prints the store hash and the dataset it is about to write to, then stops. `--yes` is what makes it run, because the second of its four steps deletes every document in that dataset and the only thing standing between a typo and somebody's content is reading those two lines.
+
+The four steps are these, and you can still run them one at a time:
 
 ```bash
 pnpm seed:bigcommerce   # catalog into BigCommerce
 pnpm seed:sanity        # content into Sanity — destructive, wipes the dataset
 pnpm sync:bigcommerce   # catalog back out of BigCommerce, into Sanity
+pnpm seed:refs          # point the seeded content at this store's catalog
 ```
 
-The sync is not optional. `reference-dataset.ndjson` carries no product or category documents at all — it holds weak references to the ones the sync writes. Seed the content without syncing and the navbar, the promo banner, and the homepage's featured product all point at documents that do not exist.
+The order is load-bearing in both directions. `seed:sanity` wipes the dataset, so a sync before it is thrown away; `seed:refs` needs the documents the sync writes, so it can only go last.
 
-`pnpm seed:bigcommerce` reads nothing live. No second storefront account, no source store to copy from. The catalog is a committed 57.6 KB fixture — 12 products, 61 variants, 10 categories — and all 132 of its images resolve from BigCommerce's own CDN.
+The last two steps are what make the demo content work on a store that is not the one it was captured from. `reference-dataset.ndjson` carries no product or category documents — it holds weak references to the ones the sync writes, and it names them by slug rather than by id, because BigCommerce mints ids per store and a product that is 183 here is 47 on your sandbox. `pnpm seed:refs` swaps each slug for the id your store handed out. Skip it and the navbar, the promo banner and the homepage's featured products render as nothing at all, with no error to say why.
+
+`pnpm seed:bigcommerce` reads nothing live. No second storefront account, no source store to copy from. The catalog is a committed fixture — 12 products, 61 variants, 11 categories — and all 132 of its images resolve from BigCommerce's own CDN.
 
 [apps/studio/seed/README.md](apps/studio/seed/README.md) has the full contract: what each file holds, why the references are weak, and how to regenerate either one.
 
@@ -183,9 +193,12 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 | `pnpm check-types` | Typecheck every package |
 | `pnpm test` | Run the Vitest suite |
 | `pnpm check-refs` | Scan for conversion leftovers and live-system identifiers |
+| `pnpm seed --yes` | All four seed steps in order. Prints its targets and stops without `--yes` |
+| `pnpm verify` | Check credentials, the channel, and that the catalog and the content agree |
 | `pnpm seed:bigcommerce` | Load the committed catalog fixture into your store |
 | `pnpm seed:sanity` | Import the demo content. Wipes the target dataset first |
 | `pnpm sync:bigcommerce` | Mirror the catalog into Sanity. Run it after both seeds |
+| `pnpm seed:refs` | Repoint the seeded content at this store's catalog ids. Dry run without `--write` |
 | `pnpm bigcommerce:schema` | Re-introspect your own store and rewrite the committed GraphQL schema |
 | `pnpm bigcommerce:smoke` | Print the connected BigCommerce store's name |
 
@@ -388,7 +401,7 @@ If you want the refusal, add it to `redirectToCheckout()` in `apps/web/src/app/c
 | Visual editing does nothing | Allow third-party cookies. Check `SANITY_STUDIO_PRESENTATION_URL`. |
 | Products not loading | Run `pnpm bigcommerce:smoke`. If it can't name your store, `BIGCOMMERCE_STORE_HASH` or `BIGCOMMERCE_STOREFRONT_TOKEN` is wrong, or the token has expired. |
 | GraphQL rejects the token | You minted a vanilla storefront token instead of a private one, or minted it for a different channel than `BIGCOMMERCE_CHANNEL_ID`. |
-| Navbar and homepage link to nothing | You ran `pnpm seed:sanity` without `pnpm sync:bigcommerce` after it. Run the sync. |
+| Navbar and homepage link to nothing | The last two seed steps did not run. `pnpm verify` says which one. |
 | Seed script fails | `BIGCOMMERCE_ADMIN_TOKEN` is missing a catalog write scope. |
 | Text looks corrupted — hundreds of invisible characters inside an eight-character nav label | That is Sanity's stega watermark, not damaged content. Leave preview mode using the bar at the bottom of the page. A browser profile can sit in preview mode from a session days ago and quietly watermark everything you test in it, so check that before you go looking at the data. |
 | A published edit never appears on the deployed site | The revalidation webhook is not wired. See [Wiring up content revalidation](#wiring-up-content-revalidation) — without it the page is never refreshed, not slowly refreshed. |

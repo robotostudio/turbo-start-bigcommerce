@@ -557,7 +557,7 @@
         {
           "namespace": "turbo_start",
           "key": "tags",
-          "value": "crewneck, knitwear, new, sweater, winter, wool"
+          "value": "crewneck, knitwear, sweater, winter, wool"
         }
       ]
     },
@@ -694,7 +694,7 @@
         {
           "namespace": "turbo_start",
           "key": "tags",
-          "value": "cotton, new, pleated, shorts, summer, tailored"
+          "value": "cotton, pleated, shorts, summer, tailored"
         }
       ]
     },
@@ -831,7 +831,7 @@
         {
           "namespace": "turbo_start",
           "key": "tags",
-          "value": "cotton, layering, new, overshirt, shirt, workwear"
+          "value": "cotton, layering, overshirt, shirt, workwear"
         }
       ]
     },
@@ -974,7 +974,7 @@
         {
           "namespace": "turbo_start",
           "key": "tags",
-          "value": "cotton, henley, layering, long-sleeve, new, top"
+          "value": "cotton, henley, layering, long-sleeve, top"
         }
       ]
     },
@@ -1118,7 +1118,7 @@
         {
           "namespace": "turbo_start",
           "key": "tags",
-          "value": "cotton, dress, linen, midi, new, sleeveless"
+          "value": "cotton, dress, linen, midi, sleeveless"
         }
       ]
     },
@@ -1262,7 +1262,7 @@
         {
           "namespace": "turbo_start",
           "key": "tags",
-          "value": "denim, high-rise, new, pleated, trousers, wide-leg"
+          "value": "denim, high-rise, pleated, trousers, wide-leg"
         }
       ]
     },
@@ -1394,7 +1394,7 @@
         {
           "namespace": "turbo_start",
           "key": "tags",
-          "value": "jacquard, knitwear, layering, new, sleeveless, vest"
+          "value": "jacquard, knitwear, layering, online-exclusive, sleeveless, vest"
         }
       ]
     },
@@ -1755,7 +1755,7 @@
         {
           "namespace": "turbo_start",
           "key": "tags",
-          "value": "accessories, cap, cotton, hat, new"
+          "value": "accessories, cap, cotton, hat, online-exclusive"
         }
       ]
     }
