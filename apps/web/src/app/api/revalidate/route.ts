@@ -103,19 +103,11 @@ function isValidSignature(
 }
 
 export async function POST(request: Request) {
+  // No missing-secret branch. `SANITY_REVALIDATE_SECRET` is required by the env
+  // schema, so a process that got this far has one — an unset secret fails
+  // validation at startup, where the message can say what to do about it,
+  // rather than answering 503 into a log for the life of the deployment.
   const secret = env.SANITY_REVALIDATE_SECRET;
-
-  // Unset is a configuration state, not an attack. 503 with a pointer beats a
-  // silent 200 that leaves someone believing revalidation is wired up.
-  if (!secret) {
-    logger.warn(
-      "SANITY_REVALIDATE_SECRET is not set — refusing to revalidate. See the webhook section of the README."
-    );
-    return Response.json(
-      { revalidated: false, reason: "not-configured" },
-      { status: 503 }
-    );
-  }
 
   const rawBody = await request.text();
 

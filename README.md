@@ -152,7 +152,7 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 | `BIGCOMMERCE_API_URL` | No | Endpoint override. Derived from the hash and channel if unset |
 | `BIGCOMMERCE_PRERENDER_LIMIT` | No | How many catalog paths to prerender at build, defaults to `100`. The rest render on demand |
 | `NEXT_PUBLIC_STORE_CURRENCY` | No | ISO 4217 code, defaults to `GBP` |
-| `SANITY_REVALIDATE_SECRET` | In production | Shared with the Sanity webhook that publishes content changes. See [Wiring up content revalidation](#wiring-up-content-revalidation). A Vercel production build refuses to start without it. Anywhere else it is unset, `/api/revalidate` answers 503 and published edits never reach the site |
+| `SANITY_REVALIDATE_SECRET` | Yes | Shared with the Sanity webhook that publishes content changes. Without it nothing invalidates the cache and published edits never reach the site, so a build without it fails validation. See [Wiring up content revalidation](#wiring-up-content-revalidation) |
 
 ### Studio (`apps/studio/.env`)
 
@@ -249,12 +249,9 @@ half of this and the command that gives you a genuinely clean build.
 
 3. Publish something and reload the page. It should change on the first request.
 
-The route rejects anything without a valid signature, so an unset or mismatched secret shows up as
-`401`s in the Sanity webhook log rather than as silent staleness. A missing secret answers `503`.
-
-A Vercel production build now refuses to start when the secret is absent, so on Vercel you meet this at
-deploy time rather than as quietly stale content. The gate keys on `VERCEL_ENV=production`, which means a
-self-hosted production deploy still gets only the `503` and this page.
+The route rejects anything without a valid signature, so a mismatched secret shows up as `401`s in the
+Sanity webhook log rather than as silent staleness. An absent one never gets that far: the secret is
+required like the Sanity tokens, so a build without it fails env validation wherever it runs.
 
 One deliberate limitation: the `sanity` tag is invalidated wholesale, because Sanity's sync tags are
 content hashes rather than document ids and a webhook payload cannot be mapped to them. One publish

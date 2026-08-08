@@ -80,7 +80,7 @@ Keep commit messages concise and focused on the "why" rather than the "what".
 
 ## Verifying your work
 
-Three habits, each of which exists because skipping it cost someone an afternoon.
+Four habits, each of which exists because skipping it cost someone an afternoon.
 
 ### Build from a cold cache
 
@@ -96,6 +96,13 @@ rm -rf apps/web/.next && pnpm build
 Sanity reads are cached with `revalidate: false` and invalidated by tag, so nothing about them expires
 on a timer. BigCommerce reads are POSTs, which Next never caches, so those refresh on their own. A page
 can be half fresh and half frozen and look completely normal.
+
+That same cache is why the revalidation webhook is not an optimisation you can defer. Nothing invalidates
+the `sanity` tag except `/api/revalidate`, so a deployment without it serves whatever was true at build
+time for as long as it runs, and `export const revalidate` on a page does not help, because it re-runs the
+render against the same cached read. `SANITY_REVALIDATE_SECRET` is therefore required in
+`packages/env/src/server.ts`, alongside the Sanity tokens: a build without it fails validation rather than
+succeeding and going quietly stale.
 
 ### Kill the old server by port, not by name
 
