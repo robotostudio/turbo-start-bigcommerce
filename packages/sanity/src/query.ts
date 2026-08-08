@@ -42,15 +42,46 @@ const imageFragment = /* groq */ `
 // `string`, miss the lookup and silently resolve to an untyped result; typegen
 // and lint both still pass, and the only symptom is an `any` far away at the
 // call site.
+//
+// The two catalog arms carry the same visibility clauses the explorer, the
+// navbar dropdown and the editorial two-up carry, for the same reason:
+// /collections/[...slug] and /products/[...slug] resolve through live
+// BigCommerce and `notFound()` when the catalog does not hand the entity back,
+// and the storefront API does not hand back a hidden one. `store.isVisible`
+// mirrors `is_visible` and `store.isDeleted` is the sync's tombstone
+// (`sanity-sync/src/upsert.ts`), so a link built from a document carrying
+// either is a link to a 404. This is the shared projection every link surface
+// is built from -- navbar, footer, promo banner, buttons, `customLink` marks --
+// so the guard belongs here rather than at each of them.
+//
+// The clause sits inside the second arm of the coalesce, never above it.
+// `customUrl.internal` points at `page`, `blog` and `blogIndex` as well as the
+// catalog, and an editorial document has no `store` at all -- a guard hoisted
+// over the coalesce reads `store.isVisible` as null on every one of them and
+// takes down the editorial half of the navbar with it.
+//
+// A null href is not a new shape for any consumer: a dangling weak reference
+// already produces one on main, which `custom-url.ts` documents as the price of
+// declaring these references weak. This widens when it fires. It also stays a
+// null *field* rather than a null array element, so no dense array needs
+// `array::compact` -- `buttons[]`, footer `links[]` and `markDefs[]` keep their
+// length and their objects, and the components already fall back on a missing
+// href.
 const hrefFragment = <A extends string, F extends string>(at: A, fallback: F) =>
   /* groq */ `"href": select(
       ${at}type == "internal" => coalesce(
         ${at}internal->slug.current,
-        "/collections/" + ${at}internal->store.slug.current
+        select(
+          ${at}internal->store.isDeleted != true && ${at}internal->store.isVisible == true =>
+            "/collections/" + ${at}internal->store.slug.current
+        )
       ),
       ${at}type == "external" => ${at}external,
       ${at}type == "email" => "mailto:" + ${at}email,
-      ${at}type == "product" => "/products/" + ${at}product->store.slug.current,
+      ${at}type == "product" => select(
+        ${at}product->store.isDeleted != true && ${at}product->store.isVisible == true =>
+          "/products/" + ${at}product->store.slug.current
+      ),
       ${fallback}
     )` as const;
 
