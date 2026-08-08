@@ -126,6 +126,8 @@ The sync is not optional. `reference-dataset.ndjson` carries no product or categ
 
 [apps/studio/seed/README.md](apps/studio/seed/README.md) has the full contract: what each file holds, why the references are weak, and how to regenerate either one.
 
+`pnpm sync:bigcommerce` is a sweep you run, not something that keeps itself in step. It compares the whole catalog against what Sanity holds and writes the difference, which is the right shape for seeding and for a nightly job, and the wrong shape for reacting to a single edit. The piece that would react — a BigCommerce webhook receiver — is designed but not built, and the design is written down in [docs/sync-design.md](docs/sync-design.md): which four scopes matter, why the `hash` field is not a signature, how a delete has to soft-delete or it takes an editor's work with it. Read that before building it rather than starting over. [Known limits](#known-limits) covers what the gap between sweeps costs in the meantime.
+
 ### 6. Start developing
 
 ```bash
@@ -286,6 +288,38 @@ Document types live in `apps/studio/schemaTypes/documents/`, objects in `apps/st
 ### Adding Shadcn components
 
 `npx shadcn add <name>` into `packages/ui`, then import via `@workspace/ui/components/<name>`. Unused primitives were stripped from this fork, so expect to add a few back.
+
+## Known limits
+
+Three things behave in ways that look like bugs and are not. The first was measured against a live store; the other two are read off this codebase's own behaviour and BigCommerce's documented settings, and are called out because nothing in the code will warn you about either.
+
+### Faceted search is on the plan, not in the code
+
+On a store without BigCommerce's Product Filtering feature, `searchProducts.filters` comes back as an **empty list with HTTP 200 and no `errors` key**, while products load normally. A free partner sandbox is one such store, and so is any plan below the tier that includes filtering.
+
+The empty list is the whole problem: it is byte-identical to "this query matched no facets". Nothing in the payload distinguishes a capability the store does not have from a search that legitimately had nothing to narrow by. The one thing that does is `site.settings.search.productFilteringEnabled`, which the storefront reads and branches on:
+
+| `productFilteringEnabled` | Facets returned | What renders |
+|---|---|---|
+| `false` | `[]` | "Filters are unavailable for this store." |
+| `true` | `[]` | "No filters match these products." |
+| `true` | some | The facet controls |
+
+Two further things are worth knowing before you conclude the code is broken. The store's own admin will happily show facets configured and enabled while this flag still reads `false` — the flag tracks the plan, not the configuration. And `hideOutOfStock`, `rating` and `productAttributes` are **accepted and silently ignored** on a plan without filtering: same request, same response, same product count. `price` is the exception — it still narrows server-side with the flag off, measured on the sandbox at 5 results down to 4 for a `maxPrice` of 200 — which is why it is the one filter this storefront can demonstrate on a free plan.
+
+### A deleted product stays linkable until the next sweep
+
+Deleting a product in BigCommerce does not reach Sanity on its own. `pnpm sync:bigcommerce` soft-deletes it — flags `store.isDeleted` on the synced document, which every storefront query filters on — but only when you run the sweep. Until then, a page-builder block still references a live-looking document and the link it renders 404s.
+
+That window is as long as the gap between your sweeps, which for a fork that never schedules one is forever. A nightly sweep bounds it to a day; the [webhook receiver](docs/sync-design.md) would bound it to seconds. Neither is wired here.
+
+The sweep never hard-deletes, and that is deliberate: a synced document carries editor-owned fields alongside the `store` subtree, and removing the document takes an editor's copy and images with it.
+
+### Renaming a product depends on a BigCommerce setting nobody looks at
+
+Product and category URLs resolve through `site.route(...)` with `redirectBehavior: FOLLOW`, so a renamed slug keeps working because BigCommerce creates a 301 for the old path and this storefront follows it.
+
+That is a store setting. A merchant who turns automatic redirects off gets no 301, `site.route` resolves nothing, and every existing link to the old slug 404s — including ones already indexed and ones sitting in a Sanity block. Nothing in this codebase can detect or compensate for it. If renames matter, confirm the setting is on before shipping.
 
 ## Hiding a product
 
