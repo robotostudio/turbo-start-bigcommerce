@@ -11,30 +11,65 @@ import { Check, ChevronDown } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
-import { DEFAULT_SORT, SORT_OPTIONS, sortFromSearchParams } from "./sort-utils";
+import {
+  DEFAULT_SORT,
+  defaultSortLabel,
+  SORT_OPTIONS,
+  sortFromSearchParams,
+} from "./sort-utils";
 
-export function SortSelector() {
+type SortSelectorProps = {
+  /**
+   * Same override the facet panel takes, for the same reason: `/search` writes
+   * its address bar with `replaceState`, which `useSearchParams` does not
+   * observe, and a client navigation there would re-trigger the intercepting
+   * route and open the drawer. Both default to the router, which is what every
+   * ordinary listing route wants.
+   */
+  params?: URLSearchParams;
+  onNavigate?: (queryString: string) => void;
+  /**
+   * Whether this listing has a keyword behind it. Only the default option's
+   * label depends on it — omitting the sort argument means relevance on a
+   * keyword search and the category's own order on a category page.
+   */
+  hasSearchTerm?: boolean;
+};
+
+export function SortSelector({
+  params,
+  onNavigate,
+  hasSearchTerm = false,
+}: SortSelectorProps = {}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const routerParams = useSearchParams();
   // Read, not passed in: the server component stays `searchParams`-free so
   // the route can be statically generated.
+  const searchParams = params ?? routerParams;
   const currentSort = sortFromSearchParams(searchParams);
 
   const handleSort = useCallback(
     (value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const next = new URLSearchParams(searchParams.toString());
       if (value === DEFAULT_SORT) {
-        params.delete("sort");
+        next.delete("sort");
       } else {
-        params.set("sort", value);
+        next.set("sort", value);
       }
       // The cursor is an offset into the *previous* order — reusing it across a
-      // sort change pages into the wrong slice, and returns short.
-      params.delete("after");
-      const qs = params.toString();
+      // sort change pages into the wrong slice, and returns short. BigCommerce
+      // encodes the sort key into the cursor itself, so a stale one is not even
+      // meaningful against the new order.
+      next.delete("after");
+      const qs = next.toString();
+
+      if (onNavigate) {
+        onNavigate(qs);
+        return;
+      }
       router.push(qs ? `?${qs}` : "?", { scroll: false });
     },
-    [router, searchParams]
+    [onNavigate, router, searchParams]
   );
 
   return (
@@ -50,7 +85,9 @@ export function SortSelector() {
             key={option.value}
             onClick={() => handleSort(option.value)}
           >
-            {option.label}
+            {option.value === DEFAULT_SORT
+              ? defaultSortLabel(hasSearchTerm)
+              : option.label}
             <Check
               className={cn(
                 "size-4",

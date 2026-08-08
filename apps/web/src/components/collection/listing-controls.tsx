@@ -69,7 +69,18 @@ export function ListingControlsProvider({
 const controlTextClass =
   "flex shrink-0 items-center gap-1 whitespace-nowrap text-base text-zinc-900 tracking-[0.24px] transition-colors hover:text-zinc-500 focus-visible:outline-none dark:text-zinc-100 dark:hover:text-zinc-400";
 
-export function ListingControls() {
+type ListingControlsProps = {
+  /** Forwarded to `SortSelector` — see its props for why `/search` needs them. */
+  params?: URLSearchParams;
+  onNavigate?: (queryString: string) => void;
+  hasSearchTerm?: boolean;
+};
+
+export function ListingControls({
+  params,
+  onNavigate,
+  hasSearchTerm,
+}: ListingControlsProps = {}) {
   const { filterOpen, toggleFilter } = useListingControls();
 
   // Grid density toggle disabled for now (see brutalist note above).
@@ -153,7 +164,11 @@ export function ListingControls() {
           </span>
         }
       >
-        <SortSelector />
+        <SortSelector
+          hasSearchTerm={hasSearchTerm}
+          onNavigate={onNavigate}
+          params={params}
+        />
       </Suspense>
     </div>
   );

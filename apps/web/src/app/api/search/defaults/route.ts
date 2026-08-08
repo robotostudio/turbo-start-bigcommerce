@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getCategoryTree } from "@/lib/bigcommerce/catalog";
 import { getFeaturedProducts } from "@/lib/bigcommerce/featured";
-import { toSearchCategory } from "../query";
+import { toSearchCategory } from "@/lib/bigcommerce/search";
 
 const COLLECTIONS_LIMIT = 8;
 

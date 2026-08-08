@@ -1,7 +1,7 @@
 import "server-only";
 
 import { env } from "@workspace/env/server";
-import type { ResultOf, VariablesOf } from "gql.tada";
+import type { ResultOf } from "gql.tada";
 
 import { type StorefrontQueryResult, storefrontQuery } from "./client";
 import { graphql } from "./graphql";
@@ -44,7 +44,7 @@ const PATHS_PAGE_SIZE = 50;
  * search grid. The review summary costs 3 of that, measured by running the
  * same query with and without it.
  */
-const ProductCard = graphql(`
+export const ProductCard = graphql(`
   fragment ProductCard on Product {
     entityId
     name
@@ -391,7 +391,7 @@ const CategoryDetail = graphql(
       metaDescription
       metaKeywords
     }
-    products(first: $first, after: $after, sortBy: $sortBy) {
+    products(first: $first, after: $after) @include(if: $withProducts) {
       collectionInfo {
         totalItems
       }
@@ -470,10 +470,20 @@ const ProductsByIdsQuery = graphql(
 );
 
 /**
- * `$sortBy` is nullable on purpose: omitting it and passing `DEFAULT` are two
- * different orders on the wire, and the category page's server render passes
- * nothing. (A `#` comment inside the variable list is what gql.tada's
- * type-level parser chokes on, hence this note out here.)
+ * `$withProducts` exists because BigCommerce charges complexity on what a query
+ * *executes*, not on what it declares: this document costs 4724 with the
+ * products connection included and 1022 with `@include(if: false)`, measured on
+ * the seeded store. The category page and `generateMetadata` want the route
+ * resolution and the category's own fields without a page of products attached
+ * — the listing comes from `searchCatalog` instead — so they pass false and pay
+ * the 1022.
+ *
+ * There is no sort argument here. `Category.products` sorts with
+ * `CategoryProductSort`, but no caller sorts through this document any more:
+ * the listings moved to `searchProducts`, and what is left — related products,
+ * the Markdown rendering — wants the category's own order. (A `#` comment
+ * inside the variable list is what gql.tada's type-level parser chokes on,
+ * hence this note out here.)
  */
 const CategoryByPathQuery = graphql(
   `
@@ -481,7 +491,7 @@ const CategoryByPathQuery = graphql(
     $path: String!
     $first: Int!
     $after: String
-    $sortBy: CategoryProductSort
+    $withProducts: Boolean!
   ) {
     site {
       route(path: $path, redirectBehavior: FOLLOW) {
@@ -591,11 +601,6 @@ type ProductNode = Extract<
 type CategoryNode = Extract<
   NonNullable<ResultOf<typeof CategoryByPathQuery>["site"]["route"]["node"]>,
   { __typename: "Category" }
->;
-
-/** The `CategoryProductSort` enum, read off the schema rather than restated. */
-export type CategoryProductSort = NonNullable<
-  VariablesOf<typeof CategoryByPathQuery>["sortBy"]
 >;
 
 export type CatalogProduct = ProductNode;
@@ -826,8 +831,13 @@ export async function getCategoryByPath(
   options?: {
     first?: number;
     after?: string | null;
-    /** A `CategoryProductSort` member. Leave unset for the category's own order. */
-    sortBy?: CategoryProductSort;
+    /**
+     * Set false to resolve the route and the category's own fields without a
+     * page of products — 1022 complexity instead of 4724. `products` is then
+     * absent from the node rather than empty, which is why it reads as
+     * `undefined` at every call site.
+     */
+    withProducts?: boolean;
   }
 ): Promise<StorefrontQueryResult<CatalogRoute<CatalogCategory>>> {
   const path = toRoutePath(CATEGORY_PREFIX, segments);
@@ -836,7 +846,7 @@ export async function getCategoryByPath(
       path,
       first: options?.first ?? CATEGORY_PAGE_SIZE,
       after: options?.after ?? null,
-      sortBy: options?.sortBy ?? null,
+      withProducts: options?.withProducts ?? true,
     },
   });
 

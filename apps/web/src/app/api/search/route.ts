@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 
 import { getCategoryTree } from "@/lib/bigcommerce/catalog";
-import { flattenCategories, searchCatalog, toSearchCategory } from "./query";
+import {
+  flattenCategories,
+  searchCatalog,
+  toSearchCategory,
+} from "@/lib/bigcommerce/search";
 
+/**
+ * Typeahead is the shared listing read with a small page size — BigCommerce
+ * publishes no predictive-search endpoint, and this needs none. The grouping
+ * into products, collections and related terms happens below, on the results.
+ */
 const LIMIT = 10;
 const RELATED_LIMIT = 8;
 
@@ -17,7 +26,9 @@ export async function GET(request: Request) {
   }
 
   const [searchResult, treeResult] = await Promise.all([
-    searchCatalog(query, LIMIT),
+    // Typeahead renders products and related terms only, so it leaves the
+    // facet list and the plan flag out of the request it pays for per keystroke.
+    searchCatalog({ searchTerm: query, first: LIMIT, facets: false }),
     getCategoryTree(),
   ]);
 

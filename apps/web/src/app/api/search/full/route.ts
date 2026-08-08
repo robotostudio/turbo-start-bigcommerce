@@ -4,15 +4,17 @@ import {
   parseFilterParams,
   toSearchFilters,
 } from "@/components/collection/filter-utils";
-import { searchCatalog } from "../query";
+import { toListingSort } from "@/components/collection/sort-utils";
+import { searchCatalog } from "@/lib/bigcommerce/search";
 
 const LIMIT = 24;
 
 /**
  * No query means no result set, so there is nothing to derive facets from —
- * `searchProducts` needs a search to filter. `facets: []` with
- * `filteringEnabled: false` puts the panel in its "unavailable" state, which is
- * the same thing it shows before a shopper has typed anything.
+ * `searchProducts` needs at least one filter and rejects a payload with none.
+ * `facets: []` with `filteringEnabled: false` puts the panel in its
+ * "unavailable" state, which is the same thing it shows before a shopper has
+ * typed anything.
  */
 const EMPTY = {
   products: [],
@@ -34,7 +36,14 @@ export async function GET(request: NextRequest) {
   // does not recognise, or cannot parse, is dropped here rather than sent on.
   const selection = toSearchFilters(parseFilterParams(sp));
 
-  const result = await searchCatalog(query, LIMIT, selection);
+  const result = await searchCatalog({
+    searchTerm: query,
+    first: LIMIT,
+    // An unrecognised member is dropped, not passed through: the same
+    // validation the category route does, for the same reason.
+    sort: toListingSort(sp.get("sort")),
+    filters: selection,
+  });
 
   if (!result.ok) {
     return NextResponse.json(EMPTY, { status: 500 });
