@@ -397,8 +397,20 @@ const editorialTwoUpBlock = /* groq */ `
       swatchColor,
       "collectionTitle": collection->store.title,
       "collectionImage": collection->store.imageUrl,
+      // Same visibility rule as the explorer, for the same reason:
+      // /collections/[...slug] resolves against live BigCommerce, which omits a
+      // hidden category from its tree, so a card linking one is a link to a 404.
+      //
+      // The clause replaces defined(collection) rather than joining it. A weak
+      // reference whose target is gone reads store.isVisible as null, null ==
+      // true is false, and the select falls through to null — which is what
+      // defined(collection) was there to produce, and what the block already
+      // renders as an unlinked card. The card keeps the title and image the
+      // last sync wrote: a stale name is a smaller lie than a link that 404s,
+      // and dropping the item would leave one column in a layout the schema
+      // validates as exactly two.
       "collectionHref": select(
-        defined(collection) => "/collections/" + collection->store.slug.current,
+        collection->store.isDeleted != true && collection->store.isVisible == true => "/collections/" + collection->store.slug.current,
         null
       ),
     })
@@ -636,21 +648,36 @@ export const queryNavbarData = defineQuery(`
       _type == "collectionGroup" => {
         "type": "collectionGroup",
         title,
-        "collectionLinks": collectionLinks[]->{
+        // Both fields are weak references to a synced category and both render
+        // as /collections/{slug}, so both carry the explorer's clauses — the
+        // dropdown is one more surface that can link a category BigCommerce
+        // will not serve.
+        //
+        // array::compact for the dangling half: CollectionGroupDropdown maps
+        // collectionLinks and reads .slug off each entry, so a null from a
+        // reference whose target the sync has not written yet is a TypeError,
+        // not a missing row. featuredProductsBlock and the explorer compact the
+        // identical shape.
+        "collectionLinks": array::compact(collectionLinks[@->store.isDeleted != true && @->store.isVisible == true]->{
           _id,
           "slug": store.slug.current,
           store{
             title,
             imageUrl
           }
-        },
-        "collectionProducts": collectionProducts->{
-          _id,
-          "slug": store.slug.current,
-          store{
-            title
+        }),
+        // A single reference cannot take a filter, so the same two clauses go
+        // in a select. No default: the dropdown already treats a missing
+        // collectionProducts as "no View all link" rather than a dense field.
+        "collectionProducts": select(
+          collectionProducts->store.isDeleted != true && collectionProducts->store.isVisible == true => collectionProducts->{
+            _id,
+            "slug": store.slug.current,
+            store{
+              title
+            }
           }
-        }
+        )
       }
     },
     ${buttonsFragment},
