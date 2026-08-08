@@ -374,8 +374,7 @@ const exploreCategoriesBlock = /* groq */ `
       // is the point: /collections/[...slug] resolves against live BigCommerce,
       // which omits a hidden category from its tree, so a card this block links
       // on a null flag is a card pointing at a 404 — the shape featured-cards.ts
-      // rules out for products. queryAllCollections filters identically for the
-      // same reason.
+      // rules out for products.
       //
       // array::compact for the other half of the same problem: these references
       // are weak, so the target may not exist at all rather than merely being
@@ -806,23 +805,5 @@ export const queryCollectionsIndexPageData = defineQuery(`
     },
     ${buttonsFragment},
     "slug": slug.current
-  }
-`);
-
-/**
- * The markdown mirror of the collections index — its only consumer is
- * `/api/markdown`, since the HTML index at `app/collections/page.tsx` reads the
- * live category tree instead. It still emits links, so it carries the same
- * visibility rule as `exploreCategoriesBlock`: a category BigCommerce has
- * hidden is a link to a path `/collections/[...slug]` will not resolve.
- */
-export const queryAllCollections = defineQuery(`
-  *[_type == "bigcommerceCategory" && defined(store.slug.current) && store.isDeleted != true && store.isVisible == true]{
-    _id,
-    _createdAt,
-    "title": store.title,
-    "slug": store.slug.current,
-    "imageUrl": store.imageUrl,
-    "description": store.descriptionHtml
   }
 `);
