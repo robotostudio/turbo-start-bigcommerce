@@ -33,7 +33,7 @@ seeded from two independent sources and still meet up.
 
 ### The contract the sync has to meet
 
-This file references 6 categories and 1 product. For the demo pages to render,
+This file references 6 categories and 4 products. For the demo pages to render,
 the sync must write, for each:
 
 | | |
