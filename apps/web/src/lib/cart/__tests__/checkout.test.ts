@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Hoisted, so all four run before `actions.ts` is evaluated. The action itself
-// is server-only and reaches `next/headers` through `lib/cart/server`; none of
-// that is what these assertions are about.
+// Hoisted, so all four run before the module is evaluated. It is server-only
+// and reaches `next/headers` through `lib/cart/server`; none of that is what
+// these assertions are about.
 vi.mock("server-only", () => ({}));
 vi.mock("@workspace/env/server", () => ({
   env: {
@@ -25,7 +25,7 @@ vi.mock("@/lib/bigcommerce/client", () => ({
   storefrontQuery: (...args: unknown[]) => storefrontQuery(...args),
 }));
 
-const { redirectToCheckout } = await import("@/app/cart/actions");
+const { redirectToCheckout } = await import("@/lib/cart/checkout");
 
 /** The mutation's shape, with the URL the fake BigCommerce hands back. */
 const minted = (url: string) => ({

@@ -154,6 +154,11 @@ export type CartActionResult =
   | { ok: true; cart: Cart | null; warnings: CartWarning[] }
   | { ok: false; error: { code: CartErrorCode; message: string } };
 
+/** What `/api/checkout` answers with, minted per click and never stored. */
+export type CheckoutRedirect =
+  | { ok: true; url: string }
+  | { ok: false; message: string };
+
 export type CartSnapshot = {
   cart: Cart | null;
   cartWithPending: Cart | null;

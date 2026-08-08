@@ -14,7 +14,7 @@ import { Loader2, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { redirectToCheckout } from "@/app/cart/actions";
+import { requestCheckoutUrl } from "@/lib/cart/checkout-request";
 import { useCart } from "./cart-context";
 import { CartEmptyState } from "./cart-empty-state";
 import { CartLineItem } from "./cart-line-item";
@@ -55,9 +55,10 @@ export function CartDrawer() {
       return;
     }
 
-    // The redirect URL is single-use, so it is minted per click by the server
-    // action — never read off the cart.
-    const redirect = await redirectToCheckout();
+    // Single-use URL, minted per click and never read off the cart. Goes
+    // through a route handler rather than a server action so a wedged action
+    // elsewhere cannot stop checkout being sent at all.
+    const redirect = await requestCheckoutUrl();
     if (!redirect.ok) {
       toast.error(redirect.message);
       setIsCheckingOut(false);
