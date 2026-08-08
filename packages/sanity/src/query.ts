@@ -307,16 +307,54 @@ const subscribeNewsletterBlock = /* groq */ `
   }
 ` as const;
 
+/**
+ * Both branches of the explore-categories fallback project this, byte for byte.
+ * They have to: the two arrive at the same `Collection` type in
+ * `sections/explore-categories.tsx` and feed the same `CollectionCard`, and a
+ * key that exists on one branch only widens the generated type into a union
+ * that nothing downstream expects.
+ */
+const categoryCardFields = /* groq */ `
+  _id,
+  "title": store.title,
+  "slug": store.slug.current,
+  "imageUrl": store.imageUrl,
+` as const;
+
 const exploreCategoriesBlock = /* groq */ `
   _type == "exploreCategories" => {
     ...,
     ${buttonsFragment},
-    "collections": *[_type == "bigcommerceCategory" && defined(store.slug.current) && store.isDeleted != true][0...4]{
-      _id,
-      "title": store.title,
-      "slug": store.slug.current,
-      "imageUrl": store.imageUrl,
-    }
+    // Picked, else automatic — the shape Featured Products already uses and the
+    // README already documents. The guard is count() > 0 rather than
+    // defined(collections), because an editor who adds picks and then removes
+    // them leaves an empty array behind, and defined([]) is true. On an absent
+    // field count(null) > 0 evaluates to null, which select() treats as no match
+    // and falls through — verified against the live dataset, not assumed.
+    "collections": select(
+      // A picked category the sync has since tombstoned drops out, and if every
+      // pick is dead the block renders nothing rather than reverting to the
+      // automatic row. Same call as the hotspot spot-drop and featured-cards.ts:
+      // showing an editor four categories they did not choose, because the ones
+      // they did choose quietly died, is worse than showing none.
+      count(collections) > 0 => collections[@->store.isDeleted != true]->{${categoryCardFields}},
+      // The parentEntityId clause is what makes "top-level" true rather than
+      // accidental. Every synced category is flat today (ROB-2566), so it
+      // filters nothing yet; the moment parentage lands in the sync, without it
+      // this block starts returning subcategories.
+      //
+      // Ordered by title because BigCommerce's own sortOrder reaches the seed
+      // fixture but is never mapped into the synced document — see
+      // toCategoryDocument in packages/sanity-sync/src/upsert.ts. Using it would
+      // need a schema change and a re-sync. Title order is at least a decision;
+      // the _id order it replaces was an accident of insertion.
+      *[
+        _type == "bigcommerceCategory"
+        && defined(store.slug.current)
+        && store.isDeleted != true
+        && !defined(store.parentEntityId)
+      ] | order(store.title asc) [0...4]{${categoryCardFields}}
+    )
   }
 ` as const;
 
