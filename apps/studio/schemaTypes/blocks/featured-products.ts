@@ -25,7 +25,7 @@ export const featuredProducts = defineType({
       of: [
         {
           type: "reference",
-          to: [{ type: "product" }],
+          to: [{ type: "bigcommerceProduct" }],
           options: { disableNew: true },
           weak: true,
         },

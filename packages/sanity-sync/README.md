@@ -1,17 +1,22 @@
 # @workspace/sanity-sync
 
-The BigCommerce to Sanity catalog sync. Built, tested, and invoked by nothing.
+The BigCommerce to Sanity catalog sync. A CLI today, a webhook route later, and the same code either way.
 
-Nothing in `apps/web` or `apps/studio` imports this package, and the schema types it exports are not
-registered in the Studio. That's the intended state for v1. Turning the sync on later should be wiring,
-not building.
+Nothing in `apps/web` imports this package. Run it from a terminal; the four functions the future route
+needs are in `src/sync.ts` and already do the whole job, so wiring the route up is a transport and some
+env, not a rewrite.
 
 ```
-src/client.ts     Sanity write client + BigCommerce credentials, from this package's own .env
-src/upsert.ts     Deterministic ids, REST -> document transforms, the two mutation builders
-src/reconcile.ts  The sweep. Pages the Admin REST catalog and upserts. Dry run by default
-src/schema.ts     The three document types, exported and unregistered
+src/client.ts     Sanity write client, BigCommerce credentials and one catalog GET, from this package's own .env
+src/upsert.ts     Deterministic ids, REST -> document transforms, the mutation builders
+src/sync.ts       The four per-entity functions. Transport-agnostic: a CLI calls them today, a route will later
+src/reconcile.ts  The sweep, and the CLI over both it and src/sync.ts. Dry run by default
+src/schema.ts     The three document types
 ```
+
+> **Run this after `pnpm seed:sanity`, never before.** The seed replaces the whole dataset. Anything the
+> sync writes beforehand is gone the moment someone reseeds, and it goes quietly. No error, just an
+> empty Products list and a sync that cheerfully reports success.
 
 ## The two rules
 
@@ -30,6 +35,10 @@ fork base needed `cleanup-stale-sanity.ts` as a separate manual sweep.
 
 `src/upsert.test.ts` asserts both: that `createOrReplace` never appears in an emitted mutation, that no
 `set` key falls outside `store`, and that a delete is a patch rather than a removal.
+
+Verified against the live sandbox, not just in tests: writing a hand-typed `body` and `seo` onto
+`bigcommerceProduct-183`, then running `--product 183 --write` twice and a full delete/restore cycle,
+left both fields untouched and the synced `store` subtree byte-identical each time.
 
 ## Deterministic ids
 
@@ -53,15 +62,58 @@ does not fall back to `apps/web/.env.local`, which is what `cleanup-stale-sanity
 whenever the web app's env moved.
 
 ```bash
-pnpm --filter @workspace/sanity-sync reconcile                  # dry run
-pnpm --filter @workspace/sanity-sync reconcile -- --since 2026-08-01T00:00:00Z
-pnpm --filter @workspace/sanity-sync reconcile -- --write       # actually writes
+S="pnpm --filter @workspace/sanity-sync reconcile"
+
+# The full sweep
+$S                                          # dry run
+$S -- --since 2026-08-01T00:00:00Z          # incremental, no soft-delete pass
+$S -- --write                               # actually writes
+
+# One entity, which is exactly what a webhook delivery does
+$S -- --product 183                         # dry run
+$S -- --product 183 --write
+$S -- --product 183 --delete --write        # soft-delete, product and its variants
+$S -- --category 36 --write
 ```
 
-Dry run is the default. A package that ships dark shouldn't write unless you say so.
+Dry run is the default everywhere. A package that ships dark shouldn't write unless you say so, and a
+dry run prints the exact mutations a real run would send rather than a summary of them.
+
+The single-entity flags exist so a developer can reproduce a webhook delivery from a terminal before the
+receiver exists. `--product 183 --write` and a `store/product/updated` for 183 run the same code.
 
 **Order matters: run this after `pnpm seed:sanity`, never before.** The Sanity seed replaces the whole
-dataset, so anything the sweep writes beforehand is gone the moment someone reseeds.
+dataset, so anything the sync writes beforehand is gone the moment someone reseeds.
+
+## The four functions the webhook route will call
+
+`src/sync.ts` is the whole sync core, and it knows nothing about how it was invoked: no `Request`, no
+`Response`, no `process.argv`. The CLI is a shell over it; the route in `docs/sync-design.md` will be a
+different shell over the same four functions.
+
+```ts
+syncProduct(entityId, { write: true }); // store/product/created, store/product/updated
+deleteProduct(entityId, { write: true }); // store/product/deleted
+syncCategory(entityId, { write: true }); // store/category/created, store/category/updated
+deleteCategory(entityId, { write: true }); // store/category/deleted
+```
+
+Each re-fetches the entity by id and writes current state, never a delta. That is what makes them
+idempotent, and idempotence is not optional here: BigCommerce payloads are id-only, arrive out of order,
+and duplicate. Re-running converges instead of corrupting, which is also why there is no deduplication
+cache to operate.
+
+Each returns a `SyncResult` of `{ entity, entityId, action, documentIds, mutations, written }`, so a CLI
+and a route report the same thing. `action` is `upserted`, `softDeleted`, or `absent` when there was
+nothing in BigCommerce and nothing in Sanity to flag.
+
+Two behaviours worth knowing before you call them:
+
+A 404 from BigCommerce converges on deleted rather than throwing. The flag is not sticky, because the
+upsert writes `store` whole with `isDeleted: false`, so a transient 404 heals on the next run.
+
+`syncProduct` also soft-deletes variants that Sanity holds and the product no longer lists. Since there
+are no variant webhooks at all, a product event is the only signal a variant ever went away.
 
 ## What the sweep does
 
@@ -80,7 +132,7 @@ with no error. The sweep requests the right size up front and drives its loop of
 server reports, so a silent re-cap costs extra round trips and never truncates.
 
 `/v3/catalog/categories` has no date filter. It answers 422, "The filter(s): date_modified:min are not
-valid filter parameter(s)". Categories are always swept whole. Cheap enough: 11 rows in one page.
+valid filter parameter(s)". Categories are always swept whole. Cheap enough: 10 rows in one page.
 
 `--since` skips the soft-delete pass. An incremental sweep only sees what changed, so every unmodified
 entity would look deleted. Only a full sweep compares the catalog against `store.isDeleted != true` in
@@ -94,4 +146,6 @@ Sanity and flags the difference.
 2. Run the sweep with `--write` once and look at the Studio.
 3. Schedule it.
 4. Optionally add the webhook receiver, per `docs/sync-design.md`. It's a latency optimisation over a
-   sweep that already works, and it is not built.
+   sweep that already works, and it is not built. It is also not much work. The four functions it needs
+   are done; what's left is a `POST` handler, six `POST /v3/hooks` calls, and four env names that
+   `apps/web` does not have yet. All four are listed in that doc.

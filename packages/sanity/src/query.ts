@@ -215,7 +215,7 @@ const exploreCategoriesBlock = /* groq */ `
   _type == "exploreCategories" => {
     ...,
     ${buttonsFragment},
-    "collections": *[_type == "collection" && defined(store.slug.current)][0...4]{
+    "collections": *[_type == "bigcommerceCategory" && defined(store.slug.current) && store.isDeleted != true][0...4]{
       _id,
       "title": store.title,
       "slug": store.slug.current,
@@ -421,7 +421,7 @@ export const queryGenericPageOGData = defineQuery(`
 `);
 
 export const queryProductOGData = defineQuery(`
-  *[_type == "product" && _id == $id][0]{
+  *[_type == "bigcommerceProduct" && _id == $id][0]{
     _id,
     _type,
     "title": select(
@@ -436,9 +436,20 @@ export const queryProductOGData = defineQuery(`
       defined(seo.image.asset) => seo.image.asset->url + "?w=1200&h=630&dpr=2&fit=crop",
       defined(store.previewImageUrl) => store.previewImageUrl
     ),
-    "price": store.priceRange.minVariantPrice,
-    "colors": store.options[]{ name, values },
-    "variants": store.variants[]->store{ price, compareAtPrice },
+    "price": coalesce(store.salePrice, store.price),
+    // Variants are their own synced documents joined on the product's entityId,
+    // not an array of references — BigCommerce webhook payloads are unordered,
+    // so the sync stores the join key rather than a reference array. The
+    // was/now pair keeps the OG card's discount maths unchanged: a synced
+    // variant marked down carries the pre-markdown figure in \`price\`.
+    "variants": *[
+      _type == "bigcommerceProductVariant"
+      && store.productEntityId == ^.store.entityId
+      && store.isDeleted != true
+    ]{
+      "price": coalesce(store.salePrice, store.price),
+      "compareAtPrice": store.price
+    },
     "dominantColor": seo.image.asset->metadata.palette.dominant.background,
     "seoImage": seo.image.asset->url + "?w=1200&h=630&dpr=2&fit=max",
     "logo": *[_type == "settings"][0].logo.asset->url + "?w=80&h=40&dpr=3&fit=max&q=100",
@@ -448,7 +459,7 @@ export const queryProductOGData = defineQuery(`
 `);
 
 export const queryCollectionOGData = defineQuery(`
-  *[_type == "collection" && _id == $id][0]{
+  *[_type == "bigcommerceCategory" && _id == $id][0]{
     _id,
     _type,
     "title": select(
@@ -461,13 +472,9 @@ export const queryCollectionOGData = defineQuery(`
     ),
     "image": select(
       defined(seo.image.asset) => seo.image.asset->url + "?w=1200&h=630&dpr=2&fit=crop",
-      defined(hero.image.asset) => hero.image.asset->url + "?w=1200&h=630&dpr=2&fit=crop",
       defined(store.imageUrl) => store.imageUrl
     ),
-    "dominantColor": coalesce(
-      seo.image.asset->metadata.palette.dominant.background,
-      hero.image.asset->metadata.palette.dominant.background
-    ),
+    "dominantColor": seo.image.asset->metadata.palette.dominant.background,
     "seoImage": seo.image.asset->url + "?w=1200&h=630&dpr=2&fit=max",
     "logo": *[_type == "settings"][0].logo.asset->url + "?w=80&h=40&dpr=3&fit=max&q=100",
     "siteTitle": *[_type == "settings"][0].siteTitle,
@@ -623,9 +630,15 @@ const productWithVariantFragment = /* groq */ `
       "slug": store.slug.current,
       store{
         title,
-        priceRange,
         previewImageUrl,
-        gid
+        // A synced product carries one price, not a min/max range. The hotspot
+        // card still reads a range, so it is built here rather than reshaping
+        // the card: a marked-down product keeps the pre-markdown figure in
+        // \`price\`, which makes it the top of the range.
+        "priceRange": {
+          "minVariantPrice": coalesce(salePrice, price),
+          "maxVariantPrice": price
+        }
       }
     },
     variant->{
@@ -633,8 +646,7 @@ const productWithVariantFragment = /* groq */ `
       store{
         title,
         price,
-        previewImageUrl,
-        gid
+        imageUrl
       }
     }
   }
@@ -689,79 +701,44 @@ const productBodyFragment = /* groq */ `
   }
 ` as const;
 
+/**
+ * A synced product's editorial body.
+ *
+ * `store.isDeleted != true` replaces the fork's `store.status == "active"`:
+ * the sync flags a vanished entity rather than removing it, and there is no
+ * `status` field to compare against.
+ */
 export const queryProductByHandle = defineQuery(`
-  *[_type == "product" && store.slug.current == $handle && store.status == "active"][0]{
+  *[_type == "bigcommerceProduct" && store.slug.current == $handle && store.isDeleted != true][0]{
     _id,
     _type,
     "slug": store.slug.current,
     "title": store.title,
-    colorTheme->{
-      _id,
-      title,
-      background,
-      text
-    },
-    ${productBodyFragment},
-    seo
+    ${productBodyFragment}
   }
 `);
 
+/**
+ * Sitemap fodder, so it filters on visibility as well as deletion. The fork's
+ * `store.status == "active"` collapsed both ideas into one field; the sync
+ * keeps them apart, and a merchant who unpublishes a product without deleting
+ * it should drop out of the sitemap on the next crawl.
+ */
 export const queryProductPaths = defineQuery(`
-  *[_type == "product" && defined(store.slug.current) && store.status == "active"].store.slug.current
+  *[_type == "bigcommerceProduct" && defined(store.slug.current) && store.isDeleted != true && store.isVisible == true].store.slug.current
 `);
 
-// ── Collection fragments ──
+// ── Category queries ──
+//
+// `queryCollectionByHandle` and its `modules` fragment are gone: they read the
+// Shopify-era collection document's editorial `hero` and `modules` arrays, and
+// the category page has rendered from live BigCommerce since the flip. The
+// synced category document holds no such fields, and its only consumer was a
+// component with no importers.
 
-const collectionModulesFragment = /* groq */ `
-  modules[]{
-    ...,
-    _type,
-    _key,
-    _type == "callout" => { text },
-    _type == "callToAction" => {
-      ...,
-      ${richTextFragment},
-      ${buttonsFragment}
-    },
-    _type == "image" => {
-      ${imageFields}
-    },
-    _type == "imageWithProductHotspots" => {
-      image{${imageFields}},
-      showHotspots,
-      ${productHotspotsFragment}
-    },
-    _type == "instagram" => {
-      url
-    }
-  }
-` as const;
-
-export const queryCollectionByHandle = defineQuery(`
-  *[_type == "collection" && store.slug.current == $handle][0]{
-    _id,
-    _type,
-    "title": store.title,
-    showHero,
-    hero{
-      ...,
-      ${imageFragment},
-      ${buttonsFragment},
-      ${richTextFragment}
-    },
-    ${collectionModulesFragment},
-    colorTheme->{
-      _id,
-      title,
-      background,
-      text
-    },
-    seo
-  }
-`);
-
+/** Same visibility rule as `queryProductPaths` — both feed the sitemap. */
 export const queryCollectionPaths = defineQuery(`
-  *[_type == "collection" && defined(store.slug.current)].store.slug.current
+  *[_type == "bigcommerceCategory" && defined(store.slug.current) && store.isDeleted != true && store.isVisible == true].store.slug.current
 `);
 
 export const queryCollectionsIndexPageData = defineQuery(`
@@ -781,13 +758,12 @@ export const queryCollectionsIndexPageData = defineQuery(`
 `);
 
 export const queryAllCollections = defineQuery(`
-  *[_type == "collection" && defined(store.slug.current)]{
+  *[_type == "bigcommerceCategory" && defined(store.slug.current) && store.isDeleted != true]{
     _id,
     _createdAt,
     "title": store.title,
     "slug": store.slug.current,
     "imageUrl": store.imageUrl,
-    "description": store.descriptionHtml,
-    seo
+    "description": store.descriptionHtml
   }
 `);

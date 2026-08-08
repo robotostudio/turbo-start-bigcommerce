@@ -18,7 +18,7 @@ const editorialItem = defineArrayMember({
       name: "collection",
       title: "Collection",
       type: "reference",
-      to: [{ type: "collection" }],
+      to: [{ type: "bigcommerceCategory" }],
       options: { disableNew: true },
       description:
         "The collection this column links to — its image and name are used automatically",

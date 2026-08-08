@@ -1,0 +1,1743 @@
+{
+  "categories": [
+    {
+      "slug": "accessories",
+      "name": "Accessories",
+      "description": "<p>Hats and accessories.</p>",
+      "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/v/69174__69174.png",
+      "sortOrder": 0
+    },
+    {
+      "slug": "all-products",
+      "name": "All Products",
+      "description": "<p>Browse the complete collection.</p>",
+      "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/w/71874__71874.png",
+      "sortOrder": 1
+    },
+    {
+      "slug": "bottoms",
+      "name": "Bottoms",
+      "description": "<p>Trousers and shorts.</p>",
+      "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/b/63025__63025.png",
+      "sortOrder": 2
+    },
+    {
+      "slug": "dresses",
+      "name": "Dresses",
+      "description": "<p>Dresses.</p>",
+      "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/l/16291__16291.png",
+      "sortOrder": 3
+    },
+    {
+      "slug": "jackets",
+      "name": "Jackets",
+      "description": "<p>Outerwear and jackets.</p>",
+      "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/n/47466__47466.png",
+      "sortOrder": 4
+    },
+    {
+      "slug": "knitwear",
+      "name": "Knitwear",
+      "description": "<p>Sweaters and knits.</p>",
+      "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/f/42913__42913.png",
+      "sortOrder": 5
+    },
+    {
+      "slug": "new-arrivals",
+      "name": "New Arrivals",
+      "description": "<p>The latest additions, Spring Summer 2026.</p>",
+      "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/w/85431__85431.png",
+      "sortOrder": 6
+    },
+    {
+      "slug": "sale",
+      "name": "Sale",
+      "description": "<p>Reduced-price styles.</p>",
+      "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/r/28335__28335.png",
+      "sortOrder": 7
+    },
+    {
+      "slug": "shirts",
+      "name": "Shirts",
+      "description": "<p>Shirts and overshirts.</p>",
+      "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/i/14045__14045.png",
+      "sortOrder": 8
+    },
+    {
+      "slug": "tops",
+      "name": "Tops",
+      "description": "<p>Tees, henleys and tops.</p>",
+      "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/a/43366__43366.png",
+      "sortOrder": 9
+    }
+  ],
+  "products": [
+    {
+      "slug": "ashcroft-linen-cotton-shirt",
+      "name": "Ashcroft Linen-Cotton Shirt",
+      "description": "<p>A button-down shirt in a linen-cotton blend that breathes like linen but creases far less. The rose shade is piece-dyed, so it reads soft rather than flat, and settles a half-tone lighter after the first few washes. A rolled button-down collar holds its shape unironed, and the single chest pocket is sized for a phone. Cut straight through the body to wear tucked or loose.</p>",
+      "price": 89,
+      "weight": 310,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "shirts"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/u/301/ashcroft-linen-cotton-shirt-faded-rose-01__27576.png",
+          "alt": "Ashcroft Linen-Cotton Shirt in Faded Rose",
+          "key": "ashcroft-linen-cotton-shirt-faded-rose-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/q/263/ashcroft-linen-cotton-shirt-faded-rose-02__07067.png",
+          "alt": "Ashcroft Linen-Cotton Shirt in Faded Rose",
+          "key": "ashcroft-linen-cotton-shirt-faded-rose-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/b/344/ashcroft-linen-cotton-shirt-faded-rose-03__11810.png",
+          "alt": "Ashcroft Linen-Cotton Shirt in Faded Rose",
+          "key": "ashcroft-linen-cotton-shirt-faded-rose-03"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/t/436/ashcroft-linen-cotton-shirt-faded-rose-04__80679.png",
+          "alt": "Ashcroft Linen-Cotton Shirt in Faded Rose",
+          "key": "ashcroft-linen-cotton-shirt-faded-rose-04"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/g/380/ashcroft-linen-cotton-shirt-faded-rose-05__37775.png",
+          "alt": "Ashcroft Linen-Cotton Shirt in Faded Rose",
+          "key": "ashcroft-linen-cotton-shirt-faded-rose-05"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "XS"
+            },
+            {
+              "label": "S"
+            },
+            {
+              "label": "M"
+            },
+            {
+              "label": "L"
+            },
+            {
+              "label": "XL"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Faded Rose",
+              "hex": "#c89aa0"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P3-FAD-XS",
+          "optionLabels": [
+            "XS",
+            "Faded Rose"
+          ],
+          "price": 89,
+          "inventory": 30,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/18_source_1786120725.png"
+        },
+        {
+          "sku": "TS-P3-FAD-S",
+          "optionLabels": [
+            "S",
+            "Faded Rose"
+          ],
+          "price": 89,
+          "inventory": 19,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/24_source_1786120727.png"
+        },
+        {
+          "sku": "TS-P3-FAD-M",
+          "optionLabels": [
+            "M",
+            "Faded Rose"
+          ],
+          "price": 89,
+          "inventory": 28,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/27_source_1786120728.png"
+        },
+        {
+          "sku": "TS-P3-FAD-L",
+          "optionLabels": [
+            "L",
+            "Faded Rose"
+          ],
+          "price": 89,
+          "inventory": 38,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/31_source_1786120729.png"
+        },
+        {
+          "sku": "TS-P3-FAD-XL",
+          "optionLabels": [
+            "XL",
+            "Faded Rose"
+          ],
+          "price": 89,
+          "inventory": 36,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/36_source_1786120731.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Shirt"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "button-down, linen, new, shirt, spring"
+        }
+      ]
+    },
+    {
+      "slug": "aster-denim-coach-jacket",
+      "name": "Aster Denim Coach Jacket",
+      "description": "<p>Built around an oversized silhouette that softens with wear, the Aster is our take on the classic coach jacket. The body is cut from a 12oz rigid denim woven in Okayama, Japan, with a deep indigo rinse that fades gradually and personally over time. Antique-silver tack buttons run the front placket, and side-seam pockets sit deep enough to actually use. Unlined and breathable, it works open over a shirt in spring or layered under a coat when the weather turns.</p>",
+      "price": 133,
+      "weight": 980,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "jackets"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/e/100/aster-denim-coach-jacket-indigo-rinse-01__76653.png",
+          "alt": "Aster Denim Coach Jacket in Indigo Rinse",
+          "key": "aster-denim-coach-jacket-indigo-rinse-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/t/874/aster-denim-coach-jacket-indigo-rinse-02__88229.png",
+          "alt": "Aster Denim Coach Jacket in Indigo Rinse",
+          "key": "aster-denim-coach-jacket-indigo-rinse-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/y/693/aster-denim-coach-jacket-indigo-rinse-03__37023.png",
+          "alt": "Aster Denim Coach Jacket in Indigo Rinse",
+          "key": "aster-denim-coach-jacket-indigo-rinse-03"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/x/087/aster-denim-coach-jacket-indigo-rinse-04__78982.png",
+          "alt": "Aster Denim Coach Jacket in Indigo Rinse",
+          "key": "aster-denim-coach-jacket-indigo-rinse-04"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/m/175/aster-denim-coach-jacket-warm-stone-01__65457.png",
+          "alt": "Aster Denim Coach Jacket in Warm Stone",
+          "key": "aster-denim-coach-jacket-warm-stone-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/k/164/aster-denim-coach-jacket-warm-stone-02__26037.png",
+          "alt": "Aster Denim Coach Jacket in Warm Stone",
+          "key": "aster-denim-coach-jacket-warm-stone-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/d/639/aster-denim-coach-jacket-warm-stone-03__06997.png",
+          "alt": "Aster Denim Coach Jacket in Warm Stone",
+          "key": "aster-denim-coach-jacket-warm-stone-03"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "XS"
+            },
+            {
+              "label": "S"
+            },
+            {
+              "label": "M"
+            },
+            {
+              "label": "L"
+            },
+            {
+              "label": "XL"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Indigo Rinse",
+              "hex": "#2c3e5d"
+            },
+            {
+              "label": "Warm Stone",
+              "hex": "#8ca6c4"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P1-IND-XS",
+          "optionLabels": [
+            "XS",
+            "Indigo Rinse"
+          ],
+          "price": 133,
+          "inventory": 10,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/21_source_1786120725.png"
+        },
+        {
+          "sku": "TS-P1-IND-S",
+          "optionLabels": [
+            "S",
+            "Indigo Rinse"
+          ],
+          "price": 133,
+          "inventory": 28,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/22_source_1786120727.png"
+        },
+        {
+          "sku": "TS-P1-IND-M",
+          "optionLabels": [
+            "M",
+            "Indigo Rinse"
+          ],
+          "price": 133,
+          "inventory": 14,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/26_source_1786120728.png"
+        },
+        {
+          "sku": "TS-P1-IND-L",
+          "optionLabels": [
+            "L",
+            "Indigo Rinse"
+          ],
+          "price": 133,
+          "inventory": 29,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/30_source_1786120729.png"
+        },
+        {
+          "sku": "TS-P1-IND-XL",
+          "optionLabels": [
+            "XL",
+            "Indigo Rinse"
+          ],
+          "price": 133,
+          "inventory": 49,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/34_source_1786120731.png"
+        },
+        {
+          "sku": "TS-P1-WAR-XS",
+          "optionLabels": [
+            "XS",
+            "Warm Stone"
+          ],
+          "price": 133,
+          "inventory": 9,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/37_source_1786120732.png"
+        },
+        {
+          "sku": "TS-P1-WAR-S",
+          "optionLabels": [
+            "S",
+            "Warm Stone"
+          ],
+          "price": 133,
+          "inventory": 42,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/39_source_1786120734.png"
+        },
+        {
+          "sku": "TS-P1-WAR-M",
+          "optionLabels": [
+            "M",
+            "Warm Stone"
+          ],
+          "price": 133,
+          "inventory": 29,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/40_source_1786120735.png"
+        },
+        {
+          "sku": "TS-P1-WAR-L",
+          "optionLabels": [
+            "L",
+            "Warm Stone"
+          ],
+          "price": 133,
+          "inventory": 50,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/41_source_1786120736.png"
+        },
+        {
+          "sku": "TS-P1-WAR-XL",
+          "optionLabels": [
+            "XL",
+            "Warm Stone"
+          ],
+          "price": 133,
+          "inventory": 22,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/42_source_1786120738.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Jacket"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "denim, jacket, japanese-denim, new, outerwear, unisex"
+        }
+      ]
+    },
+    {
+      "slug": "bramley-wool-crewneck",
+      "name": "Bramley Wool Crewneck",
+      "description": "<p>A crewneck knit from lambswool spun with a light halo, so the surface stays soft-focus rather than crisp. The oat shade is a melange of undyed and lightly dyed fibres, which keeps it warm instead of grey. Ribbing at the neck, cuffs and hem is knit slightly tighter than the body to hold shape. Roomy through the chest with a gently dropped shoulder.</p>",
+      "price": 145,
+      "salePrice": 123.25,
+      "weight": 540,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "sale",
+        "knitwear"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/t/110/bramley-wool-crewneck-oat-melange-01__26597.png",
+          "alt": "Bramley Wool Crewneck in Oat Melange",
+          "key": "bramley-wool-crewneck-oat-melange-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/a/834/bramley-wool-crewneck-oat-melange-02__93828.png",
+          "alt": "Bramley Wool Crewneck in Oat Melange",
+          "key": "bramley-wool-crewneck-oat-melange-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/k/918/bramley-wool-crewneck-oat-melange-03__13230.png",
+          "alt": "Bramley Wool Crewneck in Oat Melange",
+          "key": "bramley-wool-crewneck-oat-melange-03"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/i/243/bramley-wool-crewneck-oat-melange-04__84004.png",
+          "alt": "Bramley Wool Crewneck in Oat Melange",
+          "key": "bramley-wool-crewneck-oat-melange-04"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/p/587/bramley-wool-crewneck-oat-melange-05__63688.png",
+          "alt": "Bramley Wool Crewneck in Oat Melange",
+          "key": "bramley-wool-crewneck-oat-melange-05"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "XS"
+            },
+            {
+              "label": "S"
+            },
+            {
+              "label": "M"
+            },
+            {
+              "label": "L"
+            },
+            {
+              "label": "XL"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Oat Melange",
+              "hex": "#d8c9b4"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P7-OAT-XS",
+          "optionLabels": [
+            "XS",
+            "Oat Melange"
+          ],
+          "price": 145,
+          "salePrice": 123.25,
+          "inventory": 34,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/19_source_1786120725.png"
+        },
+        {
+          "sku": "TS-P7-OAT-S",
+          "optionLabels": [
+            "S",
+            "Oat Melange"
+          ],
+          "price": 145,
+          "salePrice": 123.25,
+          "inventory": 19,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/25_source_1786120728.png"
+        },
+        {
+          "sku": "TS-P7-OAT-M",
+          "optionLabels": [
+            "M",
+            "Oat Melange"
+          ],
+          "price": 145,
+          "salePrice": 123.25,
+          "inventory": 10,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/29_source_1786120729.png"
+        },
+        {
+          "sku": "TS-P7-OAT-L",
+          "optionLabels": [
+            "L",
+            "Oat Melange"
+          ],
+          "price": 145,
+          "salePrice": 123.25,
+          "inventory": 48,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/33_source_1786120730.png"
+        },
+        {
+          "sku": "TS-P7-OAT-XL",
+          "optionLabels": [
+            "XL",
+            "Oat Melange"
+          ],
+          "price": 145,
+          "salePrice": 123.25,
+          "inventory": 37,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/38_source_1786120732.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Sweater"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "crewneck, knitwear, new, sweater, winter, wool"
+        }
+      ]
+    },
+    {
+      "slug": "corbin-pleated-short",
+      "name": "Corbin Pleated Short",
+      "description": "<p>A tailored short cut long enough to sit just above the knee. Twin pleats give room through the hip without adding bulk at the waist, and the leg is finished with a clean turned hem rather than a cuff. The cotton is a dry-handle twill that holds a press but relaxes over a day of wear. Undyed ecru, so it warms slightly with age.</p>",
+      "price": 86,
+      "weight": 340,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "bottoms"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/j/381/corbin-pleated-short-ecru-01__91358.png",
+          "alt": "Corbin Pleated Short in Ecru",
+          "key": "corbin-pleated-short-ecru-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/s/920/corbin-pleated-short-ecru-02__07963.png",
+          "alt": "Corbin Pleated Short in Ecru",
+          "key": "corbin-pleated-short-ecru-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/f/436/corbin-pleated-short-ecru-03__36530.png",
+          "alt": "Corbin Pleated Short in Ecru",
+          "key": "corbin-pleated-short-ecru-03"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/c/508/corbin-pleated-short-ecru-04__74923.png",
+          "alt": "Corbin Pleated Short in Ecru",
+          "key": "corbin-pleated-short-ecru-04"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/i/754/corbin-pleated-short-ecru-05__22210.png",
+          "alt": "Corbin Pleated Short in Ecru",
+          "key": "corbin-pleated-short-ecru-05"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "XS"
+            },
+            {
+              "label": "S"
+            },
+            {
+              "label": "M"
+            },
+            {
+              "label": "L"
+            },
+            {
+              "label": "XL"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Ecru",
+              "hex": "#e2d8c3"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P8-ECR-XS",
+          "optionLabels": [
+            "XS",
+            "Ecru"
+          ],
+          "price": 86,
+          "inventory": 38,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/20_source_1786120725.png"
+        },
+        {
+          "sku": "TS-P8-ECR-S",
+          "optionLabels": [
+            "S",
+            "Ecru"
+          ],
+          "price": 86,
+          "inventory": 34,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/23_source_1786120727.png"
+        },
+        {
+          "sku": "TS-P8-ECR-M",
+          "optionLabels": [
+            "M",
+            "Ecru"
+          ],
+          "price": 86,
+          "inventory": 22,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/28_source_1786120728.png"
+        },
+        {
+          "sku": "TS-P8-ECR-L",
+          "optionLabels": [
+            "L",
+            "Ecru"
+          ],
+          "price": 86,
+          "inventory": 5,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/32_source_1786120730.png"
+        },
+        {
+          "sku": "TS-P8-ECR-XL",
+          "optionLabels": [
+            "XL",
+            "Ecru"
+          ],
+          "price": 86,
+          "inventory": 11,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/35_source_1786120731.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Shorts"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "cotton, new, pleated, shorts, summer, tailored"
+        }
+      ]
+    },
+    {
+      "slug": "foundry-cotton-overshirt",
+      "name": "Foundry Cotton Overshirt",
+      "description": "<p>A workwear overshirt cut heavy enough to wear as a light jacket. The cloth is a dense cotton twill, garment-dyed in small lots so the olive shifts slightly from piece to piece and keeps shifting as it wears. Two flap chest pockets sit high and square, and the hem is straight so it sits cleanly over a tee. Roomy through the body with a dropped shoulder, it layers over knitwear without pulling.</p>",
+      "price": 118,
+      "weight": 620,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "shirts"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/d/688/foundry-cotton-overshirt-olive-drab-01__59010.png",
+          "alt": "Foundry Cotton Overshirt in Olive Drab",
+          "key": "foundry-cotton-overshirt-olive-drab-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/n/794/foundry-cotton-overshirt-olive-drab-02__26822.png",
+          "alt": "Foundry Cotton Overshirt in Olive Drab",
+          "key": "foundry-cotton-overshirt-olive-drab-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/a/613/foundry-cotton-overshirt-olive-drab-03__98088.png",
+          "alt": "Foundry Cotton Overshirt in Olive Drab",
+          "key": "foundry-cotton-overshirt-olive-drab-03"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/n/869/foundry-cotton-overshirt-olive-drab-04__13944.png",
+          "alt": "Foundry Cotton Overshirt in Olive Drab",
+          "key": "foundry-cotton-overshirt-olive-drab-04"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/v/154/foundry-cotton-overshirt-olive-drab-05__14526.png",
+          "alt": "Foundry Cotton Overshirt in Olive Drab",
+          "key": "foundry-cotton-overshirt-olive-drab-05"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "XS"
+            },
+            {
+              "label": "S"
+            },
+            {
+              "label": "M"
+            },
+            {
+              "label": "L"
+            },
+            {
+              "label": "XL"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Olive Drab",
+              "hex": "#6b6b47"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P2-OLI-XS",
+          "optionLabels": [
+            "XS",
+            "Olive Drab"
+          ],
+          "price": 118,
+          "inventory": 47,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/44_source_1786120747.png"
+        },
+        {
+          "sku": "TS-P2-OLI-S",
+          "optionLabels": [
+            "S",
+            "Olive Drab"
+          ],
+          "price": 118,
+          "inventory": 14,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/46_source_1786120749.png"
+        },
+        {
+          "sku": "TS-P2-OLI-M",
+          "optionLabels": [
+            "M",
+            "Olive Drab"
+          ],
+          "price": 118,
+          "inventory": 14,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/48_source_1786120751.png"
+        },
+        {
+          "sku": "TS-P2-OLI-L",
+          "optionLabels": [
+            "L",
+            "Olive Drab"
+          ],
+          "price": 118,
+          "inventory": 34,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/51_source_1786120752.png"
+        },
+        {
+          "sku": "TS-P2-OLI-XL",
+          "optionLabels": [
+            "XL",
+            "Olive Drab"
+          ],
+          "price": 118,
+          "inventory": 17,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/54_source_1786120753.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Overshirt"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "cotton, layering, new, overshirt, shirt, workwear"
+        }
+      ]
+    },
+    {
+      "slug": "halden-waffle-henley",
+      "name": "Halden Waffle Henley",
+      "description": "<p>A long-sleeve henley knit in a heavy cotton waffle that holds its texture through repeated washing. The three-button placket is cut short and finished with a flat rib so it lies clean under a jacket. Ribbed cuffs grip at the wrist without cutting in. It is substantial enough to wear alone in autumn and thin enough to layer under a coach jacket.</p>",
+      "price": 76,
+      "weight": 380,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "tops"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/a/045/halden-waffle-henley-chalk-white-01__66533.png",
+          "alt": "Halden Waffle Henley in Chalk White",
+          "key": "halden-waffle-henley-chalk-white-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/k/305/halden-waffle-henley-chalk-white-02__04654.png",
+          "alt": "Halden Waffle Henley in Chalk White",
+          "key": "halden-waffle-henley-chalk-white-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/v/080/halden-waffle-henley-chalk-white-03__41955.png",
+          "alt": "Halden Waffle Henley in Chalk White",
+          "key": "halden-waffle-henley-chalk-white-03"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/c/266/halden-waffle-henley-chalk-white-04__02196.png",
+          "alt": "Halden Waffle Henley in Chalk White",
+          "key": "halden-waffle-henley-chalk-white-04"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/o/238/halden-waffle-henley-chalk-white-05__83551.png",
+          "alt": "Halden Waffle Henley in Chalk White",
+          "key": "halden-waffle-henley-chalk-white-05"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/f/810/halden-waffle-henley-chalk-white-06__84039.png",
+          "alt": "Halden Waffle Henley in Chalk White",
+          "key": "halden-waffle-henley-chalk-white-06"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "XS"
+            },
+            {
+              "label": "S"
+            },
+            {
+              "label": "M"
+            },
+            {
+              "label": "L"
+            },
+            {
+              "label": "XL"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Chalk White",
+              "hex": "#f2f0ea"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P4-CHA-XS",
+          "optionLabels": [
+            "XS",
+            "Chalk White"
+          ],
+          "price": 76,
+          "inventory": 23,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/43_source_1786120747.png"
+        },
+        {
+          "sku": "TS-P4-CHA-S",
+          "optionLabels": [
+            "S",
+            "Chalk White"
+          ],
+          "price": 76,
+          "inventory": 43,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/47_source_1786120749.png"
+        },
+        {
+          "sku": "TS-P4-CHA-M",
+          "optionLabels": [
+            "M",
+            "Chalk White"
+          ],
+          "price": 76,
+          "inventory": 24,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/49_source_1786120751.png"
+        },
+        {
+          "sku": "TS-P4-CHA-L",
+          "optionLabels": [
+            "L",
+            "Chalk White"
+          ],
+          "price": 76,
+          "inventory": 48,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/52_source_1786120752.png"
+        },
+        {
+          "sku": "TS-P4-CHA-XL",
+          "optionLabels": [
+            "XL",
+            "Chalk White"
+          ],
+          "price": 76,
+          "inventory": 15,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/55_source_1786120753.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Henley"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "cotton, henley, layering, long-sleeve, new, top"
+        }
+      ]
+    },
+    {
+      "slug": "lucca-sleeveless-dress",
+      "name": "Lucca Sleeveless Dress",
+      "description": "<p>A sleeveless column dress that skims rather than clings. The cotton-linen cloth has enough body to hold the line of the skirt and enough give to move easily. A high round neck and a narrow armhole keep the shoulder covered, and the side seams are split at the hem so it walks properly. Fully opaque in ivory, with no lining needed.</p>",
+      "price": 158,
+      "salePrice": 110.6,
+      "weight": 460,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "sale",
+        "dresses"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/c/482/lucca-sleeveless-dress-ivory-01__58486.png",
+          "alt": "Lucca Sleeveless Dress in Ivory",
+          "key": "lucca-sleeveless-dress-ivory-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/p/362/lucca-sleeveless-dress-ivory-02__05466.png",
+          "alt": "Lucca Sleeveless Dress in Ivory",
+          "key": "lucca-sleeveless-dress-ivory-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/h/247/lucca-sleeveless-dress-ivory-03__90279.png",
+          "alt": "Lucca Sleeveless Dress in Ivory",
+          "key": "lucca-sleeveless-dress-ivory-03"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/o/478/lucca-sleeveless-dress-ivory-04__09536.png",
+          "alt": "Lucca Sleeveless Dress in Ivory",
+          "key": "lucca-sleeveless-dress-ivory-04"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/n/399/lucca-sleeveless-dress-ivory-05__84249.png",
+          "alt": "Lucca Sleeveless Dress in Ivory",
+          "key": "lucca-sleeveless-dress-ivory-05"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "XS"
+            },
+            {
+              "label": "S"
+            },
+            {
+              "label": "M"
+            },
+            {
+              "label": "L"
+            },
+            {
+              "label": "XL"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Ivory",
+              "hex": "#fffff0"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P9-IVO-XS",
+          "optionLabels": [
+            "XS",
+            "Ivory"
+          ],
+          "price": 158,
+          "salePrice": 110.6,
+          "inventory": 16,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/45_source_1786120749.png"
+        },
+        {
+          "sku": "TS-P9-IVO-S",
+          "optionLabels": [
+            "S",
+            "Ivory"
+          ],
+          "price": 158,
+          "salePrice": 110.6,
+          "inventory": 39,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/50_source_1786120751.png"
+        },
+        {
+          "sku": "TS-P9-IVO-M",
+          "optionLabels": [
+            "M",
+            "Ivory"
+          ],
+          "price": 158,
+          "salePrice": 110.6,
+          "inventory": 30,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/53_source_1786120753.png"
+        },
+        {
+          "sku": "TS-P9-IVO-L",
+          "optionLabels": [
+            "L",
+            "Ivory"
+          ],
+          "price": 158,
+          "salePrice": 110.6,
+          "inventory": 44,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/56_source_1786120754.png"
+        },
+        {
+          "sku": "TS-P9-IVO-XL",
+          "optionLabels": [
+            "XL",
+            "Ivory"
+          ],
+          "price": 158,
+          "salePrice": 110.6,
+          "inventory": 41,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/57_source_1786120755.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Dress"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "cotton, dress, linen, midi, new, sleeveless"
+        }
+      ]
+    },
+    {
+      "slug": "meridian-wide-leg-trouser",
+      "name": "Meridian Wide-Leg Trouser",
+      "description": "<p>A pleated wide-leg trouser cut from a soft indigo denim that drapes rather than holds a shape. Twin front pleats release into a full leg that falls straight from the hip, and the waistband sits high without gapping at the back. Belt loops are set wide for a thicker belt. The denim is washed once before construction, so the fit you try on is the fit you keep.</p>",
+      "price": 128,
+      "salePrice": 96,
+      "weight": 700,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "sale",
+        "bottoms"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/i/148/meridian-wide-leg-trouser-indigo-01__83383.png",
+          "alt": "Meridian Wide-Leg Trouser in Indigo",
+          "key": "meridian-wide-leg-trouser-indigo-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/w/690/meridian-wide-leg-trouser-indigo-02__07467.png",
+          "alt": "Meridian Wide-Leg Trouser in Indigo",
+          "key": "meridian-wide-leg-trouser-indigo-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/u/877/meridian-wide-leg-trouser-indigo-03__52648.png",
+          "alt": "Meridian Wide-Leg Trouser in Indigo",
+          "key": "meridian-wide-leg-trouser-indigo-03"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/n/121/meridian-wide-leg-trouser-indigo-04__67502.png",
+          "alt": "Meridian Wide-Leg Trouser in Indigo",
+          "key": "meridian-wide-leg-trouser-indigo-04"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/a/913/meridian-wide-leg-trouser-indigo-05__77296.png",
+          "alt": "Meridian Wide-Leg Trouser in Indigo",
+          "key": "meridian-wide-leg-trouser-indigo-05"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "XS"
+            },
+            {
+              "label": "S"
+            },
+            {
+              "label": "M"
+            },
+            {
+              "label": "L"
+            },
+            {
+              "label": "XL"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Indigo",
+              "hex": "#37496b"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P6-IND-XS",
+          "optionLabels": [
+            "XS",
+            "Indigo"
+          ],
+          "price": 128,
+          "salePrice": 96,
+          "inventory": 27,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/58_source_1786120758.png"
+        },
+        {
+          "sku": "TS-P6-IND-S",
+          "optionLabels": [
+            "S",
+            "Indigo"
+          ],
+          "price": 128,
+          "salePrice": 96,
+          "inventory": 28,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/59_source_1786120760.png"
+        },
+        {
+          "sku": "TS-P6-IND-M",
+          "optionLabels": [
+            "M",
+            "Indigo"
+          ],
+          "price": 128,
+          "salePrice": 96,
+          "inventory": 14,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/60_source_1786120762.png"
+        },
+        {
+          "sku": "TS-P6-IND-L",
+          "optionLabels": [
+            "L",
+            "Indigo"
+          ],
+          "price": 128,
+          "salePrice": 96,
+          "inventory": 11,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/61_source_1786120763.png"
+        },
+        {
+          "sku": "TS-P6-IND-XL",
+          "optionLabels": [
+            "XL",
+            "Indigo"
+          ],
+          "price": 128,
+          "salePrice": 96,
+          "inventory": 16,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/62_source_1786120764.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Trousers"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "denim, high-rise, new, pleated, trousers, wide-leg"
+        }
+      ]
+    },
+    {
+      "slug": "pennant-jacquard-vest",
+      "name": "Pennant Jacquard Vest",
+      "description": "<p>A sleeveless V-neck vest knit on a jacquard loom, so the diamond motif is worked into the structure rather than printed on top. Navy and red sit against an ecru ground, with the pattern stopping cleanly at the ribbed hem and armholes. Cut short enough to sit at the waistband, it layers over a tee without adding bulk under a jacket.</p>",
+      "price": 112,
+      "weight": 300,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "knitwear"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/d/395/pennant-jacquard-vest-ecru-multi-01__54081.png",
+          "alt": "Pennant Jacquard Vest in Ecru Multi",
+          "key": "pennant-jacquard-vest-ecru-multi-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/h/237/pennant-jacquard-vest-ecru-multi-02__68875.png",
+          "alt": "Pennant Jacquard Vest in Ecru Multi",
+          "key": "pennant-jacquard-vest-ecru-multi-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/g/580/pennant-jacquard-vest-ecru-multi-03__98866.png",
+          "alt": "Pennant Jacquard Vest in Ecru Multi",
+          "key": "pennant-jacquard-vest-ecru-multi-03"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/l/987/pennant-jacquard-vest-ecru-multi-04__47048.png",
+          "alt": "Pennant Jacquard Vest in Ecru Multi",
+          "key": "pennant-jacquard-vest-ecru-multi-04"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "XS"
+            },
+            {
+              "label": "S"
+            },
+            {
+              "label": "M"
+            },
+            {
+              "label": "L"
+            },
+            {
+              "label": "XL"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Ecru Multi",
+              "hex": "#d9c7a8"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P12-ECR-XS",
+          "optionLabels": [
+            "XS",
+            "Ecru Multi"
+          ],
+          "price": 112,
+          "inventory": 18,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/63_source_1786120772.png"
+        },
+        {
+          "sku": "TS-P12-ECR-S",
+          "optionLabels": [
+            "S",
+            "Ecru Multi"
+          ],
+          "price": 112,
+          "inventory": 44,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/66_source_1786120774.png"
+        },
+        {
+          "sku": "TS-P12-ECR-M",
+          "optionLabels": [
+            "M",
+            "Ecru Multi"
+          ],
+          "price": 112,
+          "inventory": 33,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/67_source_1786120775.png"
+        },
+        {
+          "sku": "TS-P12-ECR-L",
+          "optionLabels": [
+            "L",
+            "Ecru Multi"
+          ],
+          "price": 112,
+          "inventory": 9,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/69_source_1786120776.png"
+        },
+        {
+          "sku": "TS-P12-ECR-XL",
+          "optionLabels": [
+            "XL",
+            "Ecru Multi"
+          ],
+          "price": 112,
+          "inventory": 35,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/72_source_1786120777.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Vest"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "jacquard, knitwear, layering, new, sleeveless, vest"
+        }
+      ]
+    },
+    {
+      "slug": "rye-leather-moto-jacket",
+      "name": "Rye Leather Moto Jacket",
+      "description": "<p>A café-racer jacket in vegetable-tanned lambskin, cut close through the body with a short stand collar and a straight centre zip. The leather starts supple and takes a shine at the elbows and cuffs within a season. Fully lined in cupro so it slides over knitwear. Zip hardware is solid brass, darkened to match the hide.</p>",
+      "price": 495,
+      "salePrice": 396,
+      "weight": 1650,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "sale",
+        "jackets"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/i/862/rye-leather-moto-jacket-black-01__40100.png",
+          "alt": "Rye Leather Moto Jacket in Black",
+          "key": "rye-leather-moto-jacket-black-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/k/233/rye-leather-moto-jacket-black-02__07504.png",
+          "alt": "Rye Leather Moto Jacket in Black",
+          "key": "rye-leather-moto-jacket-black-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/q/547/rye-leather-moto-jacket-black-03__48706.png",
+          "alt": "Rye Leather Moto Jacket in Black",
+          "key": "rye-leather-moto-jacket-black-03"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/t/184/rye-leather-moto-jacket-black-04__72025.png",
+          "alt": "Rye Leather Moto Jacket in Black",
+          "key": "rye-leather-moto-jacket-black-04"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/t/192/rye-leather-moto-jacket-black-05__22040.png",
+          "alt": "Rye Leather Moto Jacket in Black",
+          "key": "rye-leather-moto-jacket-black-05"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/f/395/rye-leather-moto-jacket-black-06__10622.png",
+          "alt": "Rye Leather Moto Jacket in Black",
+          "key": "rye-leather-moto-jacket-black-06"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "XS"
+            },
+            {
+              "label": "S"
+            },
+            {
+              "label": "M"
+            },
+            {
+              "label": "L"
+            },
+            {
+              "label": "XL"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Black",
+              "hex": "#000000"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P10-BLA-XS",
+          "optionLabels": [
+            "XS",
+            "Black"
+          ],
+          "price": 495,
+          "salePrice": 396,
+          "inventory": 18,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/64_source_1786120773.png"
+        },
+        {
+          "sku": "TS-P10-BLA-S",
+          "optionLabels": [
+            "S",
+            "Black"
+          ],
+          "price": 495,
+          "salePrice": 396,
+          "inventory": 8,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/70_source_1786120776.png"
+        },
+        {
+          "sku": "TS-P10-BLA-M",
+          "optionLabels": [
+            "M",
+            "Black"
+          ],
+          "price": 495,
+          "salePrice": 396,
+          "inventory": 44,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/73_source_1786120777.png"
+        },
+        {
+          "sku": "TS-P10-BLA-L",
+          "optionLabels": [
+            "L",
+            "Black"
+          ],
+          "price": 495,
+          "salePrice": 396,
+          "inventory": 20,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/75_source_1786120778.png"
+        },
+        {
+          "sku": "TS-P10-BLA-XL",
+          "optionLabels": [
+            "XL",
+            "Black"
+          ],
+          "price": 495,
+          "salePrice": 396,
+          "inventory": 24,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/77_source_1786120779.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Jacket"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "jacket, leather, moto, new, outerwear, premium"
+        }
+      ]
+    },
+    {
+      "slug": "sorrel-linen-camp-shirt",
+      "name": "Sorrel Linen Camp Shirt",
+      "description": "<p>An open-collar shirt in undyed European linen, left its natural colour so the slubs and flecks in the yarn stay visible. The camp collar sits flat and open without a stand, and the body is cut generously so air moves through it. It creases, and it is supposed to — the cloth softens with every wash and stops fighting you after about three.</p>",
+      "price": 98,
+      "weight": 280,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "shirts"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/a/406/sorrel-linen-camp-shirt-undyed-ecru-01__79868.png",
+          "alt": "Sorrel Linen Camp Shirt in Undyed Ecru",
+          "key": "sorrel-linen-camp-shirt-undyed-ecru-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/z/815/sorrel-linen-camp-shirt-undyed-ecru-02__61152.png",
+          "alt": "Sorrel Linen Camp Shirt in Undyed Ecru",
+          "key": "sorrel-linen-camp-shirt-undyed-ecru-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/u/702/sorrel-linen-camp-shirt-undyed-ecru-03__94583.png",
+          "alt": "Sorrel Linen Camp Shirt in Undyed Ecru",
+          "key": "sorrel-linen-camp-shirt-undyed-ecru-03"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/a/365/sorrel-linen-camp-shirt-undyed-ecru-04__60463.png",
+          "alt": "Sorrel Linen Camp Shirt in Undyed Ecru",
+          "key": "sorrel-linen-camp-shirt-undyed-ecru-04"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/r/562/sorrel-linen-camp-shirt-undyed-ecru-05__45711.png",
+          "alt": "Sorrel Linen Camp Shirt in Undyed Ecru",
+          "key": "sorrel-linen-camp-shirt-undyed-ecru-05"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "XS"
+            },
+            {
+              "label": "S"
+            },
+            {
+              "label": "M"
+            },
+            {
+              "label": "L"
+            },
+            {
+              "label": "XL"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Undyed Ecru",
+              "hex": "#ede6d6"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P11-UND-XS",
+          "optionLabels": [
+            "XS",
+            "Undyed Ecru"
+          ],
+          "price": 98,
+          "inventory": 42,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/65_source_1786120773.png"
+        },
+        {
+          "sku": "TS-P11-UND-S",
+          "optionLabels": [
+            "S",
+            "Undyed Ecru"
+          ],
+          "price": 98,
+          "inventory": 30,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/68_source_1786120775.png"
+        },
+        {
+          "sku": "TS-P11-UND-M",
+          "optionLabels": [
+            "M",
+            "Undyed Ecru"
+          ],
+          "price": 98,
+          "inventory": 8,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/71_source_1786120776.png"
+        },
+        {
+          "sku": "TS-P11-UND-L",
+          "optionLabels": [
+            "L",
+            "Undyed Ecru"
+          ],
+          "price": 98,
+          "inventory": 23,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/74_source_1786120777.png"
+        },
+        {
+          "sku": "TS-P11-UND-XL",
+          "optionLabels": [
+            "XL",
+            "Undyed Ecru"
+          ],
+          "price": 98,
+          "inventory": 16,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/76_source_1786120778.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Shirt"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "camp-collar, linen, new, shirt, summer, undyed"
+        }
+      ]
+    },
+    {
+      "slug": "wren-washed-cap",
+      "name": "Wren Washed Cap",
+      "description": "<p>A six-panel cap in washed cotton twill, softened before it ever reaches you so the crown sits low instead of standing up. The brim is pre-curved and stays where you bend it. An antique-brass buckle strap adjusts at the back rather than a plastic snap. The black has been overdyed and washed back, so it reads closer to a deep charcoal in daylight.</p>",
+      "price": 42,
+      "weight": 120,
+      "categorySlugs": [
+        "all-products",
+        "new-arrivals",
+        "accessories"
+      ],
+      "images": [
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/q/177/wren-washed-cap-washed-black-01__34144.png",
+          "alt": "Wren Washed Cap in Washed Black",
+          "key": "wren-washed-cap-washed-black-01"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/v/625/wren-washed-cap-washed-black-02__19812.png",
+          "alt": "Wren Washed Cap in Washed Black",
+          "key": "wren-washed-cap-washed-black-02"
+        },
+        {
+          "url": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/i/588/wren-washed-cap-washed-black-03__34644.png",
+          "alt": "Wren Washed Cap in Washed Black",
+          "key": "wren-washed-cap-washed-black-03"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "type": "rectangles",
+          "values": [
+            {
+              "label": "One Size"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "type": "swatch",
+          "values": [
+            {
+              "label": "Washed Black",
+              "hex": "#3a3a3c"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "TS-P5-WAS-ONESIZE",
+          "optionLabels": [
+            "One Size",
+            "Washed Black"
+          ],
+          "price": 42,
+          "inventory": 25,
+          "imageUrl": "https://cdn11.bigcommerce.com/s-8jbhprizry/product_images/attribute_rule_images/78_source_1786120781.png"
+        }
+      ],
+      "metafields": [
+        {
+          "namespace": "turbo_start",
+          "key": "product_type",
+          "value": "Hat"
+        },
+        {
+          "namespace": "turbo_start",
+          "key": "tags",
+          "value": "accessories, cap, cotton, hat, new"
+        }
+      ]
+    }
+  ]
+}

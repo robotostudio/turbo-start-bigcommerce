@@ -11,22 +11,12 @@ Built by [Roboto Studio](https://robotostudio.com).
 [![BigCommerce](https://img.shields.io/badge/BigCommerce-GraphQL%20Storefront-blue)](https://developer.bigcommerce.com/docs/storefront/graphql)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Where this is up to
-
-This is a fork of [turbo-start-shopify](https://github.com/robotostudio/turbo-start-shopify), mid-conversion. Read this before you file a bug:
-
-The commerce layer is still Shopify's. `lib/shopify` serves the storefront today. `lib/bigcommerce` is being built next to it and replaces it in a single commit, so the tree never carries two half-wired backends. Until that lands, the `SHOPIFY_*` environment variables are required and the `BIGCOMMERCE_*` ones are read by nothing.
-
-Everything above the commerce layer is real and works: the monorepo, the Studio, the page builder, SEO, the whole content side.
-
-[SPEC.md](SPEC.md) has the plan and [PLAN.md](PLAN.md) has the phase breakdown.
-
 ## Features
 
 - **Turborepo monorepo** with shared packages and one `pnpm dev` to run everything
 - **Next.js 16 App Router** with React Server Components, the React Compiler, Turbopack, and dynamic OG images
 - **Sanity Studio v5** with visual editing, live preview, a page builder, and auto-redirects when a slug changes
-- **BigCommerce GraphQL Storefront API** for products, categories, cart, and search (in progress, see above)
+- **BigCommerce GraphQL Storefront API** for products, categories, cart, and search
 - **Types end to end** — generated Sanity types, Zod-validated env, strict TypeScript
 - **Tailwind CSS v4** with CSS-first config, OKLCH tokens, dark mode, and Shadcn components
 - **SEO** — dynamic metadata, OG images, sitemap, JSON-LD
@@ -65,7 +55,7 @@ packages/
 - [Node.js](https://nodejs.org/) >= 22
 - [pnpm](https://pnpm.io/) 10.28+
 - A [Sanity](https://www.sanity.io/) account (free)
-- A [BigCommerce](https://developer.bigcommerce.com/docs/start/sandbox) sandbox store, once the commerce layer lands. A Shopify development store until then.
+- A [BigCommerce](https://developer.bigcommerce.com/docs/start/sandbox) store. A free partner sandbox is enough for everything here except faceted search, which is plan-gated.
 
 ## Getting started
 
@@ -95,20 +85,48 @@ One thing to know: env validation treats a blank `KEY=` as an error, not as "uns
 3. Under **API > Tokens**, create a read token and a write token
 4. Put those four values in `apps/web/.env.local`, and the same project ID and dataset in `apps/studio/.env`
 
-### 4. Set up commerce
+### 4. Set up BigCommerce
 
-Until the BigCommerce flip lands, this is a Shopify step:
+1. Create a store, or a free [partner sandbox](https://developer.bigcommerce.com/docs/start/sandbox)
+2. In the control panel: **Settings > API accounts > Create API account**, type **V2/V3 API token**
+3. Give it the `store_storefront_api` scope ("Create GraphQL Storefront API bearer tokens"), then copy the access token and the store hash out of the credentials file it hands you
 
-1. Create a [development store](https://help.shopify.com/en/partners/dashboard/managing-stores/development-stores) in your Shopify Partner dashboard
-2. In the store admin: **Settings > Apps and sales channels > Develop apps**
-3. Create a custom app with Storefront API access scopes
-4. Copy the Storefront access token and the store domain
+That API account is only for minting. What the app actually reads is a **private** storefront token, which you mint once with the account above:
 
-For BigCommerce, `BIGCOMMERCE_STOREFRONT_TOKEN` takes a **private** storefront token. Vanilla tokens are not supported: server-to-server use of them sunsets on 2027-03-31, and their CORS allowlist caps at two origins, which is one short of localhost plus production plus preview.
+```bash
+curl -X POST "https://api.bigcommerce.com/stores/{STORE_HASH}/v3/storefront/api-token-private" \
+  -H "X-Auth-Token: {YOUR_API_ACCOUNT_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel_ids": [1],
+    "expires_at": '"$(($(date +%s) + 31536000))"',
+    "allowed_cors_origins": []
+  }'
+```
 
-The BigCommerce GraphQL schema is committed at `apps/web/src/lib/bigcommerce/schema.graphql`, so a fresh clone typechecks with no store and no credentials. Once you have a store of your own, `pnpm bigcommerce:schema` introspects it and rewrites that file plus the generated `graphql-env.d.ts` beside it. Nothing runs it for you: it is not wired into `dev` or `build`, so run it when the store changes shape and commit what it writes. `pnpm bigcommerce:smoke` prints your store's name, which is the quickest way to find out whether the token works.
+The `expires_at` above is a year out. BigCommerce documents no maximum and would happily mint an immortal token, but a dated secret you re-mint annually beats one that lives forever in a repo people fork. There is no refresh endpoint — when it expires you run the same command again. `channel_ids` is required for a private token; `1` is the default channel and matches `BIGCOMMERCE_CHANNEL_ID`.
 
-### 5. Start developing
+Use a private token, not a vanilla one. Vanilla tokens (`POST /v3/storefront/api-token`) are the ones every pre-2026 tutorial shows, and BigCommerce is retiring them for server-to-server use with a hard stop on **2027-03-31**. Their CORS allowlist also caps at two origins, and this app needs three: localhost, production, and preview deployments. Private tokens are rejected outright if the request comes from a browser, which is the right shape here — every GraphQL call in this starter runs on the server.
+
+The GraphQL schema is committed at `apps/web/src/lib/bigcommerce/schema.graphql`, so a fresh clone typechecks with no store and no credentials. Once you have your own store, `pnpm bigcommerce:schema` introspects it and rewrites that file plus the generated `graphql-env.d.ts` beside it. Nothing runs it for you: it is not wired into `dev` or `build`, so run it when the store changes shape and commit what it writes. `pnpm bigcommerce:smoke` prints the connected store's name, which is the quickest way to find out whether your token works.
+
+### 5. Seed the demo content
+
+Three commands, and the order matters:
+
+```bash
+pnpm seed:bigcommerce   # catalog into BigCommerce
+pnpm seed:sanity        # content into Sanity — destructive, wipes the dataset
+pnpm sync:bigcommerce   # catalog back out of BigCommerce, into Sanity
+```
+
+The sync is not optional. `reference-dataset.ndjson` carries no product or category documents at all — it holds weak references to the ones the sync writes. Seed the content without syncing and the navbar, the promo banner, and the homepage's featured product all point at documents that do not exist.
+
+`pnpm seed:bigcommerce` reads nothing live. No second storefront account, no source store to copy from. The catalog is a committed 57.6 KB fixture — 12 products, 61 variants, 10 categories — and all 132 of its images resolve from BigCommerce's own CDN.
+
+[apps/studio/seed/README.md](apps/studio/seed/README.md) has the full contract: what each file holds, why the references are weak, and how to regenerate either one.
+
+### 6. Start developing
 
 ```bash
 pnpm dev
@@ -128,13 +146,11 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 | `NEXT_PUBLIC_SANITY_STUDIO_URL` | Yes | Studio URL, absolute. `http://localhost:3333` in dev |
 | `SANITY_API_READ_TOKEN` | Yes | Sanity token with read access |
 | `SANITY_API_WRITE_TOKEN` | Yes | Sanity token with write access |
-| `SHOPIFY_STORE_DOMAIN` | Yes | Store domain, e.g. `your-store.myshopify.com`. Dies at the flip |
-| `SHOPIFY_STOREFRONT_ACCESS_TOKEN` | Yes | Storefront API token. Dies at the flip |
-| `SHOPIFY_API_VERSION` | No | Defaults to `2025-01` |
-| `BIGCOMMERCE_STORE_HASH` | Yes | Store hash from the API path. So far only the schema and smoke scripts read it |
-| `BIGCOMMERCE_STOREFRONT_TOKEN` | Yes | Private storefront token. So far only the schema and smoke scripts read it |
+| `BIGCOMMERCE_STORE_HASH` | Yes | Store hash from the API path |
+| `BIGCOMMERCE_STOREFRONT_TOKEN` | Yes | Private storefront token, minted as above |
 | `BIGCOMMERCE_CHANNEL_ID` | No | Storefront channel, defaults to `1` |
-| `BIGCOMMERCE_API_URL` | No | Endpoint override. Derived from the hash if unset |
+| `BIGCOMMERCE_API_URL` | No | Endpoint override. Derived from the hash and channel if unset |
+| `BIGCOMMERCE_PRERENDER_LIMIT` | No | How many catalog paths to prerender at build, defaults to `100`. The rest render on demand |
 | `NEXT_PUBLIC_STORE_CURRENCY` | No | ISO 4217 code, defaults to `GBP` |
 
 ### Studio (`apps/studio/.env`)
@@ -148,8 +164,8 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 | `SANITY_STUDIO_PRODUCTION_HOSTNAME` | Deploy | Hostname for the deployed Studio |
 | `SANITY_STUDIO_API_VERSION` | No | Sanity API version |
 | `SANITY_API_WRITE_TOKEN` | No | Match the web value. Not needed to build |
-| `SHOPIFY_STORE_DOMAIN` | Seeds | Only for `pnpm seed:shopify` |
-| `SHOPIFY_ADMIN_ACCESS_TOKEN` | Seeds | Admin API token, only for the seed scripts |
+| `BIGCOMMERCE_STORE_HASH` | Seeds | Same hash as web. Only for the seed and sync scripts |
+| `BIGCOMMERCE_ADMIN_TOKEN` | Seeds | API account token with catalog write scopes, only for the seed and sync scripts |
 
 ## Commands
 
@@ -163,9 +179,10 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 | `pnpm format` | Format with Biome |
 | `pnpm check-types` | Typecheck every package |
 | `pnpm test` | Run the Vitest suite |
-| `pnpm check-refs` | Scan for Shopify leftovers and live-system identifiers |
-| `pnpm seed:shopify` | Seed a Shopify store with test products |
-| `pnpm verify:shopify` | Print a Shopify store health report |
+| `pnpm check-refs` | Scan for conversion leftovers and live-system identifiers |
+| `pnpm seed:bigcommerce` | Load the committed catalog fixture into your store |
+| `pnpm seed:sanity` | Import the demo content. Wipes the target dataset first |
+| `pnpm sync:bigcommerce` | Mirror the catalog into Sanity. Run it after both seeds |
 | `pnpm bigcommerce:schema` | Re-introspect your own store and rewrite the committed GraphQL schema |
 | `pnpm bigcommerce:smoke` | Print the connected BigCommerce store's name |
 
@@ -173,7 +190,9 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 
 `.github/workflows/ci.yml` runs on every pull request and on pushes to `main`. It copies the example env files, then runs lint, typecheck, build, tests, and `check-refs`. No secrets involved, which is the point: if the examples drift out of sync with the env schema, the build fails and says so.
 
-`check-refs` has two lists. Shopify references warn and pass, because the tree is still full of them by design. Live-system identifiers fail hard. Nothing that belongs to a real project (a project ID, a store hash, a deploy hostname) may appear as a literal, and no script may fall back to one. A half-configured contributor should get an error, not silent access to somebody else's production data.
+`check-refs` has two lists. Live-system identifiers fail hard: nothing that belongs to a real project (a project ID, a store hash, a deploy hostname) may appear as a literal, and no script may fall back to one. A half-configured contributor should get an error, not silent access to somebody else's production data.
+
+The second list catches leftovers from the platform this starter was ported off. Those still warn rather than fail while the last of them are cleared. The planning and research documents are exempt by pathspec: they are the record of how the port was decided, and rewriting history to satisfy a grep would be the wrong trade. The gate goes strict once shipping code is clear.
 
 ## Deployment
 
@@ -223,8 +242,10 @@ Document types live in `apps/studio/schemaTypes/documents/`, objects in `apps/st
 | Sanity types out of date | `pnpm --filter studio type` |
 | Build warns "Content Lake unreachable" | Your Sanity credentials are wrong or missing. The build finishes anyway with empty content, which is deliberate. |
 | Visual editing does nothing | Allow third-party cookies. Check `SANITY_STUDIO_PRESENTATION_URL`. |
-| Products not loading | Check `SHOPIFY_STORE_DOMAIN` and `SHOPIFY_STOREFRONT_ACCESS_TOKEN`. |
-| Seed script fails | `SHOPIFY_ADMIN_ACCESS_TOKEN` is missing an Admin API scope. |
+| Products not loading | Run `pnpm bigcommerce:smoke`. If it can't name your store, `BIGCOMMERCE_STORE_HASH` or `BIGCOMMERCE_STOREFRONT_TOKEN` is wrong, or the token has expired. |
+| GraphQL rejects the token | You minted a vanilla storefront token instead of a private one, or minted it for a different channel than `BIGCOMMERCE_CHANNEL_ID`. |
+| Navbar and homepage link to nothing | You ran `pnpm seed:sanity` without `pnpm sync:bigcommerce` after it. Run the sync. |
+| Seed script fails | `BIGCOMMERCE_ADMIN_TOKEN` is missing a catalog write scope. |
 | Redirects not applying | They are fetched from Sanity at build time. Redeploy after adding one. |
 | Tailwind styles missing | Check `@import "tailwindcss"` is in your CSS entry point and the `@workspace/ui` transpile config. |
 
@@ -235,7 +256,7 @@ Document types live in `apps/studio/schemaTypes/documents/`, objects in `apps/st
 | [Next.js](https://nextjs.org/) | 16 | React framework (App Router, RSC, Turbopack) |
 | [React](https://react.dev/) | 19 | UI library |
 | [Sanity](https://www.sanity.io/) | 5 | Headless CMS with visual editing |
-| [BigCommerce Storefront API](https://developer.bigcommerce.com/docs/storefront/graphql) | GraphQL | Commerce engine (in progress) |
+| [BigCommerce Storefront API](https://developer.bigcommerce.com/docs/storefront/graphql) | GraphQL | Commerce engine |
 | [Turborepo](https://turbo.build/) | 2 | Monorepo build orchestration |
 | [Tailwind CSS](https://tailwindcss.com/) | 4 | CSS framework |
 | [Shadcn UI](https://ui.shadcn.com/) | — | Component primitives |

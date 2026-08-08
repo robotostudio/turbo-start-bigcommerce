@@ -18,9 +18,7 @@
     "type": "sanity schema extract --enforce-required-fields && sanity typegen generate",
     "seed:sanity": "tsx scripts/seed-sanity.ts",
     "seed:bigcommerce": "tsx scripts/seed-bigcommerce/index.ts",
-    "sync:bigcommerce": "tsx --conditions react-server --env-file-if-exists=.env --env-file-if-exists=../web/.env.local scripts/sync-bigcommerce-sanity.ts",
-    "seed:shopify": "tsx scripts/seed-shopify/index.ts",
-    "verify:shopify": "tsx scripts/verify-shopify.ts"
+    "sync:bigcommerce": "tsx --env-file-if-exists=../../packages/sanity-sync/.env ../../packages/sanity-sync/src/reconcile.ts --write"
   },
   "keywords": [
     "sanity"
@@ -37,6 +35,7 @@
     "@sanity/uuid": "^3.0.2",
     "@sanity/vision": "^5.7.0",
     "@workspace/logger": "workspace:*",
+    "@workspace/sanity-sync": "workspace:*",
     "dotenv": "^17.2.3",
     "friendlier-words": "^1.1.3",
     "lodash.get": "^4.4.2",

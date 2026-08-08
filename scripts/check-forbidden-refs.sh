@@ -13,15 +13,34 @@ set -eu
 
 # --- Term lists. Adding a term is one line. ---------------------------------
 
-# A. Shopify references. WARN ONLY by default. The tree is still full of these
-#    by design -- lib/shopify lives until the commerce flip -- so failing here
-#    would make CI red from the first commit.
+# A. References to the platform this starter was ported off. WARN ONLY by
+#    default. The commerce module itself is gone; what is left is comments and
+#    identifiers in code other people are still clearing, so failing here would
+#    turn CI red for work already in flight. Flip to strict when it hits zero.
 SHOPIFY_TERMS='shopify
 Shopify
 SHOPIFY_
 cdn.shopify.com
 myshopify.com
 robotostudio/turbo-start-shopify'
+
+#    Historical prose. The gate exists to keep references to the old platform
+#    out of shipped code, not to erase how the port was decided. These files are
+#    the decision record -- research notes, the spec, the phase plan -- and
+#    rewriting them to satisfy a grep would cost the reasoning and buy nothing.
+#    They ship no code and a fork never reads them to configure anything.
+PROSE_EXCLUDE=':(exclude)docs/research/*
+:(exclude)docs/plans/*
+:(exclude)docs/agents/*
+:(exclude)PLAN.md
+:(exclude)SPEC.md
+:(exclude)CONTEXT.md'
+
+#    One literal, exempted line by line rather than by file. `gid://shopify/...`
+#    appears in tests where REJECTING a legacy id is the assertion -- the string
+#    is the input under test, so renaming it would delete the test's meaning.
+#    Line-level keeps the rest of those files scanned.
+TEST_LITERAL='gid://shopify'
 
 # B. Identifiers belonging to a live system. ALWAYS FAIL.
 #
@@ -62,17 +81,26 @@ trap 'rm -rf "$work"' EXIT
 # The lockfile is vendored noise, and this script is itself a list of the terms
 # it looks for, so both are excluded.
 search() {
-  git grep -I -F -f "$work/terms" "$@" -- . \
+  git grep -I -F -n -f "$work/terms" -- . \
     ':(exclude)pnpm-lock.yaml' \
     ':(exclude)scripts/check-forbidden-refs.sh' \
-    ${extra:+"$extra"} || true
+    $extra || true
 }
 
-# `extra` adds one more pathspec, used only by list B. Unset for list A.
+# `extra` holds this list's own pathspecs, newline-separated, and is deliberately
+# unquoted below so each one becomes its own argument. `exempt` is a fixed string
+# dropped line by line; empty means drop nothing.
+#
+# Paths are derived from the matched lines rather than a second `git grep -l`, so
+# a file whose only hits are exempt does not get listed as an offender.
 scan() {
   printf '%s\n' "$1" >"$work/terms"
-  search -n >"$work/lines"
-  search -l >"$work/paths"
+  if [ -n "$exempt" ]; then
+    search | grep -F -v "$exempt" >"$work/lines" || true
+  else
+    search >"$work/lines"
+  fi
+  cut -d: -f1 <"$work/lines" | sort -u >"$work/paths"
 }
 
 count() {
@@ -83,7 +111,8 @@ fail=0
 
 # --- A. Shopify references (warn) -------------------------------------------
 
-extra=''
+extra="$PROSE_EXCLUDE"
+exempt="$TEST_LITERAL"
 scan "$SHOPIFY_TERMS"
 a_lines=$(count "$work/lines")
 a_files=$(count "$work/paths")
@@ -100,7 +129,7 @@ if [ "$a_lines" -gt 0 ]; then
     fail=1
   else
     # Annotations are single-line; GitHub truncates anything after a newline.
-    printf '::warning title=Shopify references::%s matches in %s tracked files. Expected until the commerce flip.\n' \
+    printf '::warning title=Shopify references::%s matches in %s tracked files. Still being cleared; the gate goes strict at zero.\n' \
       "$a_lines" "$a_files"
   fi
 else
@@ -112,6 +141,7 @@ echo
 # --- B. Live-system identifiers (fail) --------------------------------------
 
 extra="$LIVE_EXCLUDE"
+exempt=''
 scan "$LIVE_TERMS"
 b_lines=$(count "$work/lines")
 

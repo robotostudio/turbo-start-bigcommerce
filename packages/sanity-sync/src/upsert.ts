@@ -216,6 +216,20 @@ export function toCategoryDocument(category: RestCategory): SyncedDocument {
   };
 }
 
+/**
+ * Every document a product owns, as one unit.
+ *
+ * The sweep and the single-entity sync must not diverge here: both read the
+ * same `include=variants` payload, and a variant that exists in one path but
+ * not the other is a document an editor can reference and never see updated.
+ */
+export function productDocuments(product: RestProduct): SyncedDocument[] {
+  return [
+    toProductDocument(product),
+    ...(product.variants ?? []).map(toVariantDocument),
+  ];
+}
+
 // ---------------------------------------------------------------------------
 // Mutations — rule 1 and rule 2, and nothing else
 // ---------------------------------------------------------------------------
@@ -252,4 +266,19 @@ export function softDeleteMutations(documentId: string): Mutation[] {
       },
     },
   ];
+}
+
+/**
+ * Flags the live documents this run did not see.
+ *
+ * The full sweep uses it against the whole synced set; `syncProduct` uses it
+ * against one product's variants. Both are the same comparison, and both must
+ * be given ids that Sanity actually holds — a patch on a missing document fails
+ * the entire transaction with "The document with the ID ... was not found".
+ */
+export function staleMutations(
+  liveIds: string[],
+  kept: Set<string>
+): Mutation[] {
+  return liveIds.filter((id) => !kept.has(id)).flatMap(softDeleteMutations);
 }

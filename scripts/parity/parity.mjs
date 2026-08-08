@@ -19,8 +19,8 @@
  * Ignored by construction (never reported as differences):
  *   - build-chunk and any other /_next/static asset URLs
  *   - font/asset preloads (filtered with the rest of non-navigation hrefs)
- *   - the Sanity project-id swap in CDN URLs (ztcucp3r vs 1q2o191o) — both
- *     collapse to a __SANITY__ token before comparison
+ *   - the Sanity project id in image CDN URLs: the two sides read from
+ *     different projects, so both collapse to a __SANITY__ token first
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";

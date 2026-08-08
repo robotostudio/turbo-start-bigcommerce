@@ -1,8 +1,8 @@
 /** Shared types for the BigCommerce seed script. */
 
-/** One Shopify collection, mirrored as a BigCommerce category. */
+/** One category in the frozen catalog. */
 export interface CategoryDef {
-  /** Shopify handle. Becomes `/collections/{slug}/` and is the idempotency key. */
+  /** Becomes `/collections/{slug}/` and is the idempotency key. */
   slug: string;
   name: string;
   description: string;
@@ -43,8 +43,8 @@ export interface ImageDef {
   alt: string;
   /**
    * Source filename without extension. BigCommerce keeps it inside the stored
-   * `image_file`, which makes it the only stable key: Shopify repeats the same
-   * alt text across every shot of one colourway.
+   * `image_file`, which makes it the only stable key: the alt text repeats
+   * across every shot of one colourway.
    */
   key: string;
 }
@@ -56,17 +56,17 @@ export interface MetafieldDef {
 }
 
 export interface ProductDef {
-  /** Shopify handle. Becomes `/products/{slug}/` and is the idempotency key. */
+  /** Becomes `/products/{slug}/` and is the idempotency key. */
   slug: string;
   name: string;
   description: string;
-  /** Shopify's compare-at price when there is one, otherwise its price. */
+  /** The was-price where the product is reduced, otherwise the live price. */
   price: number;
-  /** Set only when Shopify has a compare-at price, i.e. the product is reduced. */
+  /** Set only where the product is reduced. Absent means full price. */
   salePrice?: number;
-  /** In the store's own weight unit, converted from Shopify's. */
+  /** In the store's own weight unit. The file holds grams; `loadCatalog` converts. */
   weight: number;
-  /** Handles of the Shopify collections this product belongs to. */
+  /** Slugs of the categories this product belongs to. */
   categorySlugs: string[];
   images: ImageDef[];
   options: OptionDef[];

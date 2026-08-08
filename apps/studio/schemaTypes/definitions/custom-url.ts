@@ -6,8 +6,8 @@ const allLinkableTypes = [
   { type: "blog" },
   { type: "blogIndex" },
   { type: "page" },
-  { type: "product" },
-  { type: "collection" },
+  { type: "bigcommerceProduct" },
+  { type: "bigcommerceCategory" },
 ];
 
 export const customUrl = defineType({
@@ -93,7 +93,7 @@ export const customUrl = defineType({
       title: "Product",
       type: "reference",
       description: "Select a product to link to",
-      to: [{ type: "product" }],
+      to: [{ type: "bigcommerceProduct" }],
       options: { disableNew: true },
       hidden: ({ parent }) => parent?.type !== "product",
       validation: (Rule) =>

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { env } from "@workspace/env/server";
-import type { ResultOf } from "gql.tada";
+import type { ResultOf, VariablesOf } from "gql.tada";
 
 import { type StorefrontQueryResult, storefrontQuery } from "./client";
 import { graphql } from "./graphql";
@@ -374,7 +374,7 @@ const CategoryDetail = graphql(
       metaDescription
       metaKeywords
     }
-    products(first: $first, after: $after) {
+    products(first: $first, after: $after, sortBy: $sortBy) {
       collectionInfo {
         totalItems
       }
@@ -452,9 +452,20 @@ const ProductsByIdsQuery = graphql(
   [ProductCard]
 );
 
+/**
+ * `$sortBy` is nullable on purpose: omitting it and passing `DEFAULT` are two
+ * different orders on the wire, and the category page's server render passes
+ * nothing. (A `#` comment inside the variable list is what gql.tada's
+ * type-level parser chokes on, hence this note out here.)
+ */
 const CategoryByPathQuery = graphql(
   `
-  query CategoryByPath($path: String!, $first: Int!, $after: String) {
+  query CategoryByPath(
+    $path: String!
+    $first: Int!
+    $after: String
+    $sortBy: CategoryProductSort
+  ) {
     site {
       route(path: $path, redirectBehavior: FOLLOW) {
         redirect {
@@ -539,6 +550,11 @@ type ProductNode = Extract<
 type CategoryNode = Extract<
   NonNullable<ResultOf<typeof CategoryByPathQuery>["site"]["route"]["node"]>,
   { __typename: "Category" }
+>;
+
+/** The `CategoryProductSort` enum, read off the schema rather than restated. */
+export type CategoryProductSort = NonNullable<
+  VariablesOf<typeof CategoryByPathQuery>["sortBy"]
 >;
 
 export type CatalogProduct = ProductNode;
@@ -766,7 +782,12 @@ export async function getProductsByIds(
  */
 export async function getCategoryByPath(
   segments: string[],
-  options?: { first?: number; after?: string | null }
+  options?: {
+    first?: number;
+    after?: string | null;
+    /** A `CategoryProductSort` member. Leave unset for the category's own order. */
+    sortBy?: CategoryProductSort;
+  }
 ): Promise<StorefrontQueryResult<CatalogRoute<CatalogCategory>>> {
   const path = toRoutePath(CATEGORY_PREFIX, segments);
   const result = await storefrontQuery(CategoryByPathQuery, {
@@ -774,6 +795,7 @@ export async function getCategoryByPath(
       path,
       first: options?.first ?? CATEGORY_PAGE_SIZE,
       after: options?.after ?? null,
+      sortBy: options?.sortBy ?? null,
     },
   });
 

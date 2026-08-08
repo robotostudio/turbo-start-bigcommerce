@@ -35,12 +35,29 @@ const isDeleted = defineField({
   readOnly: true,
 });
 
+/**
+ * Editor-owned rich text. The sync never touches anything outside `store`.
+ *
+ * The members are the studio's own objects, referenced by name — this package
+ * cannot import from the studio, and a registered type only needs its name
+ * here. They mirror what the fork's Shopify product body allowed, so the
+ * hotspot renderer keeps working across the flip.
+ */
 const editorialBody = defineField({
   name: "body",
   type: "array",
   title: "Body",
-  description: "Editor-owned. The sync never touches anything outside `store`.",
-  of: [defineArrayMember({ type: "block" })],
+  of: [
+    defineArrayMember({ type: "block" }),
+    defineArrayMember({ type: "image" }),
+    defineArrayMember({ type: "accordion" }),
+    defineArrayMember({ type: "callout" }),
+    defineArrayMember({
+      type: "imageWithProductHotspots",
+      title: "Image with hotspots",
+    }),
+    defineArrayMember({ type: "instagram" }),
+  ],
 });
 
 export const bigcommerceProduct = defineType({

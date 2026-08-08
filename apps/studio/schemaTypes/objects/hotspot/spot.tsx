@@ -1,7 +1,5 @@
 import { defineField } from "sanity";
 
-import ShopifyDocumentStatus from "../../../components/media/shopify-document-status";
-
 export const spot = defineField({
   name: "spot",
   title: "Spot",
@@ -12,7 +10,7 @@ export const spot = defineField({
   fields: [
     defineField({
       name: "productWithVariant",
-      type: "productWithVariant",
+      type: "productWithVariantReference",
       description: "The product and variant shown when this hotspot is clicked",
     }),
     defineField({
@@ -39,9 +37,9 @@ export const spot = defineField({
       isDeleted: "productWithVariant.product.store.isDeleted",
       previewImageUrl: "productWithVariant.product.store.previewImageUrl",
       productTitle: "productWithVariant.product.store.title",
-      status: "productWithVariant.product.store.status",
-      variantPreviewImageUrl:
-        "productWithVariant.variant.store.previewImageUrl",
+      // `imageUrl`, not `previewImageUrl`: that is the field name the sync
+      // writes on a variant document.
+      variantImageUrl: "productWithVariant.variant.store.imageUrl",
       x: "x",
       y: "y",
     },
@@ -50,23 +48,25 @@ export const spot = defineField({
         isDeleted,
         previewImageUrl,
         productTitle,
-        status,
-        variantPreviewImageUrl,
+        variantImageUrl,
         x,
         y,
       } = selection;
+      const url = variantImageUrl || previewImageUrl;
       return {
-        media: (
-          <ShopifyDocumentStatus
-            isActive={status === "active"}
-            isDeleted={isDeleted}
-            type="product"
-            url={variantPreviewImageUrl || previewImageUrl}
-            title={productTitle}
+        media: url ? (
+          <img
+            alt=""
+            src={url}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
-        ),
+        ) : undefined,
         title: productTitle,
-        subtitle: x && y ? `[${x}%, ${y}%]` : `No position set`,
+        subtitle: isDeleted
+          ? "Deleted in BigCommerce"
+          : x && y
+            ? `[${x}%, ${y}%]`
+            : "No position set",
       };
     },
   },

@@ -6,9 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 BigCommerce + Sanity headless commerce starter — pnpm monorepo with Turborepo orchestration.
 
-Forked from [turbo-start-shopify](https://github.com/robotostudio/turbo-start-shopify), which remains
-the `upstream` remote. The Shopify commerce layer is being replaced with BigCommerce; until that flip
-lands, `lib/shopify` and the `SHOPIFY_*` env vars are still live and still required for the build.
+Every commerce read and write runs on BigCommerce, through `apps/web/src/lib/bigcommerce`. Sanity owns
+everything editorial. The catalog reaches Sanity as synced documents — `packages/sanity-sync` writes
+them at deterministic ids (`bigcommerceProduct-{entityId}` and siblings), and page-builder blocks
+reference those documents. The Studio itself never calls BigCommerce.
 
 ## Commands
 
@@ -27,14 +28,26 @@ pnpm build:studio     # studio only
 pnpm lint             # biome lint
 pnpm format           # biome format --write
 pnpm format:check     # biome format (check only)
-pnpm check-types      # tsc --noEmit across all packages
+pnpm check-types      # tsc --noEmit across all packages, plus gql.tada check
 pnpm test             # vitest run
+pnpm check-refs       # scan tracked files for references that must not survive
+
+# Seed — run in this order, it is load-bearing
+pnpm seed:bigcommerce # catalog into BigCommerce, from a committed fixture
+pnpm seed:sanity      # content into Sanity — DESTRUCTIVE, wipes the dataset
+pnpm sync:bigcommerce # catalog back out of BigCommerce, into Sanity
 
 # Studio schema tooling (run from apps/studio)
 npx sanity schema extract --enforce-required-fields
 npx sanity typegen generate
 npx sanity deploy
 ```
+
+The sync is not optional. `apps/studio/seed/reference-dataset.ndjson` carries no catalog
+documents — it holds **weak** references to the ones the sync writes, at
+`bigcommerceProduct-{entityId}` / `bigcommerceCategory-{entityId}`. Seed the content
+without syncing and the navbar, promo banner and homepage featured product all point at
+documents that do not exist yet. See `apps/studio/seed/README.md` for the full contract.
 
 ## Architecture
 
@@ -70,9 +83,9 @@ packages/
 
 ### Sanity Studio Structure
 
-- **Documents**: `blog`, `page`, `faq`, `author`, `product`, `collection`, `productVariant`, `redirect`, `colorTheme`
+- **Documents**: `blog`, `page`, `faq`, `author`, `redirect`, `colorTheme`
 - **Singletons**: `homePage`, `blogIndex`, `settings`, `footer`, `navbar`
-- **Shopify objects**: `shopifyProduct`, `shopifyProductVariant`, `shopifyCollection`, `inventory`, `option`, `priceRange`, etc. — these are replaced by BigCommerce stubs at the schema swap; see `SPEC.md`
+- **Synced catalog**: `bigcommerceProduct`, `bigcommerceProductVariant`, `bigcommerceCategory` — written by `packages/sanity-sync`, never by hand. Their schema lives in that package, not in `apps/studio`
 - **Blueprint** (`sanity.blueprint.ts`): auto-redirect function — creates redirect documents on slug change
 
 ### Key Patterns
@@ -99,11 +112,15 @@ packages/
 **Web** (`apps/web/.env.local`):
 - `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET`, `NEXT_PUBLIC_SANITY_API_VERSION`, `NEXT_PUBLIC_SANITY_STUDIO_URL`
 - `SANITY_API_READ_TOKEN`, `SANITY_API_WRITE_TOKEN`
-- `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_STOREFRONT_ACCESS_TOKEN`, `SHOPIFY_API_VERSION` — live until the flip
-- `BIGCOMMERCE_STORE_HASH`, `BIGCOMMERCE_STOREFRONT_TOKEN`, `BIGCOMMERCE_CHANNEL_ID`
+- `BIGCOMMERCE_STORE_HASH`, `BIGCOMMERCE_STOREFRONT_TOKEN`, `BIGCOMMERCE_CHANNEL_ID`, `BIGCOMMERCE_PRERENDER_LIMIT`
+
+The storefront token must be a **private** one. A vanilla token stops working
+server-to-server on 2027-03-31 and its CORS allowlist caps at two origins — one short
+of localhost plus production plus preview. The README gives the mint command.
 
 **Studio** (`apps/studio/.env`):
 - `SANITY_STUDIO_PROJECT_ID`, `SANITY_STUDIO_DATASET`, `SANITY_STUDIO_TITLE`, `SANITY_STUDIO_PRESENTATION_URL`
+- `BIGCOMMERCE_STORE_HASH`, `BIGCOMMERCE_ADMIN_TOKEN` — used by `pnpm seed:bigcommerce` only. Deliberately separate from the storefront token, which cannot write catalog data
 
 Both `.env.example` files are the source of truth. Env validation hard-throws on a missing or
 empty-string value — `KEY=` is not the same as absent, and only absent lets a `.default()` fire.

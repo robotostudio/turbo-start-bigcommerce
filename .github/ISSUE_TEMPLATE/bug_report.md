@@ -4,10 +4,10 @@ about: Something in the starter is broken
 labels: bug
 ---
 
-Read [Where this is up to](https://github.com/robotostudio/turbo-start-bigcommerce#where-this-is-up-to)
-first. The commerce layer is still Shopify's — `lib/shopify` serves the storefront, and the
-`BIGCOMMERCE_*` variables are read by nothing until the flip commit lands. Missing BigCommerce data
-is not a bug yet.
+If the storefront has no products in it, check the seed order first: `pnpm seed:sanity` wipes the
+dataset, and `pnpm sync:bigcommerce` has to run after it or the catalog references point at nothing.
+[apps/studio/seed/README.md](https://github.com/robotostudio/turbo-start-bigcommerce/blob/main/apps/studio/seed/README.md)
+covers it.
 
 ## What happened
 

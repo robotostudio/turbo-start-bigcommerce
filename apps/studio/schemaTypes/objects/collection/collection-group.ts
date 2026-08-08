@@ -26,7 +26,7 @@ export const collectionGroup = defineField({
       type: "reference",
       description: "Products from this collection will be listed",
       weak: true,
-      to: [{ type: "collection" }],
+      to: [{ type: "bigcommerceCategory" }],
     }),
   ],
 });

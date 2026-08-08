@@ -84,7 +84,10 @@ export const structure = (
       list(S, "author", "Authors", User),
       S.divider(),
 
-      // Commerce
+      // Commerce — the catalog, synced from BigCommerce by
+      // @workspace/sanity-sync's reconcile sweep. No "(synced)" anywhere: an
+      // editor cares that this is the product list, not where the rows came
+      // from.
       S.listItem()
         .title("Commerce")
         .icon(ShoppingBag)
@@ -92,24 +95,14 @@ export const structure = (
           S.list()
             .title("Commerce")
             .items([
-              list(S, "product", "Products", ShoppingBag),
-              S.listItem()
-                .title("Collections")
-                .icon(BookMarked)
-                .child(
-                  S.list()
-                    .title("Collections")
-                    .items([
-                      singleton(
-                        S,
-                        "collectionsIndex",
-                        "Collections Settings",
-                        BookMarked
-                      ),
-                      list(S, "collection", "All Collections", BookMarked),
-                    ])
-                ),
-              list(S, "productVariant", "Product Variants", FileText),
+              list(S, "bigcommerceProduct", "Products", ShoppingBag),
+              list(S, "bigcommerceCategory", "Categories", BookMarked),
+              list(
+                S,
+                "bigcommerceProductVariant",
+                "Product Variants",
+                FileText
+              ),
               list(S, "colorTheme", "Color Themes", Settings2),
             ])
         ),
@@ -123,6 +116,14 @@ export const structure = (
           S.list()
             .title("Site Configuration")
             .items([
+              // Editorial content for the /collections index page — a page,
+              // not a catalog list, so it sits here rather than under Commerce.
+              singleton(
+                S,
+                "collectionsIndex",
+                "Collections Listing Page",
+                BookMarked
+              ),
               singleton(S, "promoBanner", "Promo Banner", Megaphone),
               singleton(S, "navbar", "Navigation", PanelTop),
               singleton(S, "footer", "Footer", PanelBottom),

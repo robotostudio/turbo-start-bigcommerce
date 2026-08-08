@@ -40,33 +40,16 @@ export function CollectionProducts({
   const searchParams = useSearchParams();
   // Sort comes off the URL here, not from the server component — awaiting
   // `searchParams` there would opt the whole route out of static generation.
-  const { sort, reverse } = sortFromSearchParams(searchParams);
+  const sort = sortFromSearchParams(searchParams);
   const density =
     searchParams.get("view") === "dense" ? "dense" : "comfortable";
 
-  // Extract filter params to include in query key and API calls
-  const filterEntries: [string, string][] = [];
-  for (const [key, value] of searchParams.entries()) {
-    if (key.startsWith("filter.")) {
-      filterEntries.push([key, value]);
-    }
-  }
-  const filterKey = JSON.stringify(filterEntries);
-
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery<CollectionPage>({
-      queryKey: ["collection-products", handle, sort, reverse, filterKey],
+      queryKey: ["collection-products", handle, sort],
       queryFn: async ({ pageParam }) => {
-        const params = new URLSearchParams({
-          sort,
-          reverse: String(reverse),
-        });
+        const params = new URLSearchParams({ sort });
         if (pageParam) params.set("after", pageParam as string);
-
-        // Forward filter params to the API route
-        for (const [key, value] of filterEntries) {
-          params.append(key, value);
-        }
 
         const res = await fetch(
           `/api/collections/${handle}/products?${params.toString()}`
@@ -78,10 +61,12 @@ export function CollectionProducts({
       getNextPageParam: (lastPage) =>
         lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.endCursor : undefined,
       // The server always renders the default view, so its products only seed
-      // the matching query — attached to a sorted/filtered key they would
-      // paint the wrong order for a beat before the refetch corrects it.
+      // the matching query — attached to a sorted key they would paint the
+      // wrong order for a beat before the refetch corrects it. `DEFAULT_SORT`
+      // is a sentinel the route turns back into "no `sortBy`", so this branch
+      // and the server render ask BigCommerce for the identical order.
       initialData:
-        sort === DEFAULT_SORT && !reverse && filterEntries.length === 0
+        sort === DEFAULT_SORT
           ? {
               pages: [{ products: initialProducts, pageInfo: initialPageInfo }],
               pageParams: [null],

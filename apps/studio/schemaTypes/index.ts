@@ -1,10 +1,18 @@
+import { syncSchemaTypes } from "@workspace/sanity-sync/schema";
+
 import { pageBuilderBlocks } from "@/schemaTypes/blocks";
 import { definitions } from "@/schemaTypes/definitions";
 import { documents, singletons } from "@/schemaTypes/documents";
 import { annotations, objects } from "@/schemaTypes/objects";
 
+// The sync package built these "exported, deliberately NOT registered" and
+// called registration the flip that turns the sync on. This is the flip
+// (ROB-2543, revised): page-builder blocks reference the synced documents
+// instead of holding denormalised stubs, and the Studio never calls
+// BigCommerce itself.
 export const schemaTypes = [
   ...documents,
+  ...syncSchemaTypes,
   ...objects,
   ...annotations,
   ...definitions,

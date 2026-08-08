@@ -6,6 +6,7 @@
   "exports": {
     "./client": "./src/client.ts",
     "./upsert": "./src/upsert.ts",
+    "./sync": "./src/sync.ts",
     "./reconcile": "./src/reconcile.ts",
     "./schema": "./src/schema.ts"
   },

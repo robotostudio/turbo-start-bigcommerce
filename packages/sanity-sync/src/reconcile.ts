@@ -5,37 +5,46 @@ import { Logger } from "@workspace/logger";
 
 import {
   type BigCommerceCredentials,
+  catalogGet,
   createWriteClient,
+  PRODUCT_INCLUDE,
   readBigCommerceCredentials,
 } from "./client.js";
 import {
+  deleteCategory,
+  deleteProduct,
+  type SyncResult,
+  syncCategory,
+  syncProduct,
+} from "./sync.js";
+import {
+  productDocuments,
   type RestCategory,
   type RestProduct,
+  staleMutations,
   type SyncedDocument,
-  softDeleteMutations,
   toCategoryDocument,
-  toProductDocument,
-  toVariantDocument,
   upsertMutations,
 } from "./upsert.js";
 
 /**
- * The reconcile sweep. This is the primary sync mechanism, not a fallback.
+ * The reconcile sweep, and the CLI over both it and the single-entity core in
+ * `src/sync.ts`.
  *
- * BigCommerce has no CRUD webhooks for variants and none for brands, and most
- * product image changes — including changing the thumbnail — fire no update
- * event at all. Webhook payloads are id-only, unordered, and can duplicate. A
- * webhook-only sync is therefore structurally incomplete; webhooks are at best
- * a latency optimisation layered on top of this sweep.
+ * The sweep is the primary sync mechanism, not a fallback. BigCommerce has no
+ * CRUD webhooks for variants and none for brands, and most product image
+ * changes — including changing the thumbnail — fire no update event at all.
+ * Webhook payloads are id-only, unordered, and can duplicate. A webhook-only
+ * sync is therefore structurally incomplete; webhooks are at best a latency
+ * optimisation layered on top of this sweep.
  *
  * Nothing invokes this. Run it by hand:
- *   pnpm --filter @workspace/sanity-sync reconcile              # dry run
- *   pnpm --filter @workspace/sanity-sync reconcile -- --write   # for real
+ *   pnpm --filter @workspace/sanity-sync reconcile                    # dry run
+ *   pnpm --filter @workspace/sanity-sync reconcile -- --write         # for real
+ *   pnpm --filter @workspace/sanity-sync reconcile -- --product 183   # one entity
  */
 
 const logger = new Logger("Reconcile");
-
-const ADMIN_API = "https://api.bigcommerce.com/stores";
 
 /**
  * Admin REST caps a catalog page at 50 — but silently drops it to 10 the moment
@@ -48,9 +57,6 @@ const ADMIN_API = "https://api.bigcommerce.com/stores";
  */
 const PAGE_SIZE = 50;
 const PAGE_SIZE_WITH_OPTIONS = 10;
-
-/** Options are needed for the product document; variants and images ride along free. */
-const PRODUCT_INCLUDE = "variants,options,images";
 
 function pageSizeFor(include: string | undefined): number {
   const parts = include?.split(",") ?? [];
@@ -87,24 +93,15 @@ async function* paginate<T>(
       params.set("date_modified:min", options.since);
     }
 
-    const url = `${ADMIN_API}/${credentials.storeHash}/v3/catalog/${resource}?${params}`;
-    const response = await fetch(url, {
-      headers: {
-        "X-Auth-Token": credentials.adminToken,
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `GET /v3/catalog/${resource} failed: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const body = (await response.json()) as {
+    const body = await catalogGet<{
       data: T[];
       meta: { pagination: Pagination };
-    };
+    }>(`${resource}?${params}`, credentials);
+
+    // 404 is a real answer for a single entity, never for a list resource.
+    if (!body) {
+      throw new Error(`GET /v3/catalog/${resource} answered 404`);
+    }
 
     // Trust the server's pagination, not the requested limit — that is what
     // makes the silent page-size drop a non-event.
@@ -159,13 +156,14 @@ async function sweepProducts(
     include: PRODUCT_INCLUDE,
   })) {
     for (const product of page) {
-      collect(sweep, toProductDocument(product));
-      products += 1;
-
-      for (const variant of product.variants ?? []) {
-        collect(sweep, toVariantDocument(variant));
-        variants += 1;
+      // Same product -> documents path the single-entity sync uses. Two of
+      // these would drift, and a variant only one of them writes is a document
+      // an editor can reference and never see updated.
+      for (const document of productDocuments(product)) {
+        collect(sweep, document);
       }
+      products += 1;
+      variants += (product.variants ?? []).length;
     }
   }
 
@@ -180,7 +178,7 @@ async function sweepCategories(
 
   // No `since` here on purpose. `/v3/catalog/categories` has no date filter —
   // it answers 422 "The filter(s): date_modified:min are not valid filter
-  // parameter(s)". Categories are always swept whole, which is cheap: 11 rows
+  // parameter(s)". Categories are always swept whole, which is cheap: 10 rows
   // in one page on the sandbox, and a real catalog rarely runs to thousands.
   for await (const page of paginate<RestCategory>("categories", credentials)) {
     for (const category of page) {
@@ -212,18 +210,13 @@ async function sweepDeletes(
     }
   );
 
-  let softDeleted = 0;
-  for (const id of live) {
-    if (!sweep.seen.has(id)) {
-      sweep.mutations.push(...softDeleteMutations(id));
-      softDeleted += 1;
-    }
-  }
+  const stale = staleMutations(live, sweep.seen);
+  sweep.mutations.push(...stale);
 
   logger.info(
-    `Soft-delete pass: ${live.length} live synced document(s) in Sanity, ${softDeleted} no longer in the catalog`
+    `Soft-delete pass: ${live.length} live synced document(s) in Sanity, ${stale.length} no longer in the catalog`
   );
-  return softDeleted;
+  return stale.length;
 }
 
 export async function reconcile(
@@ -262,25 +255,87 @@ export async function reconcile(
 }
 
 // ---------------------------------------------------------------------------
-// CLI
+// CLI — a shell over `reconcile()` and the four functions in `src/sync.ts`
 // ---------------------------------------------------------------------------
+
+/** `parseArgs` hands back strings, and `/v3/catalog/products/NaN` is a 404 that reads as a delete. */
+function entityIdFrom(raw: string, flag: string): number {
+  const entityId = Number(raw);
+  if (!Number.isInteger(entityId) || entityId <= 0) {
+    throw new Error(`--${flag} needs a BigCommerce entity id, got "${raw}"`);
+  }
+  return entityId;
+}
+
+function printMutations(mutations: Mutation[], write: boolean): void {
+  if (write) {
+    return;
+  }
+  logger.info("DRY RUN — the exact mutations that would be issued:");
+  for (const mutation of mutations) {
+    logger.info(JSON.stringify(mutation));
+  }
+}
+
+/**
+ * The single-entity path, which is what a webhook delivery does. Reproducing a
+ * delivery from a terminal is the whole point of it existing before the route
+ * does.
+ */
+async function runOne(values: {
+  write: boolean;
+  delete: boolean;
+  product?: string;
+  category?: string;
+}): Promise<SyncResult> {
+  const write = values.write;
+
+  if (values.product) {
+    const entityId = entityIdFrom(values.product, "product");
+    return values.delete
+      ? deleteProduct(entityId, { write })
+      : syncProduct(entityId, { write });
+  }
+
+  if (values.category) {
+    const entityId = entityIdFrom(values.category, "category");
+    return values.delete
+      ? deleteCategory(entityId, { write })
+      : syncCategory(entityId, { write });
+  }
+
+  throw new Error("Pass --product <id> or --category <id>.");
+}
 
 async function main() {
   const { values } = parseArgs({
     options: {
       write: { type: "boolean", default: false },
       since: { type: "string" },
+      product: { type: "string" },
+      category: { type: "string" },
+      delete: { type: "boolean", default: false },
     },
   });
 
-  const result = await reconcile({ since: values.since, write: values.write });
-
-  if (!values.write) {
-    logger.info("DRY RUN — the exact mutations that would be issued:");
-    for (const mutation of result.mutations) {
-      logger.info(JSON.stringify(mutation));
-    }
+  if (values.product && values.category) {
+    throw new Error("Pass --product or --category, not both.");
   }
+
+  if (values.product || values.category) {
+    const result = await runOne(values);
+    printMutations(result.mutations, values.write);
+    logger.info(
+      `${result.entity} ${result.entityId}: ${result.action} — ${result.documentIds.length} document(s), ${result.mutations.length} mutation(s)`
+    );
+    logger.info(
+      result.written ? "Wrote to Sanity." : "Nothing was written to Sanity."
+    );
+    return;
+  }
+
+  const result = await reconcile({ since: values.since, write: values.write });
+  printMutations(result.mutations, values.write);
 
   logger.info(
     `${result.products} product(s), ${result.variants} variant(s), ${result.categories} categor(y|ies), ${result.softDeleted} soft-delete(s) → ${result.mutations.length} mutation(s)`

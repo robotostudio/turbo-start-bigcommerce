@@ -24,12 +24,7 @@ export const notFoundPage = defineField({
       type: "reference",
       description: "Collection products displayed on this page",
       weak: true,
-      to: [
-        {
-          name: "collection",
-          type: "collection",
-        },
-      ],
+      to: [{ type: "bigcommerceCategory" }],
     }),
     defineField({
       name: "colorTheme",

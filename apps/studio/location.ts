@@ -34,10 +34,10 @@ export const locations = {
       ],
     }),
   }),
-  // Shopify-synced documents keep their handle under `store.slug.current`, and
-  // it is a bare handle — unlike page/blog slugs, the route prefix is not
+  // Synced BigCommerce documents keep their handle under `store.slug.current`,
+  // and it is a bare handle — unlike page/blog slugs, the route prefix is not
   // baked in by `createSlug`.
-  collection: defineLocations({
+  bigcommerceCategory: defineLocations({
     select: {
       title: "store.title",
       slug: "store.slug.current",
@@ -58,7 +58,7 @@ export const locations = {
           }
         : { locations: [] },
   }),
-  product: defineLocations({
+  bigcommerceProduct: defineLocations({
     select: {
       title: "store.title",
       slug: "store.slug.current",

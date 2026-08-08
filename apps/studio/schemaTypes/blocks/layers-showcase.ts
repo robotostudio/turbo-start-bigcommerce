@@ -29,7 +29,7 @@ export const layersShowcase = defineType({
       name: "product",
       title: "Featured Product",
       type: "reference",
-      to: [{ type: "product" }],
+      to: [{ type: "bigcommerceProduct" }],
       options: { disableNew: true },
       description:
         "The collage and the large image are pulled from this product's images, with live price, sizes, and add-to-cart",

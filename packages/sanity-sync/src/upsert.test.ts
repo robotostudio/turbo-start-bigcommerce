@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   categoryDocumentId,
   productDocumentId,
+  productDocuments,
   type RestCategory,
   type RestProduct,
   type RestVariant,
   slugFromPath,
   softDeleteMutations,
+  staleMutations,
   toCategoryDocument,
   toProductDocument,
   toVariantDocument,
@@ -159,6 +161,41 @@ describe("rule 2: soft-delete with a flag", () => {
     const patch = (mutations[0] as { patch: { set: Record<string, unknown> } })
       .patch;
     expect(Object.keys(patch.set)).toEqual(["store.isDeleted"]);
+  });
+});
+
+describe("the product unit shared by the sweep and the single-entity sync", () => {
+  it("is the product plus every variant on it", () => {
+    expect(productDocuments(product).map((d) => d._id)).toEqual([
+      "bigcommerceProduct-180",
+      "bigcommerceProductVariant-167",
+    ]);
+  });
+
+  it("yields the product alone when variants were not included", () => {
+    // The include failing must never look like "every variant was deleted" —
+    // the orphan pass in syncProduct diffs against exactly this list.
+    const withoutInclude: RestProduct = { ...product, variants: undefined };
+    expect(productDocuments(withoutInclude).map((d) => d._id)).toEqual([
+      "bigcommerceProduct-180",
+    ]);
+  });
+});
+
+describe("stale ids", () => {
+  const kept = new Set(["bigcommerceProductVariant-167"]);
+
+  it("soft-deletes what the run did not see and nothing it did", () => {
+    expect(
+      staleMutations(
+        ["bigcommerceProductVariant-167", "bigcommerceProductVariant-999"],
+        kept
+      )
+    ).toEqual(softDeleteMutations("bigcommerceProductVariant-999"));
+  });
+
+  it("emits nothing when everything live was seen", () => {
+    expect(staleMutations(["bigcommerceProductVariant-167"], kept)).toEqual([]);
   });
 });
 

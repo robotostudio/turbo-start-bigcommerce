@@ -1,12 +1,12 @@
 /**
  * Idempotent writes against the REST Catalog API.
  *
- * Every resource is looked up before it is written, keyed on something Shopify
- * controls: categories and products on their storefront URL, variants on SKU,
- * options on display name, images on their source filename, metafields on
- * `namespace:key`. Re-running updates in place instead of appending, and
- * anything in BigCommerce that is no longer in Shopify is deleted, so the two
- * catalogs converge rather than drift.
+ * Every resource is looked up before it is written, keyed on something the
+ * catalog file controls: categories and products on their storefront URL,
+ * variants on SKU, options on display name, images on their source filename,
+ * metafields on `namespace:key`. Re-running updates in place instead of
+ * appending, and anything in BigCommerce that the file no longer has is
+ * deleted, so the store converges on the file rather than drifting from it.
  */
 
 import { bc, log } from "./client.js";
@@ -36,8 +36,8 @@ const DELETE_CHUNK = 50;
 const METAFIELD_PERMISSION = "read_and_sf_access";
 
 /**
- * The reference storefront links to `/collections/{handle}` and
- * `/products/{handle}`, so both URLs are set explicitly. BigCommerce otherwise
+ * The reference storefront links to `/collections/{slug}` and
+ * `/products/{slug}`, so both URLs are set explicitly. BigCommerce otherwise
  * derives a category path from its position in the tree and a product path
  * from its name.
  */
@@ -48,6 +48,7 @@ interface BcCategory {
   category_id: number;
   name: string;
   url: { path: string };
+  image_url?: string;
 }
 
 interface BcProduct {
@@ -115,9 +116,10 @@ async function deleteInChunks(
 }
 
 /**
- * Deletes every product and category BigCommerce holds that Shopify does not.
- * This is what makes the script a mirror rather than an importer — and it is
- * destructive, so it only ever runs against the store the credentials name.
+ * Deletes every product and category BigCommerce holds that the catalog file
+ * does not. This is what makes the script a mirror rather than an importer —
+ * and it is destructive, so it only ever runs against the store the
+ * credentials name.
  */
 export async function pruneCatalog(
   catalog: Catalog,
@@ -129,7 +131,7 @@ export async function pruneCatalog(
   );
 
   if (staleProducts.length > 0) {
-    log.info(`Deleting ${staleProducts.length} products not in Shopify…`);
+    log.info(`Deleting ${staleProducts.length} products not in the catalog…`);
     await deleteInChunks(
       "/v3/catalog/products",
       "id",
@@ -146,7 +148,9 @@ export async function pruneCatalog(
   );
 
   if (staleCategories.length > 0) {
-    log.info(`Deleting ${staleCategories.length} categories not in Shopify…`);
+    log.info(
+      `Deleting ${staleCategories.length} categories not in the catalog…`
+    );
     // Deepest first: a parent cannot be removed while it still has children.
     const ids = staleCategories
       .sort((a, b) => b.url.path.length - a.url.path.length)
@@ -160,7 +164,14 @@ export async function pruneCatalog(
 // Categories
 // ---------------------------------------------------------------------------
 
-function categoryBody(def: CategoryDef) {
+/**
+ * `hasImage` suppresses `image_url` on a category that already has one.
+ * BigCommerce treats the field as an upload instruction, not a value: sending
+ * it re-downloads the file and stores it under a fresh random path, orphaning
+ * the old one. The committed catalog names those paths, so an unconditional
+ * re-send would leave every category image 404 after the second run.
+ */
+function categoryBody(def: CategoryDef, hasImage = false) {
   return {
     tree_id: TREE_ID,
     parent_id: 0,
@@ -168,29 +179,34 @@ function categoryBody(def: CategoryDef) {
     description: def.description,
     sort_order: def.sortOrder,
     url: { path: categoryPath(def.slug), is_customized: true },
-    ...(def.imageUrl === undefined ? {} : { image_url: def.imageUrl }),
+    ...(def.imageUrl === undefined || hasImage
+      ? {}
+      : { image_url: def.imageUrl }),
     is_visible: true,
   };
 }
 
 /**
- * Mirrors the Shopify collections as a flat set of categories. Flat is the
- * point: a nested BigCommerce tree would put the parent segments back into the
- * path and stop `/collections/{handle}/` matching.
+ * Writes the categories as a flat set. Flat is the point: a nested
+ * BigCommerce tree would put the parent segments back into the path and stop
+ * `/collections/{slug}/` matching.
  */
 export async function upsertCategories(
   defs: CategoryDef[],
   stats: RunStats
 ): Promise<Map<string, number>> {
   const existing = await listCategories();
-  const byPath = new Map(existing.map((c) => [c.url?.path, c.category_id]));
+  const byPath = new Map(existing.map((c) => [c.url?.path, c]));
 
   const updates = defs
     .filter((d) => byPath.has(categoryPath(d.slug)))
-    .map((d) => ({
-      category_id: byPath.get(categoryPath(d.slug)) as number,
-      ...categoryBody(d),
-    }));
+    .map((d) => {
+      const found = byPath.get(categoryPath(d.slug)) as BcCategory;
+      return {
+        category_id: found.category_id,
+        ...categoryBody(d, Boolean(found.image_url)),
+      };
+    });
   const creates = defs.filter((d) => !byPath.has(categoryPath(d.slug)));
 
   if (updates.length > 0) {
@@ -199,7 +215,14 @@ export async function upsertCategories(
   }
 
   if (creates.length > 0) {
-    await bc("POST", "/v3/catalog/trees/categories", creates.map(categoryBody));
+    // Not `creates.map(categoryBody)`: `map` passes the index as the second
+    // argument, which would land in `hasImage` and drop every image but the
+    // first.
+    await bc(
+      "POST",
+      "/v3/catalog/trees/categories",
+      creates.map((d) => categoryBody(d))
+    );
     stats.created += creates.length;
     log.info(`Categories created: ${creates.map((c) => c.name).join(", ")}`);
   }
@@ -341,8 +364,8 @@ async function upsertVariants(
 /**
  * Uploads any image the product does not already have and removes any it
  * should no longer have. The key is the source filename, which BigCommerce
- * keeps inside `image_file`: Shopify's alt text repeats across every shot of
- * one colourway and so cannot tell four images apart.
+ * keeps inside `image_file`: the alt text repeats across every shot of one
+ * colourway and so cannot tell four images apart.
  */
 async function upsertImages(
   productId: number,
@@ -421,7 +444,7 @@ export async function upsertProduct(
   const categories = def.categorySlugs.map((slug) => {
     const id = categoryIds.get(slug);
     if (id === undefined) {
-      throw new Error(`Product ${def.slug} — unknown collection ${slug}`);
+      throw new Error(`Product ${def.slug} — unknown category ${slug}`);
     }
     return id;
   });

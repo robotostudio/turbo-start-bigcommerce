@@ -25,9 +25,9 @@ pnpm test
 pnpm check-refs
 ```
 
-`check-refs` is the one that surprises people: Shopify references warn and pass, because the tree is
-still full of them on purpose. Live-system identifiers — a real project ID, store hash, or deploy
-hostname — fail hard.
+`check-refs` is the one that surprises people. Live-system identifiers, meaning a real project ID,
+store hash, or deploy hostname, fail hard. Leftovers from the platform this starter was ported off
+only warn, and the planning and research docs are exempt from that list entirely.
 
 - [ ] Branched from `main`, one feature or fix in it
 - [ ] Commits follow [Conventional Commits](https://www.conventionalcommits.org/)

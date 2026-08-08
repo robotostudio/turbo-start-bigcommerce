@@ -11,36 +11,25 @@ import { Check, ChevronDown } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
-import { sortFromSearchParams } from "./sort-utils";
-
-const SORT_OPTIONS = [
-  { label: "Featured", sortKey: "COLLECTION_DEFAULT", reverse: false },
-  { label: "Price: Low to High", sortKey: "PRICE", reverse: false },
-  { label: "Price: High to Low", sortKey: "PRICE", reverse: true },
-  { label: "Title: A-Z", sortKey: "TITLE", reverse: false },
-  { label: "Title: Z-A", sortKey: "TITLE", reverse: true },
-  { label: "Best Selling", sortKey: "BEST_SELLING", reverse: false },
-  { label: "Newest", sortKey: "CREATED", reverse: true },
-] as const;
+import { DEFAULT_SORT, SORT_OPTIONS, sortFromSearchParams } from "./sort-utils";
 
 export function SortSelector() {
   const router = useRouter();
   const searchParams = useSearchParams();
   // Read, not passed in: the server component stays `searchParams`-free so
   // the route can be statically generated.
-  const { sort: currentSort, reverse: currentReverse } =
-    sortFromSearchParams(searchParams);
+  const currentSort = sortFromSearchParams(searchParams);
 
   const handleSort = useCallback(
-    (sortKey: string, reverse: boolean) => {
+    (value: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (sortKey === "COLLECTION_DEFAULT" && reverse === false) {
+      if (value === DEFAULT_SORT) {
         params.delete("sort");
-        params.delete("reverse");
       } else {
-        params.set("sort", sortKey);
-        params.set("reverse", String(reverse));
+        params.set("sort", value);
       }
+      // The cursor is an offset into the *previous* order — reusing it across a
+      // sort change pages into the wrong slice, and returns short.
       params.delete("after");
       const qs = params.toString();
       router.push(qs ? `?${qs}` : "?", { scroll: false });
@@ -55,25 +44,22 @@ export function SortSelector() {
         <ChevronDown className="size-[18px]" strokeWidth={1.75} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {SORT_OPTIONS.map((option) => {
-          const active =
-            option.sortKey === currentSort && option.reverse === currentReverse;
-          return (
-            <DropdownMenuItem
-              className="flex items-center justify-between gap-6"
-              key={`${option.sortKey}-${option.reverse}`}
-              onClick={() => handleSort(option.sortKey, option.reverse)}
-            >
-              {option.label}
-              <Check
-                className={cn("size-4", active ? "opacity-100" : "opacity-0")}
-              />
-            </DropdownMenuItem>
-          );
-        })}
+        {SORT_OPTIONS.map((option) => (
+          <DropdownMenuItem
+            className="flex items-center justify-between gap-6"
+            key={option.value}
+            onClick={() => handleSort(option.value)}
+          >
+            {option.label}
+            <Check
+              className={cn(
+                "size-4",
+                option.value === currentSort ? "opacity-100" : "opacity-0"
+              )}
+            />
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
-
-export { parseSortParams } from "./sort-utils";

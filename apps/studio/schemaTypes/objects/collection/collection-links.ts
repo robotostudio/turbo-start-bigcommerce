@@ -12,7 +12,7 @@ export const collectionLinks = defineField({
       name: "collection",
       type: "reference",
       weak: true,
-      to: [{ type: "collection" }],
+      to: [{ type: "bigcommerceCategory" }],
     }),
   ],
 });

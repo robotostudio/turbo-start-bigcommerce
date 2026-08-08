@@ -1,16 +1,18 @@
 /**
  * BigCommerce seed script — CLI entry point.
  *
- * Mirrors the live Shopify catalog into the BigCommerce sandbox: same
- * products, variants, prices, images, options and collections, under the same
- * slugs. Shopify is read-only here; BigCommerce is rewritten to match it,
- * including deleting anything Shopify no longer has.
+ * Writes the catalog frozen in `seed/bigcommerce-catalog.json` into your
+ * BigCommerce store: products, variants, prices, images, options and
+ * categories, under the slugs the reference storefront links to. The file is
+ * read-only here; BigCommerce is rewritten to match it, including deleting
+ * anything the file does not have.
  *
  * Usage:
  *   pnpm --filter studio seed:bigcommerce
  *   pnpm --filter studio seed:bigcommerce -- --verbose
  */
 
+import { loadCatalog, validateCatalog } from "./catalog.js";
 import { getStore, log, pool } from "./client.js";
 import {
   assignToChannel,
@@ -22,7 +24,6 @@ import {
   upsertCategories,
   upsertProduct,
 } from "./seed.js";
-import { fetchCatalog, validateCatalog } from "./shopify.js";
 import type { Catalog, RunStats } from "./types.js";
 
 /**
@@ -73,7 +74,7 @@ async function main(): Promise<void> {
       `[${store.status}, ${store.currency}, ${store.weightUnits}]`
   );
 
-  const catalog = await fetchCatalog(store.weightUnits);
+  const catalog = loadCatalog(store.weightUnits);
   validateCatalog(catalog);
 
   const variantCount = catalog.products.reduce(
@@ -81,8 +82,8 @@ async function main(): Promise<void> {
     0
   );
   log.info(
-    `Shopify: ${catalog.products.length} products, ${variantCount} variants, ` +
-      `${catalog.categories.length} collections`
+    `Catalog: ${catalog.products.length} products, ${variantCount} variants, ` +
+      `${catalog.categories.length} categories`
   );
 
   const before = await counts();

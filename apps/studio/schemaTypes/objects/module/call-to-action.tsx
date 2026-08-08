@@ -72,7 +72,7 @@ export const callToAction = defineField({
         }),
         defineArrayMember({
           name: "productWithVariant",
-          type: "productWithVariant",
+          type: "productWithVariantReference",
           validation: (Rule) => Rule.required(),
         }),
       ],

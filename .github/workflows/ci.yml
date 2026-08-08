@@ -50,7 +50,8 @@ jobs:
 
       - run: pnpm test
 
-      # Warns on Shopify references, fails on live-system identifiers.
-      # A later ticket flips this to strict by appending `--strict`.
+      # Warns on leftovers from the platform this was ported off, fails on
+      # live-system identifiers. A later ticket flips this to strict by
+      # appending `--strict`.
       - name: Forbidden references
         run: ./scripts/check-forbidden-refs.sh
