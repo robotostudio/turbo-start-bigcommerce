@@ -125,7 +125,7 @@ The four steps are these, and you can still run them one at a time:
 pnpm seed:bigcommerce   # catalog into BigCommerce
 pnpm seed:sanity        # content into Sanity — destructive, wipes the dataset
 pnpm sync:bigcommerce   # catalog back out of BigCommerce, into Sanity
-pnpm seed:refs          # point the seeded content at this store's catalog
+pnpm seed:refs --write  # point the seeded content at this store's catalog
 ```
 
 The order is load-bearing in both directions. `seed:sanity` wipes the dataset, so a sync before it is thrown away; `seed:refs` needs the documents the sync writes, so it can only go last.

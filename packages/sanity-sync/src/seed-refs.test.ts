@@ -1,8 +1,10 @@
+import type { SanityClient } from "@sanity/client";
 import { describe, expect, it } from "vitest";
 
 import {
   type CatalogDocument,
   type ContentDocument,
+  linkSeedRefs,
   parsePlaceholder,
   remapSeedRefs,
 } from "./seed-refs.js";
@@ -172,5 +174,79 @@ describe("remapSeedRefs", () => {
     };
 
     expect(remapSeedRefs([blogIndex], catalog).mutations).toEqual([]);
+  });
+});
+
+/** `homePage` as it reads once the patch has landed. */
+const homePageResolved: ContentDocument = {
+  _id: "homePage",
+  _type: "homePage",
+  pageBuilder: [
+    {
+      _key: "featuredHome",
+      _type: "featuredProducts",
+      products: [
+        {
+          _key: "featured-bramley",
+          _type: "reference",
+          _weak: true,
+          _ref: "bigcommerceProduct-47",
+        },
+      ],
+    },
+  ],
+};
+
+describe("linkSeedRefs", () => {
+  /**
+   * Enough of a client for the two fetches and the mutate. The content fetch
+   * answers with `after` once a mutate has landed, standing in for the patch
+   * having been applied — which is what the read-back check reads.
+   */
+  function stubClient(documents: ContentDocument[], after: ContentDocument[]) {
+    const mutations: unknown[] = [];
+    const client = {
+      fetch: (query: string) => {
+        if (query.includes("_type in $types")) {
+          return Promise.resolve(catalog);
+        }
+        return Promise.resolve(mutations.length > 0 ? after : documents);
+      },
+      mutate: (input: unknown) => {
+        mutations.push(input);
+        return Promise.resolve({});
+      },
+    };
+    return { client, mutations };
+  }
+
+  it("writes nothing when any placeholder is unresolved", async () => {
+    const { client, mutations } = stubClient(
+      [
+        homePage,
+        {
+          _id: "promoBanner",
+          _type: "promoBanner",
+          link: { _ref: "bigcommerceCategory-sale", _type: "reference" },
+        },
+      ],
+      []
+    );
+
+    const result = await linkSeedRefs(
+      { write: true },
+      client as unknown as SanityClient
+    );
+
+    expect(result.unresolved).toEqual(["bigcommerceCategory:sale"]);
+    expect(mutations).toEqual([]);
+  });
+
+  it("writes when every placeholder resolves", async () => {
+    const { client, mutations } = stubClient([homePage], [homePageResolved]);
+
+    await linkSeedRefs({ write: true }, client as unknown as SanityClient);
+
+    expect(mutations).toHaveLength(1);
   });
 });

@@ -18,7 +18,8 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { dirname } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Logger } from "@workspace/logger";
@@ -49,18 +50,62 @@ const STEPS = [
 
 function run(args: readonly string[]): void {
   const result = spawnSync("pnpm", [...args], { cwd: ROOT, stdio: "inherit" });
+  const command = `\`pnpm ${args.join(" ")}\``;
+
+  // `status` is null both when the process never started and when a signal
+  // killed it, and "exited null" names neither.
+  if (result.error) {
+    throw new Error(`${command} could not start: ${result.error.message}`);
+  }
+  if (result.signal) {
+    throw new Error(`${command} was killed by ${result.signal}`);
+  }
   if (result.status !== 0) {
-    throw new Error(`\`pnpm ${args.join(" ")}\` exited ${result.status}`);
+    throw new Error(`${command} exited ${result.status}`);
   }
 }
 
+/**
+ * Steps 3 and 4 read `packages/sanity-sync/.env`, not the studio's — that
+ * package owns its own credentials on purpose. So the dataset printed above the
+ * confirmation is the one steps 1 and 2 use, and two of the four steps could
+ * quietly write somewhere else. `--yes` has to mean one target, so the two
+ * files are compared before anything runs.
+ */
+function syncTarget(): { project: string; dataset: string } | null {
+  let text: string;
+  try {
+    text = readFileSync(join(ROOT, "packages", "sanity-sync", ".env"), "utf8");
+  } catch {
+    return null;
+  }
+  const read = (key: string) =>
+    text.match(new RegExp(`^\\s*${key}\\s*=\\s*"?([^"\n\r]*)"?`, "m"))?.[1] ??
+    "";
+  return { project: read("SANITY_PROJECT_ID"), dataset: read("SANITY_DATASET") };
+}
+
 function main(): void {
-  log.info(`BigCommerce store: ${process.env.BIGCOMMERCE_STORE_HASH ?? "unset"}`);
+  const project = process.env.SANITY_STUDIO_PROJECT_ID ?? "unset";
+  const dataset = process.env.SANITY_STUDIO_DATASET ?? "unset";
+
   log.info(
-    `Sanity dataset:    ${process.env.SANITY_STUDIO_PROJECT_ID ?? "unset"}/${process.env.SANITY_STUDIO_DATASET ?? "unset"}`
+    `BigCommerce store: ${process.env.BIGCOMMERCE_STORE_HASH ?? "unset"}`
   );
+  log.info(`Sanity dataset:    ${project}/${dataset}`);
   for (const [index, step] of STEPS.entries()) {
     log.info(`  ${index + 1}. ${step.label}`);
+  }
+
+  const sync = syncTarget();
+  if (sync && (sync.project !== project || sync.dataset !== dataset)) {
+    log.error(
+      `packages/sanity-sync/.env points at ${sync.project}/${sync.dataset}, not ${project}/${dataset}.`
+    );
+    log.error(
+      "Steps 3 and 4 read that file, so the run would write to two different datasets. Make them match."
+    );
+    process.exit(1);
   }
 
   if (!process.argv.includes("--yes")) {

@@ -40,7 +40,7 @@ pnpm verify           # credentials, channel, catalog and content agree
 pnpm seed:bigcommerce # catalog into BigCommerce, from a committed fixture
 pnpm seed:sanity      # content into Sanity — DESTRUCTIVE, wipes the dataset
 pnpm sync:bigcommerce # catalog back out of BigCommerce, into Sanity
-pnpm seed:refs        # repoint the content at the ids this store minted
+pnpm seed:refs --write # repoint the content at the ids this store minted; dry run without --write
 
 # Studio schema tooling (run from apps/studio)
 npx sanity schema extract --enforce-required-fields

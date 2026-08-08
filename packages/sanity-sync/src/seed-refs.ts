@@ -196,6 +196,15 @@ export async function linkSeedRefs(
 
   const result = remapSeedRefs(documents, catalog);
 
+  // All or nothing. A run where some slugs resolve and others do not means the
+  // sync is incomplete, and writing the resolvable half leaves a dataset that
+  // is neither the old state nor the new one — while the log says it wrote.
+  // Refusing costs nothing: the step is idempotent, so the operator fixes the
+  // sync and runs it again.
+  if (result.unresolved.length > 0) {
+    return result;
+  }
+
   if (options.write && result.mutations.length > 0) {
     await client.mutate(result.mutations);
 
@@ -222,8 +231,9 @@ async function main() {
   });
 
   const result = await linkSeedRefs({ write: values.write });
+  const wrote = values.write && result.unresolved.length === 0;
 
-  if (!values.write) {
+  if (!wrote) {
     logger.info("DRY RUN — the exact mutations that would be issued:");
     for (const mutation of result.mutations) {
       logger.info(JSON.stringify(mutation));
@@ -233,16 +243,14 @@ async function main() {
   logger.info(
     `${result.resolved} reference(s) resolved across ${result.mutations.length} document(s).`
   );
-  logger.info(
-    values.write ? "Wrote to Sanity." : "Dry run — nothing was written."
-  );
+  logger.info(wrote ? "Wrote to Sanity." : "Nothing was written.");
 
   if (result.unresolved.length > 0) {
     for (const key of result.unresolved) {
       logger.error(`No synced document for ${key}`);
     }
     logger.error(
-      "Run `pnpm sync:bigcommerce` first — those slugs have no catalog document yet."
+      "Run `pnpm sync:bigcommerce` first — those slugs have no catalog document yet. Nothing was written; this step writes all the references or none of them."
     );
     process.exit(1);
   }

@@ -20,13 +20,13 @@ clone the real pages.
 pnpm seed:bigcommerce   # catalog into BigCommerce
 pnpm seed:sanity        # content into Sanity  (destructive: wipes the dataset)
 pnpm sync:bigcommerce   # catalog back out of BigCommerce, into Sanity
-pnpm seed:refs          # point the content at the ids this store minted
+pnpm seed:refs --write  # point the content at the ids this store minted
 ```
 
 Neither of the last two is optional. `reference-dataset.ndjson` no longer
 carries product or category documents — it references the ones the sync
 writes. Seed the content without syncing and the navbar, the promo banner and
-the homepage's featured product all point at documents that do not exist yet.
+the homepage's featured products all point at documents that do not exist yet.
 
 Those references are deliberately **weak**. A strong reference to a document
 outside the import set is rejected outright — `sanity dataset import` fails at
@@ -53,6 +53,16 @@ It rewrites only references whose tail is not a number, which is what makes a
 second run cost nothing: once a reference points at `bigcommerceProduct-47` it
 no longer matches, so re-running after a re-seed touches only what the re-seed
 put back. Run it without `--write` to see the patches first.
+
+It writes all of the references or none of them. A slug with no catalog
+document means the sync is incomplete, and half a remap is a dataset that is
+neither the old state nor the new one.
+
+The same rule puts one constraint on the catalog: **no slug may be entirely
+numeric.** `bigcommerceProduct-2024` reads as an id that has already been
+resolved, so it is skipped and stays dangling, with the empty navbar and no
+error described above. Nothing in the committed fixture is close to this, but a
+replacement catalog could be.
 
 ### The contract the sync has to meet
 
@@ -174,8 +184,11 @@ Roboto Studio's Sanity org.
    `bigcommerceProduct-183` becomes
    `bigcommerceProduct-aster-denim-coach-jacket`. The slugs are in the export,
    on `store.slug.current` of the catalog documents you dropped in step 3.
-7. Write the result here and run `pnpm seed:sanity` against a scratch dataset
-   before you commit it.
+7. Write the result here, then run `pnpm seed:sanity`, `pnpm sync:bigcommerce`,
+   `pnpm seed:refs --write` and `pnpm verify` against a scratch dataset before
+   you commit it. The import accepts any string, so it is `seed:refs` and
+   `verify` that catch a slug mistyped in step 6 — otherwise it surfaces on
+   somebody else's fresh sandbox as a reference that points at nothing.
 
 Steps 4, 5 and 6 are not optional. The importer refuses an asset document that
 names a different project — it fails with "references a different project ID

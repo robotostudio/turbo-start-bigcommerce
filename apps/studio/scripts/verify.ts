@@ -17,7 +17,8 @@
  * the two apps that need them:
  *
  *   apps/studio/.env      BIGCOMMERCE_ADMIN_TOKEN, SANITY_STUDIO_*
- *   apps/web/.env.local   BIGCOMMERCE_STOREFRONT_TOKEN, BIGCOMMERCE_CHANNEL_ID
+ *   apps/web/.env.local   BIGCOMMERCE_STOREFRONT_TOKEN, BIGCOMMERCE_CHANNEL_ID,
+ *                         SANITY_API_READ_TOKEN
  */
 
 import { createClient } from "@sanity/client";
@@ -40,6 +41,9 @@ const REQUIRED_ENV = [
   "BIGCOMMERCE_STOREFRONT_TOKEN",
 ] as const;
 
+/** `@workspace/env` defaults this to "1" as well, so an unset value is not a divergence. */
+const channelId = process.env.BIGCOMMERCE_CHANNEL_ID ?? "1";
+
 type Check = { name: string; ok: boolean; detail: string };
 
 const checks: Check[] = [];
@@ -57,23 +61,29 @@ function missingEnv(): string[] {
   return REQUIRED_ENV.filter((name) => !process.env[name]);
 }
 
+/** `custom_url` is optional here because a catalog entity without one must be reported, not crashed on. */
 type RestProduct = {
   id: number;
   name: string;
-  custom_url: { url: string };
+  custom_url?: { url?: string };
 };
 
 type RestCategory = {
   id: number;
   name: string;
-  custom_url: { url: string };
+  custom_url?: { url?: string };
 };
 
-async function storefrontQuery<T>(query: string): Promise<T> {
-  const channelId = process.env.BIGCOMMERCE_CHANNEL_ID ?? "1";
-  const url = `https://store-${process.env.BIGCOMMERCE_STORE_HASH}-${channelId}.mybigcommerce.com/graphql`;
+/** Matches `apps/web`'s own resolution, override included, or it checks a different endpoint than the app uses. */
+function storefrontUrl(): string {
+  return (
+    process.env.BIGCOMMERCE_API_URL ??
+    `https://store-${process.env.BIGCOMMERCE_STORE_HASH}-${channelId}.mybigcommerce.com/graphql`
+  );
+}
 
-  const response = await fetch(url, {
+async function storefrontQuery<T>(query: string): Promise<T> {
+  const response = await fetch(storefrontUrl(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -108,10 +118,27 @@ const sanityClient = () =>
     projectId: process.env.SANITY_STUDIO_PROJECT_ID as string,
     dataset: process.env.SANITY_STUDIO_DATASET as string,
     apiVersion: process.env.SANITY_STUDIO_API_VERSION ?? "2025-05-08",
-    token: process.env.SANITY_API_WRITE_TOKEN,
+    // Read token first: this script only reads, and a tool holding write
+    // credentials is one careless edit away from mutating the dataset it checks.
+    token:
+      process.env.SANITY_API_READ_TOKEN ?? process.env.SANITY_API_WRITE_TOKEN,
     useCdn: false,
     perspective: "raw",
   });
+
+/** Catalog entities whose storefront path has no synced document under the same slug. */
+function pathProblems(
+  entities: { name: string; custom_url?: { url?: string } }[],
+  type: string,
+  bySlug: Set<string>
+): string[] {
+  return entities
+    .filter((entity) => {
+      const path = entity.custom_url?.url;
+      return !(path && bySlug.has(`${type}:${slugFromPath(path)}`));
+    })
+    .map((entity) => entity.custom_url?.url ?? `${entity.name} (no URL)`);
+}
 
 type SyncedDocument = {
   _id: string;
@@ -140,11 +167,17 @@ async function main() {
     storeHash: process.env.BIGCOMMERCE_STORE_HASH as string,
     adminToken: process.env.BIGCOMMERCE_ADMIN_TOKEN as string,
   };
-  const channelId = process.env.BIGCOMMERCE_CHANNEL_ID ?? "1";
 
   // --- BigCommerce Admin -----------------------------------------------------
   let adminProducts: RestProduct[] = [];
   let adminCategories: RestCategory[] = [];
+  /**
+   * Why the checks below the Admin read cannot be answered, when they cannot.
+   * They all compare something against the catalog, so an empty or truncated
+   * catalog makes every one of them come out clean — three green-sounding
+   * details under a FAIL verdict, while the real cause sits further up.
+   */
+  let blocked: string | null = null;
   try {
     const [products, categories] = await Promise.all([
       catalogGet<{ data: RestProduct[] }>(
@@ -158,14 +191,28 @@ async function main() {
     ]);
     adminProducts = products?.data ?? [];
     adminCategories = categories?.data ?? [];
+
+    // One page each. Neither read follows pagination, and a fork that fills a
+    // page is something this script cannot answer for: every product past the
+    // cap would read as unassigned and unsynced, which is a confident FAIL
+    // naming three wrong layers. Say the catalog is too big instead.
+    if (
+      adminProducts.length >= ADMIN_PAGE ||
+      adminCategories.length >= ADMIN_PAGE
+    ) {
+      blocked = `the catalog fills the ${ADMIN_PAGE}-row page this script reads; it does not paginate`;
+    } else if (adminProducts.length === 0) {
+      blocked = "the catalog is empty — run `pnpm seed:bigcommerce`";
+    }
+
     record(
       "bigcommerce admin",
-      adminProducts.length > 0,
-      adminProducts.length > 0
-        ? `${adminProducts.length} product(s), ${adminCategories.length} categor(y|ies)`
-        : "the catalog is empty — run `pnpm seed:bigcommerce`"
+      blocked === null,
+      blocked ??
+        `${adminProducts.length} product(s), ${adminCategories.length} categor(y|ies)`
     );
   } catch (error) {
+    blocked = "the Admin read failed";
     record("bigcommerce admin", false, (error as Error).message);
   }
 
@@ -174,49 +221,50 @@ async function main() {
   // BigCommerce assigns a new product to no channel at all, and the storefront
   // then cannot see it — no error, just a shorter list.
   let storefrontIds = new Set<number>();
-  let storefrontAnswered = false;
+  // A rejected token returns an empty product list, which is byte-identical to
+  // every product being unassigned — so the channel check needs to know the
+  // query answered at all before it reads anything into a short list.
+  let storefrontBlocked: string | null = "the storefront query failed above";
   try {
     const data = await storefrontQuery<{
-      site: {
-        settings: { storeName: string } | null;
-        products: { edges: { node: { entityId: number } }[] | null };
-      };
+      site?: {
+        settings?: { storeName: string } | null;
+        products?: { edges?: { node: { entityId: number } }[] | null } | null;
+      } | null;
     }>(
       `{ site { settings { storeName }
            products(first: ${STOREFRONT_PAGE}) { edges { node { entityId } } } } }`
     );
     storefrontIds = new Set(
-      (data.site.products.edges ?? []).map((edge) => edge.node.entityId)
+      (data.site?.products?.edges ?? []).map((edge) => edge.node.entityId)
     );
-    storefrontAnswered = true;
+    storefrontBlocked =
+      storefrontIds.size >= STOREFRONT_PAGE
+        ? `the storefront returned the full ${STOREFRONT_PAGE}-row page; this script does not paginate`
+        : null;
     record(
       "storefront token",
-      Boolean(data.site.settings?.storeName),
-      data.site.settings?.storeName ?? "the token answered without store settings"
+      Boolean(data.site?.settings?.storeName),
+      data.site?.settings?.storeName ??
+        "the token answered without store settings"
     );
   } catch (error) {
     record("storefront token", false, (error as Error).message);
   }
 
-  // Only meaningful once the storefront answered at all: a rejected token
-  // returns an empty product list, which is indistinguishable from every
-  // product being unassigned and would report the wrong layer as broken.
-  if (storefrontAnswered) {
+  const channelBlocked = blocked ?? storefrontBlocked;
+  if (channelBlocked) {
+    record(`channel ${channelId}`, false, `not checked — ${channelBlocked}`);
+  } else {
     const unassigned = adminProducts.filter(
       (product) => !storefrontIds.has(product.id)
     );
     record(
       `channel ${channelId}`,
-      adminProducts.length > 0 && unassigned.length === 0,
+      unassigned.length === 0,
       unassigned.length === 0
         ? `all ${adminProducts.length} product(s) visible to the storefront`
         : `not assigned: ${unassigned.map((p) => p.name).join(", ")}`
-    );
-  } else {
-    record(
-      `channel ${channelId}`,
-      false,
-      "not checked — the storefront query failed above"
     );
   }
 
@@ -254,43 +302,39 @@ async function main() {
       .filter((document) => document._type === "bigcommerceProduct")
       .map((document) => document.entityId)
   );
-  const unsynced = adminProducts.filter(
-    (product) => !syncedProductIds.has(product.id)
-  );
-  record(
-    "catalog synced into sanity",
-    adminProducts.length > 0 && unsynced.length === 0,
-    unsynced.length === 0
-      ? `${syncedProductIds.size} product document(s) match the catalog`
-      : `no document for: ${unsynced.map((p) => p.name).join(", ")} — run \`pnpm sync:bigcommerce\``
-  );
+  if (blocked) {
+    record("catalog synced into sanity", false, `not checked — ${blocked}`);
+    record("storefront paths match", false, `not checked — ${blocked}`);
+  } else {
+    const unsynced = adminProducts.filter(
+      (product) => !syncedProductIds.has(product.id)
+    );
+    record(
+      "catalog synced into sanity",
+      unsynced.length === 0,
+      unsynced.length === 0
+        ? `${syncedProductIds.size} product document(s) match the catalog`
+        : `no document for: ${unsynced.map((p) => p.name).join(", ")} — run \`pnpm sync:bigcommerce\``
+    );
 
-  const bySlug = new Map(
-    live.map((document) => [`${document._type}:${document.slug}`, document])
-  );
-  const staleSlugs = [
-    ...adminProducts
-      .filter(
-        (product) =>
-          !bySlug.has(`bigcommerceProduct:${slugFromPath(product.custom_url.url)}`)
-      )
-      .map((product) => product.custom_url.url),
-    ...adminCategories
-      .filter(
-        (category) =>
-          !bySlug.has(
-            `bigcommerceCategory:${slugFromPath(category.custom_url.url)}`
-          )
-      )
-      .map((category) => category.custom_url.url),
-  ];
-  record(
-    "storefront paths match",
-    adminProducts.length > 0 && staleSlugs.length === 0,
-    staleSlugs.length === 0
-      ? "every catalog path has a document under the same slug"
-      : `no document for: ${staleSlugs.join(", ")}`
-  );
+    const bySlug = new Set(
+      live.map((document) => `${document._type}:${document.slug}`)
+    );
+    // A catalog entity with no `custom_url` has no storefront path at all, so
+    // it can never match a synced slug. It is reported rather than skipped:
+    // dereferencing it would throw and take every check below it with it.
+    const staleSlugs = [
+      ...pathProblems(adminProducts, "bigcommerceProduct", bySlug),
+      ...pathProblems(adminCategories, "bigcommerceCategory", bySlug),
+    ];
+    record(
+      "storefront paths match",
+      staleSlugs.length === 0,
+      staleSlugs.length === 0
+        ? "every catalog path has a document under the same slug"
+        : `no document for: ${staleSlugs.join(", ")}`
+    );
+  }
 
   // A dangling reference is the failure the seed is built to avoid, and the one
   // that renders as nothing rather than as an error. `_ref` values are read off
