@@ -78,17 +78,113 @@ const markDefsFragment = /* groq */ `
   }
 ` as const;
 
+const productWithVariantFragment = /* groq */ `
+  productWithVariant{
+    // Null once the sync tombstones the product, which drops the whole spot:
+    // \`ProductHotspotsImage\` already bails on a spot with no product. The
+    // alternative is a card that links to a PDP which 404s, and the repo has
+    // settled that argument the other way once already — see the comment on the
+    // flatMap in \`components/product/featured-cards.ts\`. The sync soft-deletes,
+    // so without this the document is still there and still projects happily.
+    "product": select(
+      product->store.isDeleted != true => product->{
+        _id,
+        "slug": store.slug.current,
+        store{
+          title,
+          previewImageUrl,
+          // A synced product carries one price, not a min/max range. The
+          // hotspot card still reads a range, so it is built here rather than
+          // reshaping the card: a marked-down product keeps the pre-markdown
+          // figure in \`price\`, which makes it the top of the range.
+          "priceRange": {
+            "minVariantPrice": coalesce(salePrice, price),
+            "maxVariantPrice": price
+          }
+        }
+      }
+    ),
+    variant->{
+      _id,
+      store{
+        title,
+        price,
+        imageUrl
+      }
+    }
+  }
+` as const;
+
+const productHotspotsFragment = /* groq */ `
+  productHotspots[]{
+    _key,
+    x,
+    y,
+    ${productWithVariantFragment}
+  }
+` as const;
+
+/**
+ * The member projections shared by the two editorial bodies.
+ *
+ * `blog.richText` and `bigcommerceProduct.body` accept the same six members —
+ * the blog gets them from the `richText` type (`rich-text.ts`), the product from
+ * `editorialBody` in `packages/sanity-sync/src/schema.ts`. They used to be
+ * projected by two fragments that had drifted, and the drift was invisible:
+ * every unhandled member still comes back from the bare `...` spread, just as
+ * raw stored data.
+ *
+ * That is how hotspots in blog posts came to render nothing. `image` arrived as
+ * `{_type, asset:{_ref}}` with no `id`, so `ProductHotspotsImage`'s
+ * `if (!image.id) return null` fired, and `productWithVariant.product` was still
+ * an undereferenced `{_ref}` behind it. Neither failure logged anything.
+ *
+ * `instagram` is deliberately absent: its only field is a plain `url` string,
+ * which survives the spread intact. A case that projects nothing new would read
+ * as coverage rather than as a no-op.
+ */
+const editorialMembersFragment = /* groq */ `
+  _type == "block" => {
+    ...,
+    ${markDefsFragment}
+  },
+  _type == "image" => {
+    ${imageFields},
+    "caption": caption
+  },
+  _type == "imageWithProductHotspots" => {
+    _type,
+    _key,
+    image{${imageFields}},
+    showHotspots,
+    ${productHotspotsFragment}
+  },
+  _type == "accordion" => {
+    _type,
+    _key,
+    groups[]{
+      _key,
+      title,
+      body[]{
+        ...,
+        _type == "block" => {
+          ...,
+          ${markDefsFragment}
+        }
+      }
+    }
+  },
+  _type == "callout" => {
+    _type,
+    _key,
+    text
+  }
+` as const;
+
 const richTextFragment = /* groq */ `
   richText[]{
     ...,
-    _type == "block" => {
-      ...,
-      ${markDefsFragment}
-    },
-    _type == "image" => {
-      ${imageFields},
-      "caption": caption
-    }
+    ${editorialMembersFragment}
   }
 ` as const;
 
@@ -623,81 +719,12 @@ export const queryRedirectBySource = defineQuery(`
 
 // ── Product fragments ──
 
-const productWithVariantFragment = /* groq */ `
-  productWithVariant{
-    product->{
-      _id,
-      "slug": store.slug.current,
-      store{
-        title,
-        previewImageUrl,
-        // A synced product carries one price, not a min/max range. The hotspot
-        // card still reads a range, so it is built here rather than reshaping
-        // the card: a marked-down product keeps the pre-markdown figure in
-        // \`price\`, which makes it the top of the range.
-        "priceRange": {
-          "minVariantPrice": coalesce(salePrice, price),
-          "maxVariantPrice": price
-        }
-      }
-    },
-    variant->{
-      _id,
-      store{
-        title,
-        price,
-        imageUrl
-      }
-    }
-  }
-` as const;
-
-const productHotspotsFragment = /* groq */ `
-  productHotspots[]{
-    _key,
-    x,
-    y,
-    ${productWithVariantFragment}
-  }
-` as const;
-
+// Same members as `richTextFragment`, different field name. See
+// `editorialMembersFragment`.
 const productBodyFragment = /* groq */ `
   body[]{
     ...,
-    _type == "block" => {
-      ...,
-      ${markDefsFragment}
-    },
-    _type == "image" => {
-      ${imageFields}
-    },
-    _type == "imageWithProductHotspots" => {
-      _type,
-      _key,
-      image{${imageFields}},
-      showHotspots,
-      ${productHotspotsFragment}
-    },
-    _type == "accordion" => {
-      _type,
-      _key,
-      groups[]{
-        _key,
-        title,
-        body[]{
-          ...,
-          _type == "block" => {
-            ...,
-            ${markDefsFragment}
-          }
-        }
-      }
-    },
-    _type == "callout" => {
-      _type,
-      _key,
-      text
-    }
+    ${editorialMembersFragment}
   }
 ` as const;
 
