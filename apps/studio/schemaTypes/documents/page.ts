@@ -4,6 +4,7 @@ import { defineField, defineType } from "sanity";
 import {
   documentSlugField,
   imageWithAltField,
+  metaDescriptionRules,
   pageBuilderField,
 } from "@/schemaTypes/common";
 import { GROUP, GROUPS } from "@/utils/constants";
@@ -36,18 +37,7 @@ export const page = defineType({
         "A brief summary of what this page is about. This text helps search engines understand your page and may appear in search results.",
       rows: 3,
       group: GROUP.CONTENT,
-      validation: (rule) => [
-        rule
-          .min(140)
-          .warning(
-            "The meta description should be at least 140 characters for optimal SEO visibility in search results"
-          ),
-        rule
-          .max(160)
-          .warning(
-            "The meta description should not exceed 160 characters as it will be truncated in search results"
-          ),
-      ],
+      validation: metaDescriptionRules,
     }),
     documentSlugField("page", {
       group: GROUP.CONTENT,

@@ -97,13 +97,15 @@ export const structure = (
             .items([
               list(S, "bigcommerceProduct", "Products", ShoppingBag),
               list(S, "bigcommerceCategory", "Categories", BookMarked),
-              list(
-                S,
-                "bigcommerceProductVariant",
-                "Product Variants",
-                FileText
-              ),
               list(S, "colorTheme", "Color Themes", Settings2),
+              // No "Product Variants" list. `bigcommerceProductVariant` is the
+              // only synced type with no editor-owned fields at all — every
+              // field sits under the read-only `store` object — so the list was
+              // 61 documents an editor could open and change nothing in. The
+              // type stays registered because the product-with-variant block
+              // references it, and the variant picker there filters to the
+              // chosen product's own variants, which is where an editor
+              // actually meets them.
             ])
         ),
       S.divider(),

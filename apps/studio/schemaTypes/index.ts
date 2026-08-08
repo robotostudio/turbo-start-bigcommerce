@@ -4,6 +4,7 @@ import { pageBuilderBlocks } from "@/schemaTypes/blocks";
 import { definitions } from "@/schemaTypes/definitions";
 import { documents, singletons } from "@/schemaTypes/documents";
 import { annotations, objects } from "@/schemaTypes/objects";
+import { withStoreThumbnails } from "@/schemaTypes/synced-previews";
 
 // The sync package built these "exported, deliberately NOT registered" and
 // called registration the flip that turns the sync on. This is the flip
@@ -12,7 +13,7 @@ import { annotations, objects } from "@/schemaTypes/objects";
 // BigCommerce itself.
 export const schemaTypes = [
   ...documents,
-  ...syncSchemaTypes,
+  ...withStoreThumbnails(syncSchemaTypes),
   ...objects,
   ...annotations,
   ...definitions,

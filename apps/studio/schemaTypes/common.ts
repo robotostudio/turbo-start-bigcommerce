@@ -2,6 +2,7 @@ import {
   defineField,
   type ImageRule,
   type ImageValue,
+  type StringRule,
   type ValidationBuilder,
 } from "sanity";
 
@@ -26,6 +27,29 @@ export const buttonsField = defineField({
   description:
     "Add one or more clickable buttons that visitors can use to navigate your website",
 });
+
+/**
+ * The meta-description length warnings, shared by every document that has one.
+ *
+ * The floor is 50, not the 140 this started at. At 140 all seven seeded pages
+ * and posts tripped the warning on a fresh install, so an editor's first
+ * impression of the Studio was seven amber triangles on content they had not
+ * written — which teaches them that warnings are decoration. There is no SEO
+ * minimum at 140; the floor exists only to catch a description that is really
+ * a stub.
+ */
+export const metaDescriptionRules: ValidationBuilder<StringRule, string> = (
+  rule
+) => [
+  rule
+    .min(50)
+    .warning("Add a little more — under 50 characters reads as a stub"),
+  rule
+    .max(160)
+    .warning(
+      "Google truncates around 160 characters, so the end of this may not be shown"
+    ),
+];
 
 export const pageBuilderField = defineField({
   name: "pageBuilder",
