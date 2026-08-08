@@ -152,7 +152,7 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 | `BIGCOMMERCE_API_URL` | No | Endpoint override. Derived from the hash and channel if unset |
 | `BIGCOMMERCE_PRERENDER_LIMIT` | No | How many catalog paths to prerender at build, defaults to `100`. The rest render on demand |
 | `NEXT_PUBLIC_STORE_CURRENCY` | No | ISO 4217 code, defaults to `GBP` |
-| `SANITY_REVALIDATE_SECRET` | In production | Shared with the Sanity webhook that publishes content changes. See [Wiring up content revalidation](#wiring-up-content-revalidation). Without it `/api/revalidate` answers 503 and published edits never reach the site |
+| `SANITY_REVALIDATE_SECRET` | In production | Shared with the Sanity webhook that publishes content changes. See [Wiring up content revalidation](#wiring-up-content-revalidation). A Vercel production build refuses to start without it. Anywhere else it is unset, `/api/revalidate` answers 503 and published edits never reach the site |
 
 ### Studio (`apps/studio/.env`)
 
@@ -252,6 +252,10 @@ half of this and the command that gives you a genuinely clean build.
 The route rejects anything without a valid signature, so an unset or mismatched secret shows up as
 `401`s in the Sanity webhook log rather than as silent staleness. A missing secret answers `503`.
 
+A Vercel production build now refuses to start when the secret is absent, so on Vercel you meet this at
+deploy time rather than as quietly stale content. The gate keys on `VERCEL_ENV=production`, which means a
+self-hosted production deploy still gets only the `503` and this page.
+
 One deliberate limitation: the `sanity` tag is invalidated wholesale, because Sanity's sync tags are
 content hashes rather than document ids and a webhook payload cannot be mapped to them. One publish
 therefore refreshes all Sanity-backed content, not just the document that changed. For per-route
@@ -286,6 +290,62 @@ Document types live in `apps/studio/schemaTypes/documents/`, objects in `apps/st
 
 `npx shadcn add <name>` into `packages/ui`, then import via `@workspace/ui/components/<name>`. Unused primitives were stripped from this fork, so expect to add a few back.
 
+## Hiding a product
+
+Setting `is_visible: false` on a BigCommerce product takes it out of the storefront catalog. Two things it does not do are worth knowing before a client asks.
+
+Everything below was measured against a live store on 8 August 2026 — one product, hidden and then restored, `is_visible` only. Channel assignment is a separate switch and was not touched.
+
+### Hiding does not stop a product being bought
+
+A cart that already holds the product keeps it. The line stays priced, `createCartRedirectUrls` still mints a checkout URL, that URL still redirects into BigCommerce's checkout, and the cart still reads back at its full total. Hiding takes a product out of the catalog. It does not invalidate carts that already hold it, at any layer.
+
+That is BigCommerce's behaviour, not this starter's, and this storefront deliberately does not add a check of its own. See [Checkout does not re-check the catalog](#checkout-does-not-re-check-the-catalog).
+
+### Hiding takes about half a minute to take effect
+
+BigCommerce caches storefront GraphQL responses per query document, and each cached document expires on its own schedule. So a hidden product keeps appearing for a while, and different parts of the site stop showing it at different moments:
+
+| Read | Hidden product gone after |
+|------|---------------------------|
+| A query the edge has never served before | ~10s |
+| `site.route(path:)` — the PDP, and picked featured cards | ~20s |
+| `site.product(entityId:)` and `site.products(entityIds:)` | ~30s |
+
+Hide a product, reload, and it can still be on your storefront for up to about half a minute. One observation on one store rather than a documented SLA, but it is the right order of magnitude to expect, and it is long enough to convince you the hide did not work.
+
+### What each surface does once it has caught up
+
+| Surface | Behaviour |
+|---------|-----------|
+| `/products/[...slug]` | 404s |
+| Featured Products with products picked | the product drops out and the row gets shorter |
+| Featured Products with none picked | the newest-products fallback substitutes and the row stays full |
+| A cart that already holds it | keeps it, priced, and checks out |
+
+Anything the browser refetches after hydration corrects itself a beat after page load. The category grid and the Featured Products row both do. Anything only rendered on the server stays stale for its revalidate window, and ISR hands the stale copy to the first visitor after expiry too, so that window is a floor rather than a ceiling.
+
+### Hiding a product silently reshuffles the featured row
+
+Which way it goes depends on something the block does not show the editor.
+
+- **Products picked in the Studio.** Each handle is resolved on its own, and one that no longer resolves drops out. Pick four, hide one, get a three-card row.
+- **No products picked.** The block falls back to the newest four products, that read re-runs against the live catalog, and whatever is next gets promoted. Pick none, hide one, get four cards containing a product nobody chose.
+
+Neither is wrong, and neither is guessable from the block. Server and client agree in both cases; they call the same `featuredCards()`.
+
+The fallback row can also show three cards for a few seconds before settling back to four. It resolves in two reads — the newest four ids, then a detail read per id — so if the detail read expires from BigCommerce's cache before the id list does, the list still names the hidden product and the detail for it comes back empty. Seen once across three attempts. If you catch it, wait and reload rather than chasing it.
+
+### Checkout does not re-check the catalog
+
+The storefront does not re-resolve cart lines against the catalog before minting the checkout redirect, and does not refuse a cart holding a product that has since been hidden. That is a decision rather than an oversight.
+
+BigCommerce accepts the order. Refusing it would be a policy this storefront invents rather than one it enforces, and which orders a merchant wants is the merchant's call to make. A starter is the wrong place to make it for them.
+
+The cost, since it is the obvious next question, is small. Cart lines carry `productEntityId`, so one batched `site.products(entityIds: [...])` covers a whole cart in a single request. It is cheap, and it is not authoritative: an entityId read still returns a hidden product for around 30 seconds after the merchant hides it, so the check narrows the window rather than closing it.
+
+If you want the refusal, add it to `redirectToCheckout()` in `apps/web/src/app/cart/actions.ts`. Read the entityIds off the cart, batch one catalog query, and return `{ ok: false, message }` when one comes back missing. The checkout button already renders whatever message that action returns.
+
 ## Troubleshooting
 
 | Problem | Fix |
@@ -303,6 +363,8 @@ Document types live in `apps/studio/schemaTypes/documents/`, objects in `apps/st
 | A published edit never appears on the deployed site | The revalidation webhook is not wired. See [Wiring up content revalidation](#wiring-up-content-revalidation) — without it the page is never refreshed, not slowly refreshed. |
 | A build shipped stale content and every check passed | Next's Data Cache lives in `.next` and outlives `turbo run build --force`. Build from a cold cache: `rm -rf apps/web/.next && pnpm build`. |
 | You rebuilt, the page is unchanged — or 500s with `ChunkLoadError` | The old server is still on the port, serving the build you deleted. `pkill -f "next start"` misses it: the process renames itself to `next-server (<version>)`. Kill it by port instead — `kill $(lsof -nP -iTCP:3000 -sTCP:LISTEN -t)`, unquoted so more than one PID still works — and check the new server's log for `EADDRINUSE`. |
+| You hid a product and it is still on the site | Give it about half a minute. BigCommerce caches storefront GraphQL per query document and each one expires on its own schedule, so surfaces stop showing it at different moments. See [Hiding a product](#hiding-a-product). |
+| You hid a product and the featured row still shows four, one of them a product you never picked | Working as built. A block with no products picked falls back to the newest four and promotes whatever is next. A block with products picked gets a shorter row instead. See [Hiding a product silently reshuffles the featured row](#hiding-a-product-silently-reshuffles-the-featured-row). |
 | Redirects not applying | They are fetched from Sanity at build time. Redeploy after adding one. |
 | Tailwind styles missing | Check `@import "tailwindcss"` is in your CSS entry point and the `@workspace/ui` transpile config. |
 
