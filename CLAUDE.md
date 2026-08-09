@@ -43,7 +43,7 @@ pnpm sync:bigcommerce # catalog back out of BigCommerce, into Sanity
 pnpm seed:refs --write # repoint the content at the ids this store minted; dry run without --write
 
 # Studio schema tooling (run from apps/studio)
-npx sanity schema extract --enforce-required-fields
+npx sanity schema extract --enforce-required-fields --force # --force since v6: extract refuses to overwrite schema.json without it
 npx sanity typegen generate
 npx sanity deploy
 ```
@@ -61,7 +61,7 @@ do not exist, which renders as nothing rather than as an error. See
 ```
 apps/
   web/          → Next.js 16 (App Router, Turbopack, React Compiler, RSC)
-  studio/       → Sanity Studio v5 (custom structure, plugins, blueprints)
+  studio/       → Sanity Studio v6 (custom structure, plugins, blueprints)
 packages/
   env/          → @workspace/env — T3 env validation (Zod v4), client.ts + server.ts
   sanity/       → @workspace/sanity — Sanity client, GROQ queries, live preview, generated types
@@ -105,7 +105,7 @@ packages/
 
 ## Tooling
 
-- **Node**: >=22
+- **Node**: >=22.12 (Sanity v6 requires it)
 - **Package manager**: pnpm 10.28.0 (workspace protocol, catalog for shared versions in `pnpm-workspace.yaml`)
 - **Formatter/Linter**: Biome 2.3.8 — double quotes, semicolons, 2-space indent, 80 char width, trailing commas es5
 - **Import order** (Biome): URL/Node → packages → blank line → aliases/paths
