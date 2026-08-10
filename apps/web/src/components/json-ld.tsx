@@ -1,5 +1,4 @@
-import { client, urlFor } from "@workspace/sanity/client";
-import { querySettingsData } from "@workspace/sanity/query";
+import { urlFor } from "@workspace/sanity/client";
 import type {
   QueryBlogSlugPageDataResult,
   QuerySettingsDataResult,
@@ -23,7 +22,7 @@ import type {
   WithContext,
 } from "schema-dts";
 
-import { getBaseUrl, handleErrors } from "@/utils";
+import { getBaseUrl } from "@/utils";
 
 type RichTextChild = {
   _type: string;
@@ -361,30 +360,6 @@ export function CollectionJsonLd({
   return <JsonLdScript data={collectionJsonLd} id={id} />;
 }
 
-// Combined JSON-LD Component for pages with multiple structured data
-type CombinedJsonLdProps = {
-  settings?: QuerySettingsDataResult;
-  article?: QueryBlogSlugPageDataResult;
-  faqs?: FlexibleFaq[];
-  includeWebsite?: boolean;
-  includeOrganization?: boolean;
-};
-
-export async function CombinedJsonLd({
-  includeWebsite = false,
-  includeOrganization = false,
-}: CombinedJsonLdProps) {
-  const [res] = await handleErrors(client.fetch(querySettingsData));
-
-  const cleanSettings = stegaClean(res);
-  return (
-    <>
-      {includeWebsite && cleanSettings && (
-        <WebSiteJsonLd settings={cleanSettings} />
-      )}
-      {includeOrganization && cleanSettings && (
-        <OrganizationJsonLd settings={cleanSettings} />
-      )}
-    </>
-  );
-}
+// `CombinedJsonLd` used to live here. It reads Sanity, and this module is
+// imported by client components, so it moved to `combined-json-ld.tsx` —
+// every component left in this file takes its data as props.

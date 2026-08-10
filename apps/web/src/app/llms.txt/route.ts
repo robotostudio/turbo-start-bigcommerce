@@ -1,5 +1,5 @@
 import { Logger } from "@workspace/logger";
-import { sanityFetch } from "@workspace/sanity/live";
+import { PUBLISHED, sanityFetch } from "@workspace/sanity/live";
 import { queryBlogPaths, querySlugPagePaths } from "@workspace/sanity/query";
 
 import { getCategoryPaths, getProductPaths } from "@/lib/bigcommerce/catalog";
@@ -9,8 +9,6 @@ import { toMarkdownHref } from "@/lib/markdown/shared";
 import { getBaseUrl } from "@/utils";
 
 const logger = new Logger("LlmsTxt");
-
-const PUBLISHED = { perspective: "published", stega: false } as const;
 
 const SITE_TITLE = "Roboto Studio Demo";
 const SITE_DESCRIPTION =

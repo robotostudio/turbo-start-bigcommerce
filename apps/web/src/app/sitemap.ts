@@ -1,5 +1,5 @@
 import { Logger } from "@workspace/logger";
-import { client } from "@workspace/sanity/client";
+import { PUBLISHED, sanityFetch } from "@workspace/sanity/live";
 import { querySitemapData } from "@workspace/sanity/query";
 import type { QuerySitemapDataResult } from "@workspace/sanity/types";
 import type { MetadataRoute } from "next";
@@ -99,15 +99,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     toEntry(path, rank)
   );
 
-  // The editorial half is one round trip. If it fails there is no partial
-  // sitemap to salvage, so fall back to the static routes rather than failing
-  // the build (or, in production, serving a 500 to a crawler).
+  // The editorial half is one round trip. An unreachable Content Lake already
+  // degrades to null data inside the wrapper, so this guard is for the rest:
+  // fall back to the static routes rather than failing the build (or, in
+  // production, serving a 500 to a crawler).
   const fetched = await fetchOrFallback(
     "Sanity sitemap data",
     "the sitemap lists static routes only",
     async () => {
-      const [sanityDocs, commercePaths] = await Promise.all([
-        client.fetch(querySitemapData),
+      const [{ data: sanityDocs }, commercePaths] = await Promise.all([
+        // Through the wrapper, not `client.fetch`: this route is prerendered,
+        // and the wrapper's `SANITY_CACHE_TAG` is what lets `/api/revalidate`
+        // rebuild it when a page or post is published.
+        sanityFetch({ query: querySitemapData, ...PUBLISHED }),
         // A catalog read that fails costs its own section and nothing else —
         // the editorial routes are already in hand, and llms.txt degrades the
         // same way for the same reason.
@@ -138,8 +142,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticEntries,
 
+    // `sanityDocs` is null when the Content Lake is unreachable — the commerce
+    // half is already in hand, so list that rather than nothing.
     ...SANITY_SITEMAP_SOURCES.flatMap(({ key, pathPrefix, ...rank }) =>
-      sanityDocs[key].map((doc) =>
+      (sanityDocs?.[key] ?? []).map((doc) =>
         toEntry(`${pathPrefix}${doc.path}`, rank, doc.lastModified)
       )
     ),
