@@ -97,7 +97,6 @@ export const structure = (
             .items([
               list(S, "bigcommerceProduct", "Products", ShoppingBag),
               list(S, "bigcommerceCategory", "Categories", BookMarked),
-              list(S, "colorTheme", "Color Themes", Settings2),
               // No "Product Variants" list. `bigcommerceProductVariant` is the
               // only synced type with no editor-owned fields at all — every
               // field sits under the read-only `store` object — so the list was

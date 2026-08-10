@@ -1,5 +1,4 @@
 import { assist } from "@sanity/assist";
-import { colorInput } from "@sanity/color-input";
 import { visionTool } from "@sanity/vision";
 import { defineConfig } from "sanity";
 import { presentationTool } from "sanity/presentation";
@@ -44,7 +43,6 @@ export default defineConfig({
     structureTool({
       structure,
     }),
-    colorInput(),
     imageHotspotArrayPlugin(),
     presentationUrl(),
     visionTool(),

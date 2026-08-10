@@ -90,7 +90,7 @@ packages/
 
 ### Sanity Studio Structure
 
-- **Documents**: `blog`, `page`, `faq`, `author`, `redirect`, `colorTheme`
+- **Documents**: `blog`, `page`, `faq`, `author`, `redirect`
 - **Singletons**: `homePage`, `blogIndex`, `settings`, `footer`, `navbar`
 - **Synced catalog**: `bigcommerceProduct`, `bigcommerceProductVariant`, `bigcommerceCategory` — written by `packages/sanity-sync`, never by hand. Their schema lives in that package, not in `apps/studio`
 - **Blueprint** (`sanity.blueprint.ts`): auto-redirect function — creates redirect documents on slug change

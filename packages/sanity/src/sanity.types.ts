@@ -561,19 +561,11 @@ export type ProductHotspots = Array<
   } & Spot
 >;
 
-export type ColorThemeReference = {
-  _ref: string;
-  _type: "reference";
-  _weak?: boolean;
-  [internalGroqTypeReferenceTo]?: "colorTheme";
-};
-
 export type NotFoundPage = {
   _type: "notFoundPage";
   title: string;
   body?: string;
   collection?: BigcommerceCategoryReference;
-  colorTheme?: ColorThemeReference;
 };
 
 export type Menu = {
@@ -1019,26 +1011,6 @@ export type HomePage = {
   ogDescription?: string;
 };
 
-export type ColorTheme = {
-  _id: string;
-  _type: "colorTheme";
-  _createdAt: string;
-  _updatedAt: string;
-  _rev: string;
-  title: string;
-  text: Color;
-  background: Color;
-};
-
-export type Color = {
-  _type: "color";
-  hex?: string;
-  alpha?: number;
-  hsl?: HslaColor;
-  hsv?: HsvaColor;
-  rgb?: RgbaColor;
-};
-
 export type Author = {
   _id: string;
   _type: "author";
@@ -1404,30 +1376,6 @@ export type MediaTag = {
   name?: Slug;
 };
 
-export type RgbaColor = {
-  _type: "rgbaColor";
-  r?: number;
-  g?: number;
-  b?: number;
-  a?: number;
-};
-
-export type HsvaColor = {
-  _type: "hsvaColor";
-  h?: number;
-  s?: number;
-  v?: number;
-  a?: number;
-};
-
-export type HslaColor = {
-  _type: "hslaColor";
-  h?: number;
-  s?: number;
-  l?: number;
-  a?: number;
-};
-
 export type SanityImagePaletteSwatch = {
   _type: "sanity.imagePaletteSwatch";
   background?: string;
@@ -1563,7 +1511,6 @@ export type AllSanitySchemaTypes =
   | BigcommerceProductVariantReference
   | ProductWithVariantReference
   | ProductHotspots
-  | ColorThemeReference
   | NotFoundPage
   | Menu
   | MenuLinks
@@ -1588,8 +1535,6 @@ export type AllSanitySchemaTypes =
   | CollectionsIndex
   | BlogIndex
   | HomePage
-  | ColorTheme
-  | Color
   | Author
   | Faq
   | Page
@@ -1615,9 +1560,6 @@ export type AllSanitySchemaTypes =
   | MediaFolderReference
   | MediaFolder
   | MediaTag
-  | RgbaColor
-  | HsvaColor
-  | HslaColor
   | SanityImagePaletteSwatch
   | SanityImagePalette
   | SanityImageDimensions
