@@ -64,6 +64,41 @@ export type StorefrontQueryResult<T> =
       errors?: readonly StorefrontGraphQLError[];
     };
 
+/**
+ * True when BigCommerce refused to serve the request, rather than answering
+ * that there is nothing there — the storefront being unreachable, rate
+ * limited, down, or rejecting the request for costing more than the
+ * per-request complexity budget.
+ *
+ * Deliberately narrow, the same way `isUnreachable` in
+ * `packages/sanity/src/live.ts` is: a caller that degrades to a visible
+ * "unavailable" state on *any* failure would hide a malformed query, which is
+ * a bug in this repo and arrives as the same HTTP 400 an over-complex one
+ * does. The complexity rejection is matched on its message because that is
+ * all BigCommerce sends — no `extensions`, no `path`, no complexity header:
+ *
+ *   400 {"errors":[{"message":"The query is too complex as it has a
+ *   complexity score of 34314 out of 10000. Please remove some elements and
+ *   try again"}]}
+ */
+export function isStorefrontUnavailable(failure: {
+  kind: StorefrontFailureKind;
+  status?: number;
+  errors?: readonly StorefrontGraphQLError[];
+}): boolean {
+  if (failure.kind === "network") {
+    return true;
+  }
+
+  if (failure.status !== undefined && isTransient(failure.status)) {
+    return true;
+  }
+
+  return (failure.errors ?? []).some((error) =>
+    /complexity score of/i.test(error.message)
+  );
+}
+
 type GraphQLBody<T> = {
   data?: T | null;
   errors?: {
