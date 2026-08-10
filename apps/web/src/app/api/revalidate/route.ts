@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@workspace/env/server";
 import { Logger } from "@workspace/logger";
+import { SANITY_CACHE_TAG } from "@workspace/sanity/live";
 import { revalidateTag } from "next/cache";
 
 /**
@@ -18,26 +19,23 @@ import { revalidateTag } from "next/cache";
  * runtime, authenticate in constant time, answer fast. It differs in one way
  * that matters — BigCommerce sends a shared secret in a header, Sanity signs
  * the body, so this verifies an HMAC rather than comparing a token.
+ *
+ * The tag it clears, `SANITY_CACHE_TAG`, is imported from the `sanityFetch`
+ * wrapper rather than repeated here, because a copy that drifts from the
+ * wrapper fails silently: `revalidateTag` matches nothing and still answers
+ * 200. next-sanity's own tags are `sanity:<syncTag>`, one per content hash
+ * (`s1:9x+Q0Q`), and those are not document ids — the webhook payload knows
+ * `_id`, and no `_id` appears in any tag — so the blanket tag is the only
+ * handle a webhook has. Blunt: one publish clears the cache for all Sanity
+ * content, not just the document that changed. Correct, though, and the
+ * alternative is a per-document tag scheme that every call site would have to
+ * opt into and keep in step. Give a route its own tag before optimising this.
  */
 
 // Not edge: `node:crypto`'s `timingSafeEqual` needs Node.
 export const runtime = "nodejs";
 
 const logger = new Logger("revalidate");
-
-/**
- * Every `sanityFetch` is tagged `"sanity"` by default, alongside one
- * `sanity:<syncTag>` per content hash that the Content Lake returns.
- *
- * The sync tags are content hashes (`s1:9x+Q0Q`), not document ids, so a
- * webhook payload cannot be mapped to them — the payload knows `_id`, and no
- * `_id` appears in any tag. That leaves `"sanity"`, which every fetch carries.
- * Blunt: one publish clears the cache for all Sanity content, not just the
- * document that changed. Correct, though, and the alternative is inventing a
- * per-document tag scheme that every call site would have to opt into and
- * keep in step. Give a route its own tag before optimising this.
- */
-const SANITY_CACHE_TAG = "sanity";
 
 /** Bounds replay of a captured request without needing to store nonces. */
 const MAX_SIGNATURE_AGE_MS = 5 * 60 * 1000;
