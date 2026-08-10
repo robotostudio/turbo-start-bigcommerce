@@ -1,20 +1,20 @@
 "use client";
 
 import { Button } from "@workspace/ui/components/button";
+import { toast } from "@workspace/ui/components/sonner";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-import { toast } from "@workspace/ui/components/sonner";
-
-import { requestCheckoutUrl } from "@/lib/cart/checkout-request";
 import { useCart } from "@/components/cart/cart-context";
 import { CartLineItem } from "@/components/cart/cart-line-item";
 import { CartSummary } from "@/components/cart/cart-summary";
+import { CartUnavailable } from "@/components/cart/cart-unavailable";
 import { BagIcon } from "@/components/icons";
+import { requestCheckoutUrl } from "@/lib/cart/checkout-request";
 
 export default function CartPage() {
-  const { cart, isLoading, settle } = useCart();
+  const { cart, isLoading, loadFailed, settle } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const lines = cart?.lines.edges.map((e) => e.node) ?? [];
@@ -49,6 +49,20 @@ export default function CartPage() {
         <h1 className="mb-8 font-semibold text-3xl">Cart</h1>
         <div className="flex items-center justify-center py-16">
           <div className="size-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
+
+  // Before the empty state, not inside it: the cart read failing is not the
+  // cart being empty, and telling a shopper their bag is empty when it is not
+  // is the worst thing this page can say.
+  if (loadFailed && lines.length === 0) {
+    return (
+      <div className="px-4 py-16">
+        <h1 className="mb-8 font-semibold text-3xl">Cart</h1>
+        <div className="flex flex-col items-center justify-center gap-6 py-16">
+          <CartUnavailable />
         </div>
       </div>
     );

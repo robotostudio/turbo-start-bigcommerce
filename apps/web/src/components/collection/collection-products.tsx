@@ -5,11 +5,11 @@ import { useSearchParams } from "next/navigation";
 
 import { ActiveFilters } from "@/components/collection/active-filters";
 import { CollectionPagination } from "@/components/collection/collection-pagination";
+import { FilterPanel } from "@/components/collection/filter-panel";
 import {
   type Facet,
   filterParamsOnly,
 } from "@/components/collection/filter-utils";
-import { FilterPanel } from "@/components/collection/filter-panel";
 import { ProductGrid } from "@/components/collection/product-grid";
 import {
   DEFAULT_SORT,
@@ -75,47 +75,54 @@ export function CollectionProducts({
     searchParams.get("view") === "dense" ? "dense" : "comfortable";
   const filterQs = filterParamsOnly(searchParams.toString()).toString();
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteQuery<CollectionPage>({
-      // Filters belong in the key alongside sort, or a facet pick rewrites the
-      // URL and gets served the previous result set out of the cache.
-      queryKey: ["collection-products", handle, sort, filterQs],
-      queryFn: async ({ pageParam }) => {
-        const params = new URLSearchParams(filterQs);
-        params.set("categoryEntityId", String(categoryEntityId));
-        params.set("sort", sort);
-        if (pageParam) params.set("after", pageParam as string);
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isError,
+    isFetchNextPageError,
+    refetch,
+  } = useInfiniteQuery<CollectionPage>({
+    // Filters belong in the key alongside sort, or a facet pick rewrites the
+    // URL and gets served the previous result set out of the cache.
+    queryKey: ["collection-products", handle, sort, filterQs],
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams(filterQs);
+      params.set("categoryEntityId", String(categoryEntityId));
+      params.set("sort", sort);
+      if (pageParam) params.set("after", pageParam as string);
 
-        const res = await fetch(
-          `/api/collections/products/${handle}?${params.toString()}`
-        );
-        if (!res.ok) throw new Error("Failed to fetch products");
-        return res.json() as Promise<CollectionPage>;
-      },
-      initialPageParam: null as string | null,
-      getNextPageParam: (lastPage) =>
-        lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.endCursor : undefined,
-      // The server always renders the default, unfiltered view, so its products
-      // only seed the matching query — attached to a sorted or filtered key they
-      // would paint the wrong set for a beat before the refetch corrects it.
-      // `DEFAULT_SORT` is a sentinel the route turns back into "no sort
-      // argument", so this branch and the server render ask BigCommerce for the
-      // identical order.
-      initialData:
-        sort === DEFAULT_SORT && filterQs === ""
-          ? {
-              pages: [
-                {
-                  products: initialProducts,
-                  pageInfo: initialPageInfo,
-                  facets: initialFacets,
-                  filteringEnabled: initialFilteringEnabled,
-                },
-              ],
-              pageParams: [null],
-            }
-          : undefined,
-    });
+      const res = await fetch(
+        `/api/collections/products/${handle}?${params.toString()}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch products");
+      return res.json() as Promise<CollectionPage>;
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.endCursor : undefined,
+    // The server always renders the default, unfiltered view, so its products
+    // only seed the matching query — attached to a sorted or filtered key they
+    // would paint the wrong set for a beat before the refetch corrects it.
+    // `DEFAULT_SORT` is a sentinel the route turns back into "no sort
+    // argument", so this branch and the server render ask BigCommerce for the
+    // identical order.
+    initialData:
+      sort === DEFAULT_SORT && filterQs === ""
+        ? {
+            pages: [
+              {
+                products: initialProducts,
+                pageInfo: initialPageInfo,
+                facets: initialFacets,
+                filteringEnabled: initialFilteringEnabled,
+              },
+            ],
+            pageParams: [null],
+          }
+        : undefined,
+  });
 
   const allProducts = data?.pages.flatMap((page) => page.products) ?? [];
 
@@ -131,6 +138,18 @@ export function CollectionProducts({
   const facets = page?.facets ?? initialFacets;
   const filteringEnabled = page?.filteringEnabled ?? initialFilteringEnabled;
 
+  /**
+   * Two different failures, one line.
+   *
+   * A facet pick or a sort change moves the query key off the server-rendered
+   * seed, so a failed fetch leaves no pages at all and the grid printed "No
+   * products found." for a category full of products. A failed "Load more"
+   * keeps `hasNextPage` true and the button simply stopped doing anything.
+   * Both are read here rather than assumed to be the same flag: with seeded
+   * data the query can report a page failure while its status stays success.
+   */
+  const failed = isError || isFetchNextPageError;
+
   return (
     <>
       <div className="mb-8 flex flex-col gap-4">
@@ -138,7 +157,23 @@ export function CollectionProducts({
         {/* Facets passed so a brand chip reads "Aster" rather than its entity id. */}
         <ActiveFilters facets={facets} />
       </div>
-      <ProductGrid density={density} products={allProducts} />
+      {failed && (
+        <p className="mb-6 text-muted-foreground text-sm">
+          We couldn&apos;t load these products.{" "}
+          <button
+            className="text-foreground underline underline-offset-4"
+            onClick={() => refetch()}
+            type="button"
+          >
+            Try again
+          </button>
+        </p>
+      )}
+      {/* An empty grid under that line would read "No products found." — the
+       * lie the line is there to replace. */}
+      {!(failed && allProducts.length === 0) && (
+        <ProductGrid density={density} products={allProducts} />
+      )}
       <CollectionPagination
         hasNextPage={hasNextPage}
         isLoading={isFetchingNextPage}
