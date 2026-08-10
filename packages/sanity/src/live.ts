@@ -23,6 +23,25 @@ export { SanityLive };
 
 const logger = new Logger("sanity");
 
+/**
+ * The one cache tag every Sanity read carries, and the only handle
+ * `/api/revalidate` has on the cache.
+ *
+ * next-sanity tags each cached fetch with `sanity:<syncTag>` per content hash
+ * and nothing else (`dist/live/conditions/react-server/index.js`: `[...tags,
+ * ...syncTags.map(...)]`). Those hashes are not document ids, so a webhook
+ * payload cannot be mapped to them, and `tags` is empty unless a caller fills
+ * it. Up to next-sanity 12 the library added a blanket `"sanity"` itself; 13
+ * dropped it, which left `revalidateTag("sanity")` matching nothing and every
+ * published change invisible in production until the next deploy.
+ *
+ * Added here rather than at each call site so a new `sanityFetch` cannot be
+ * written without it. Prepended, not substituted: the `sanity:<hash>` tags are
+ * what `<SanityLive />` revalidates for live preview, and they still come back
+ * from the library untouched.
+ */
+export const SANITY_CACHE_TAG = "sanity";
+
 /** Socket-level failures: no HTTP response came back at all. */
 const NETWORK_ERROR_CODES = new Set([
   "ECONNREFUSED",
@@ -103,7 +122,10 @@ function warnOnce(query: string, error: unknown) {
  */
 const fetchWithFallback: typeof liveFetch = async (options) => {
   try {
-    return await liveFetch(options);
+    return await liveFetch({
+      ...options,
+      tags: [SANITY_CACHE_TAG, ...(options.tags ?? [])],
+    });
   } catch (error) {
     if (!isUnreachable(error)) {
       throw error;
