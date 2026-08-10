@@ -2,11 +2,11 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { CollectionProducts } from "@/components/collection/collection-products";
-import { ProductGrid } from "@/components/collection/product-grid";
 import {
   ListingControls,
   ListingControlsProvider,
 } from "@/components/collection/listing-controls";
+import { ProductGrid } from "@/components/collection/product-grid";
 import { BreadcrumbJsonLd, CollectionJsonLd } from "@/components/json-ld";
 import {
   getCategoryByPath,
@@ -108,7 +108,14 @@ export default async function CollectionPage({ params }: PageProps) {
   // `generateStaticParams` and `revalidate` above), and "Load more" pays
   // nothing extra: the id resolved here is forwarded to the client.
   const result = await getCategoryByPath(slug, { withProducts: false });
-  if (!result.ok) notFound();
+  // A failed read is not a missing category. `notFound()` here told a shopper
+  // that a category which exists does not — and because this route is held for
+  // the `revalidate` window above, that lie was cached and served to everyone
+  // for five minutes after BigCommerce recovered. Throwing keeps the last good
+  // page in place through the revalidation, and matches the listing read below.
+  if (!result.ok) {
+    throw new Error(`Category read failed for ${slug.join("/")}`);
+  }
 
   // A renamed category keeps working: BigCommerce auto-creates the 301 and
   // `redirectBehavior: FOLLOW` hands back its canonical URL.

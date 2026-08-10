@@ -2,6 +2,7 @@
 
 import NumberFlow from "@number-flow/react";
 
+import { hasCurrency, PRICE_UNAVAILABLE } from "@/lib/bigcommerce/money";
 import type { MoneyV2 } from "@/lib/cart/types";
 
 /**
@@ -16,6 +17,12 @@ export function AnimatedMoney({
   money: MoneyV2;
   className?: string;
 }) {
+  // Same answer `formatMoney` gives for the same input: a code `Intl` rejects
+  // would throw here too, and an amount with no currency is not a price.
+  if (!hasCurrency(money.currencyCode)) {
+    return <span className={className}>{PRICE_UNAVAILABLE}</span>;
+  }
+
   return (
     <NumberFlow
       className={className}
