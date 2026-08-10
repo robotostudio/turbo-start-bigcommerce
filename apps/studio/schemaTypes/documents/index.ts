@@ -11,7 +11,6 @@ import { page } from "@/schemaTypes/documents/page";
 import { promoBanner } from "@/schemaTypes/documents/promo-banner";
 import { redirect } from "@/schemaTypes/documents/redirect";
 import { settings } from "@/schemaTypes/documents/settings";
-import { colorTheme } from "./color-theme";
 
 export const singletons = [
   homePage,
@@ -29,7 +28,6 @@ export const documents = [
   faq,
   author,
   category,
-  colorTheme,
   ...singletons,
   redirect,
 ];

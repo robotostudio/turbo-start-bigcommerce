@@ -29,11 +29,5 @@ export const notFoundPage = defineField({
       to: [{ type: "bigcommerceCategory" }],
       options: catalogReferenceOptions,
     }),
-    defineField({
-      name: "colorTheme",
-      type: "reference",
-      description: "Color theme applied to the 404 page",
-      to: [{ type: "colorTheme" }],
-    }),
   ],
 });
