@@ -41,6 +41,9 @@ const imageLinkCard = defineField({
       externalUrl: "url.external",
       urlType: "url.type",
       internalUrl: "url.internal.slug.current",
+      // Synced catalog documents keep their slug under `store`, editorial
+      // documents keep it at the top level. A link can point at either.
+      internalStoreUrl: "url.internal.store.slug.current",
       openInNewTab: "url.openInNewTab",
     },
     prepare: ({
@@ -50,14 +53,19 @@ const imageLinkCard = defineField({
       externalUrl,
       urlType,
       internalUrl,
+      internalStoreUrl,
       openInNewTab,
     }) => {
-      const url = urlType === "external" ? externalUrl : internalUrl;
+      const url =
+        urlType === "external"
+          ? externalUrl
+          : (internalUrl ?? internalStoreUrl);
       const newTabIndicator = openInNewTab ? " ↗" : "";
 
       return {
         title: title || "Untitled Card",
-        subtitle: description + (url ? ` • ${url}${newTabIndicator}` : ""),
+        subtitle:
+          (description ?? "") + (url ? ` • ${url}${newTabIndicator}` : ""),
         media,
       };
     },

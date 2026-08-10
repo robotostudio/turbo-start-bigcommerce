@@ -147,6 +147,9 @@ export const customUrl = defineType({
       urlType: "type",
       externalUrl: "external",
       internalUrl: "internal.slug.current",
+      // Synced catalog documents keep their slug under `store`, editorial
+      // documents keep it at the top level. A link can point at either.
+      internalStoreUrl: "internal.store.slug.current",
       email: "email",
       productTitle: "product.store.title",
       openInNewTab: "openInNewTab",
@@ -155,13 +158,14 @@ export const customUrl = defineType({
       urlType,
       externalUrl,
       internalUrl,
+      internalStoreUrl,
       email,
       productTitle,
       openInNewTab,
     }) {
       const newTab = openInNewTab ? " ↗" : "";
       const labels: Record<string, string> = {
-        internal: `Internal: ${internalUrl ?? "unset"}`,
+        internal: `Internal: ${internalUrl ?? internalStoreUrl ?? "unset"}`,
         external: `External: ${externalUrl ?? "unset"}`,
         email: `Email: ${email ?? "unset"}`,
         product: `Product: ${productTitle ?? "unset"}`,

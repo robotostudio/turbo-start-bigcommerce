@@ -24,13 +24,27 @@ const footerColumnLink = defineField({
       externalUrl: "url.external",
       urlType: "url.type",
       internalUrl: "url.internal.slug.current",
+      // Synced catalog documents keep their slug under `store`, editorial
+      // documents keep it at the top level. A link can point at either.
+      internalStoreUrl: "url.internal.store.slug.current",
       openInNewTab: "url.openInNewTab",
     },
-    prepare({ title, externalUrl, urlType, internalUrl, openInNewTab }) {
-      const url = urlType === "external" ? externalUrl : internalUrl;
+    prepare({
+      title,
+      externalUrl,
+      urlType,
+      internalUrl,
+      internalStoreUrl,
+      openInNewTab,
+    }) {
+      const url =
+        urlType === "external"
+          ? externalUrl
+          : (internalUrl ?? internalStoreUrl);
       const newTabIndicator = openInNewTab ? " ↗" : "";
+      const label = url ?? "unset";
       const truncatedUrl =
-        url?.length > 30 ? `${url.substring(0, 30)}...` : url;
+        label.length > 30 ? `${label.substring(0, 30)}...` : label;
 
       return {
         title: title || "Untitled Link",

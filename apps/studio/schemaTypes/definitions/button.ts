@@ -45,6 +45,9 @@ export const button = defineType({
       externalUrl: "url.external",
       urlType: "url.type",
       internalUrl: "url.internal.slug.current",
+      // Synced catalog documents keep their slug under `store`, editorial
+      // documents keep it at the top level. A link can point at either.
+      internalStoreUrl: "url.internal.store.slug.current",
       openInNewTab: "url.openInNewTab",
     },
     prepare: ({
@@ -53,14 +56,18 @@ export const button = defineType({
       externalUrl,
       urlType,
       internalUrl,
+      internalStoreUrl,
       openInNewTab,
     }) => {
-      const url = urlType === "external" ? externalUrl : internalUrl;
+      const url =
+        urlType === "external"
+          ? externalUrl
+          : (internalUrl ?? internalStoreUrl);
       const newTabIndicator = openInNewTab ? " ↗" : "";
 
       return {
         title: title || "Untitled Button",
-        subtitle: `${capitalize(variant ?? "default")} • ${url}${newTabIndicator}`,
+        subtitle: `${capitalize(variant ?? "default")} • ${url ?? "unset"}${newTabIndicator}`,
       };
     },
   },
