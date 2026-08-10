@@ -6,7 +6,6 @@ import type { QueryHomePageDataResult } from "@workspace/sanity/types";
 import { createDataAttribute } from "next-sanity";
 import { useCallback, useMemo } from "react";
 
-import type { ProductCardProps } from "./product/product-card";
 import { CollectionBanner } from "./sections/collection-banner";
 import { CTABlock } from "./sections/cta";
 import { EditorialTwoUp } from "./sections/editorial-two-up";
@@ -29,12 +28,6 @@ export type PageBuilderProps = {
   readonly pageBuilder?: PageBuilderBlock[];
   readonly id: string;
   readonly type: string;
-  /**
-   * Resolved product-card props for `featuredProducts` blocks, fetched
-   * server-side in the page and keyed by block `_key`. Blocks can't read the
-   * catalog themselves since this is a client component.
-   */
-  readonly featuredProductsByKey?: Record<string, ProductCardProps[]>;
 };
 
 type SanityDataAttributeConfig = {
@@ -122,11 +115,7 @@ function useOptimisticPageBuilder(
 /**
  * Custom hook for block component rendering logic
  */
-function useBlockRenderer(
-  id: string,
-  type: string,
-  featuredProductsByKey?: Record<string, ProductCardProps[]>
-) {
+function useBlockRenderer(id: string, type: string) {
   const createBlockDataAttribute = useCallback(
     (blockKey: string) =>
       createSanityDataAttribute({
@@ -152,24 +141,17 @@ function useBlockRenderer(
         );
       }
 
-      // `featuredProducts` blocks receive their catalog data (fetched
-      // server-side) injected here, since a client block can't fetch it.
-      const injectedProps =
-        block._type === "featuredProducts"
-          ? { products: featuredProductsByKey?.[block._key] ?? [] }
-          : {};
-
       return (
         <div
           data-sanity={createBlockDataAttribute(block._key)}
           key={`${block._type}-${block._key}`}
         >
           {/** biome-ignore lint/suspicious/noExplicitAny: <any is used to allow for dynamic component rendering> */}
-          <Component {...(block as any)} {...injectedProps} />
+          <Component {...(block as any)} />
         </div>
       );
     },
-    [createBlockDataAttribute, featuredProductsByKey]
+    [createBlockDataAttribute]
   );
 
   return { renderBlock };
@@ -182,10 +164,9 @@ export function PageBuilder({
   pageBuilder: initialBlocks = [],
   id,
   type,
-  featuredProductsByKey,
 }: PageBuilderProps) {
   const blocks = useOptimisticPageBuilder(initialBlocks, id);
-  const { renderBlock } = useBlockRenderer(id, type, featuredProductsByKey);
+  const { renderBlock } = useBlockRenderer(id, type);
 
   const containerDataAttribute = useMemo(
     () => createSanityDataAttribute({ id, type, path: "pageBuilder" }),
