@@ -1,5 +1,5 @@
 import { Logger } from "@workspace/logger";
-import { sanityFetch } from "@workspace/sanity/live";
+import { PUBLISHED, sanityFetch } from "@workspace/sanity/live";
 import {
   queryAllBlogDataForSearch,
   queryBlogIndexPageData,
@@ -30,9 +30,6 @@ import {
 import { normalizeMarkdownPath } from "@/lib/markdown/path";
 
 const logger = new Logger("MarkdownRoute");
-
-/** Published, non-stega reads — this surface is for agents, never draft preview. */
-const PUBLISHED = { perspective: "published", stega: false } as const;
 
 /** How many products a category's Markdown lists. */
 const CATEGORY_PRODUCTS = 50;

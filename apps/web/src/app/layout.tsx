@@ -11,7 +11,7 @@ import { preconnect, prefetchDNS } from "react-dom";
 
 import { CartToasts } from "@/components/cart/cart-toasts";
 import { FooterServer, FooterSkeleton } from "@/components/footer";
-import { CombinedJsonLd } from "@/components/json-ld";
+import { CombinedJsonLd } from "@/components/combined-json-ld";
 import { Navbar } from "@/components/navbar";
 import { PreviewBar } from "@/components/preview-bar";
 import { PromoBanner } from "@/components/promo-banner";

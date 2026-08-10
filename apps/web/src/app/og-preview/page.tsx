@@ -1,5 +1,5 @@
 /** biome-ignore-all lint/performance/noImgElement: internal QA preview, not user-facing */
-import { client } from "@workspace/sanity/client";
+import { sanityFetch } from "@workspace/sanity/live";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -62,8 +62,12 @@ export default async function OgPreviewPage() {
     notFound();
   }
 
-  const [content, productsResult, categoryTree] = await Promise.all([
-    client.fetch<Content>(CONTENT_QUERY),
+  const [{ data: content }, productsResult, categoryTree] = await Promise.all([
+    // `CONTENT_QUERY` is local to this page, so it is not in the generated
+    // query map and the wrapper cannot type it — hence the cast. It goes
+    // through the wrapper anyway: one read path for every Sanity call, and an
+    // unreachable Content Lake leaves the catalog sections rendering.
+    sanityFetch({ query: CONTENT_QUERY }) as Promise<{ data: Content | null }>,
     getProductSummaries(PRODUCT_PREVIEW_LIMIT),
     getCategoryTree(),
   ]);
@@ -74,7 +78,7 @@ export default async function OgPreviewPage() {
 
   const sections: Section[] = [];
 
-  if (content.home) {
+  if (content?.home) {
     sections.push({
       heading: "Home",
       cards: [
@@ -89,12 +93,17 @@ export default async function OgPreviewPage() {
 
   const simple: { key: string; heading: string; type: string; docs: Doc[] }[] =
     [
-      { key: "pages", heading: "Pages", type: "page", docs: content.pages },
+      {
+        key: "pages",
+        heading: "Pages",
+        type: "page",
+        docs: content?.pages ?? [],
+      },
       {
         key: "blogs",
         heading: "Blog posts",
         type: "blog",
-        docs: content.blogs,
+        docs: content?.blogs ?? [],
       },
     ];
 
