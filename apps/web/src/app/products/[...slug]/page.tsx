@@ -15,12 +15,12 @@ import {
   ProductSelection,
   SelectedVariantGallery,
 } from "@/components/product/product-selection";
+import { ProductUnavailable } from "@/components/product/product-unavailable";
 import { RatingStars } from "@/components/product/rating-stars";
 import { RelatedProducts } from "@/components/product/related-products";
 import { SavedItemButton } from "@/components/saved-items/saved-item-button";
 import {
   type CatalogProduct,
-  getProductByPath,
   getProductPaths,
   nodes,
   resolveSeo,
@@ -82,10 +82,14 @@ export async function generateStaticParams() {
  */
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  const result = await getProductByPath(slug);
-  if (!(result.ok && result.data.node)) return {};
+  // The same cached read the body runs, so metadata costs no extra request. A
+  // refused read leaves the page its fallback metadata, because `node` is null
+  // either way; a bug still throws out of here, the same as it does out of the
+  // body, and a page that cannot render is not worth a `<title>` for.
+  const route = await getProductDetail(slug);
+  if (!route.node) return {};
 
-  const product = result.data.node;
+  const product = route.node;
   const seo = resolveSeo(product.seo, {
     title: product.name,
     description: product.plainTextDescription,
@@ -187,10 +191,21 @@ function compareAtByVariantId(
 export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params;
 
-  // Two reads, not one: `site.route` resolves the merchant's URL and its
-  // auto-created 301, but drops `productOptions` on the way — see
-  // `getProductDetail`.
   const route = await getProductDetail(slug);
+
+  // A storefront that refused the read is not a product that does not exist,
+  // and 404ing one would tell the shopper the opposite.
+  //
+  // Rendered rather than thrown. Next serves an uncaught throw on a direct hit
+  // as an unstyled 21-byte "Internal Server Error" — measured, and true with
+  // both an `error.tsx` and a `global-error.tsx` in place, because neither
+  // boundary is mounted for a document render that never began. The cost of
+  // rendering it is that ISR caches this page like any other, so a recovered
+  // product can serve the apology for up to the 60s `revalidate` window before
+  // the next background regeneration replaces it.
+  if (route.unavailable) {
+    return <ProductUnavailable />;
+  }
 
   // A merchant rename auto-creates a 301, and `redirectBehavior: FOLLOW` hands
   // back both the destination and its canonical URL. Send the shopper (and the
