@@ -2,12 +2,19 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import Link from "next/link";
 
 import {
   ProductCard,
   type ProductCardProps,
 } from "@/components/product/product-card";
+
+/**
+ * Mirrors FEATURED_FALLBACK_COUNT at featured-cards.ts:10 — that constant sits
+ * behind `import "server-only"`, so a client component cannot import it.
+ */
+const FALLBACK_SKELETON_COUNT = 4;
 
 type FeaturedProductsProps = {
   heading?: string | null;
@@ -16,29 +23,39 @@ type FeaturedProductsProps = {
    * "whatever is newest", which is what the resolver falls back to.
    */
   productHandles?: (string | null)[] | null;
-  /**
-   * Card props resolved server-side in the page: this block renders inside the
-   * client PageBuilder and cannot read the catalog itself.
-   */
-  products: ProductCardProps[];
 };
+
+/**
+ * One card's worth of skeleton, shaped like what ProductCard actually renders:
+ * the aspect-56/75 image, then the vendor eyebrow (text-xs, 18px), title
+ * (leading-tight, 20px), subtitle (text-base, 24px), rating row (18px) and
+ * price (text-base, 24px). Row heights are pinned so the section keeps its
+ * height when the cards land and nothing below it jumps.
+ */
+function CardSkeleton() {
+  return (
+    <div>
+      <Skeleton className="aspect-56/75 w-full" />
+      <div className="mt-2 flex flex-col gap-2 px-1">
+        <div className="flex flex-col gap-0.5">
+          <Skeleton className="h-[18px] w-16" />
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-6 w-1/3" />
+          <Skeleton className="h-[18px] w-12" />
+        </div>
+        <Skeleton className="h-6 w-1/4" />
+      </div>
+    </div>
+  );
+}
 
 export function FeaturedProducts({
   heading,
   productHandles,
-  products,
 }: FeaturedProductsProps) {
   const handles = (productHandles ?? []).filter((h): h is string => Boolean(h));
 
-  /**
-   * The server props are the first paint; this refetch is what keeps them
-   * honest. The home page is statically generated with a 300s revalidate, and
-   * ISR hands the stale copy to the first visitor after expiry too — so without
-   * this, a product hidden in BigCommerce keeps its card here, linking to a page
-   * that has already started 404ing. The category grid never had that problem
-   * because it refetches the same way.
-   */
-  const { data: cards } = useQuery({
+  const { data: cards, isPending } = useQuery({
     queryKey: ["featured-products-cards", handles.join(",")],
     queryFn: async () => {
       const query = handles.length > 0 ? `?handles=${handles.join(",")}` : "";
@@ -47,13 +64,14 @@ export function FeaturedProducts({
       const data: { cards: ProductCardProps[] } = await res.json();
       return data.cards;
     },
-    initialData: products,
-    // Not `staleTime: 0` by accident — the whole point is to revalidate on
-    // mount. On a fresh, non-stale page this costs one request and changes
-    // nothing on screen.
   });
 
-  if (cards.length === 0) return null;
+  // Gated on isPending, not cards.length: a block whose handles all fail must
+  // render nothing, not a skeleton that never resolves (the ROB-2561 scenario).
+  if (!isPending && !cards?.length) return null;
+
+  const skeletonCount =
+    handles.length > 0 ? handles.length : FALLBACK_SKELETON_COUNT;
 
   return (
     <section className="site-container py-12 md:py-20">
@@ -67,9 +85,13 @@ export function FeaturedProducts({
       </div>
 
       <div className="grid grid-cols-2 gap-1 md:grid-cols-4">
-        {cards.map((product) => (
-          <ProductCard key={product.slug} {...product} />
-        ))}
+        {isPending
+          ? Array.from({ length: skeletonCount }, (_, index) => (
+              <CardSkeleton key={index.toString()} />
+            ))
+          : (cards ?? []).map((product) => (
+              <ProductCard key={product.slug} {...product} />
+            ))}
       </div>
     </section>
   );
