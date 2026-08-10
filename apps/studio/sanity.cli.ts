@@ -21,31 +21,35 @@ if (!dataset) {
 }
 
 /**
- * Returns the correct studio host based on environment variables.
- * - If HOST_NAME is set and not "main", returns `${HOST_NAME}-${PRODUCTION_HOSTNAME}`
- * - If HOST_NAME is "main" or not set, returns PRODUCTION_HOSTNAME
- * - If PRODUCTION_HOSTNAME is not set, returns a default using projectId
+ * The `<host>.sanity.studio` subdomain `sanity deploy` publishes to.
+ *
+ * `SANITY_STUDIO_PRODUCTION_HOSTNAME` names it; without one we derive
+ * `studio-<projectId>`, which is where this studio already lives. The prefix
+ * is not decoration: Sanity validates the host against
+ * `^[a-z][a-z0-9-]*[a-z0-9]$`, and a project id may start with a digit, so a
+ * bare id is rejected with `"appHost" must match pattern` — an error that says
+ * nothing about the variable it is missing. Every deploy on a machine without
+ * that variable failed on it.
+ *
+ * `HOST_NAME` (the branch, in CI) prefixes whichever of the two we end up
+ * with, so a branch deploy that forgot the variable gets its own studio
+ * instead of publishing over production.
  */
 function getStudioHost(): string | undefined {
+  const base = process.env.SANITY_STUDIO_PRODUCTION_HOSTNAME || defaultHost();
+  if (!base) {
+    return undefined;
+  }
+
   const host = process.env.HOST_NAME;
-  const productionHostName = process.env.SANITY_STUDIO_PRODUCTION_HOSTNAME;
+  return host && host !== "main" ? `${host}-${base}` : base;
+}
 
-  if (productionHostName) {
-    if (host && host !== "main") {
-      return `${host}-${productionHostName}`;
-    }
-
-    return productionHostName;
-  }
-
-  if (projectId) {
-    return `${projectId}`;
-  }
-
-  // No fallback on purpose. A studio host belonging to someone else's project
-  // would let a half-configured env deploy over live content. Undefined makes
-  // the caller skip the deploy target instead.
-  return undefined;
+function defaultHost(): string | undefined {
+  // No fallback without a project id on purpose. A studio host belonging to
+  // someone else's project would let a half-configured env deploy over live
+  // content. Undefined makes the caller skip the deploy target instead.
+  return projectId ? `studio-${projectId}` : undefined;
 }
 
 const studioHost = getStudioHost();
