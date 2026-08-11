@@ -14,13 +14,18 @@ export type { DrainContext, LoggerConfig, WideEvent } from "evlog";
  * Nothing breaks if it is never called: evlog writes to stdout with detected
  * defaults, which is what Vercel collects today.
  *
- * It exists so that adding a log drain later is one edit in one file rather
- * than a new dependency in every app. When that day comes:
+ * It exists so that a log drain has one place to be configured, rather than a
+ * new dependency in every app. When that day comes:
  *
  * ```ts
  * import { createAxiomDrain } from "evlog/axiom";
  * initLogging({ drain: createAxiomDrain() });
  * ```
+ *
+ * On Vercel that is the first step and not the last: evlog fires drains as
+ * floating promises and only awaits one when a `waitUntil` is threaded through,
+ * which the `log.*` surface never does, so a lambda that freezes at response
+ * time takes the in-flight `fetch` with it. The README says what to wire.
  */
 export function initLogging(config: Parameters<typeof initLogger>[0] = {}) {
   // Pretty printing goes off as soon as a drain exists, unless the caller

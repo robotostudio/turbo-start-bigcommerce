@@ -3,8 +3,9 @@
 Logging for the monorepo, on top of [evlog](https://www.evlog.dev/).
 
 Output goes to stdout, with errors on stderr, and Vercel collects both. Nothing
-else is wired up yet — the package exists in this shape so that adding a log
-drain later is one edit in one file.
+else is wired up yet — the package exists in this shape so that a log drain has
+one place to be configured when someone wants one. On Vercel that edit is the
+first step and not the last; see [Adding a drain](#adding-a-drain).
 
 ## Usage
 
