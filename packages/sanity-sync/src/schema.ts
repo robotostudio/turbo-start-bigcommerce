@@ -126,7 +126,7 @@ export const bigcommerceProductVariant = defineType({
   title: "Product variant",
   type: "document",
   description:
-    "A BigCommerce variant. Synced only by the reconcile sweep — BigCommerce has no CRUD webhooks for variants.",
+    "A BigCommerce variant. Written whenever its product syncs, which a store/sku/* webhook triggers as well as a store/product/* one.",
   fields: [
     defineField({
       name: "store",

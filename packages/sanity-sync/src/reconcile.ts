@@ -31,17 +31,27 @@ import {
  * The reconcile sweep, and the CLI over both it and the single-entity core in
  * `src/sync.ts`.
  *
- * The sweep is the primary sync mechanism, not a fallback. BigCommerce has no
- * CRUD webhooks for variants and none for brands, and most product image
- * changes — including changing the thumbnail — fire no update event at all.
- * Webhook payloads are id-only, unordered, and can duplicate. A webhook-only
- * sync is therefore structurally incomplete; webhooks are at best a latency
- * optimisation layered on top of this sweep.
+ * This is the backfill, not the sync. `apps/web/src/app/api/bigcommerce/webhook/route.ts`
+ * keeps Sanity current; run this once to seed a dataset, or by hand to repair
+ * one after an outage. ROB-2608 ruled out putting it on a cron.
  *
- * Nothing invokes this. Run it by hand:
- *   pnpm --filter @workspace/sanity-sync reconcile                    # dry run
- *   pnpm --filter @workspace/sanity-sync reconcile -- --write         # for real
- *   pnpm --filter @workspace/sanity-sync reconcile -- --product 183   # one entity
+ * An earlier version of this comment argued the opposite — that a webhook-only
+ * sync was structurally incomplete because variants had no CRUD webhooks. That
+ * was wrong. `store/sku/created|updated|deleted` all fire, and a variant edit
+ * fires one of them and no product event at all, measured in
+ * `docs/research/09-webhook-payloads.md`.
+ *
+ * What webhooks genuinely cannot see is images. A change through
+ * `/v3/catalog/products/{id}/images` fires nothing on any scope, and neither
+ * does the control panel, which writes the same sub-resource. The storefront
+ * reads images live from BigCommerce for that reason. Brands are also
+ * webhook-less, which costs nothing while only `brandId` reaches Sanity.
+ *
+ * Nothing invokes this. Run it by hand, and note there is no `--` before the
+ * flags — pnpm forwards it and the CLI rejects it as a positional:
+ *   pnpm --filter @workspace/sanity-sync reconcile                 # dry run
+ *   pnpm --filter @workspace/sanity-sync reconcile --write         # for real
+ *   pnpm --filter @workspace/sanity-sync reconcile --product 183   # one entity
  */
 
 const logger = new Logger("Reconcile");

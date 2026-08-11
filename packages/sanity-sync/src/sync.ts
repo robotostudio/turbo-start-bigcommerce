@@ -129,9 +129,12 @@ export async function syncProduct(
   const documents = productDocuments(product);
   const mutations = documents.flatMap(upsertMutations);
 
-  // BigCommerce has no CRUD webhooks for variants, so a product event is the
-  // only signal that one went away. Absent `variants` means the include did not
-  // come back — never read that as "every variant was deleted".
+  // A `store/sku/deleted` announces one variant leaving; this is what notices
+  // the rest. The delete event carries a single sku, so a bulk change that
+  // drops several arrives as several events and any one of them can go missing.
+  // Re-deriving the full set from the product is what makes the outcome the
+  // same either way. Absent `variants` means the include did not come back —
+  // never read that as "every variant was deleted".
   if (product.variants) {
     const kept = new Set(documents.map((document) => document._id));
     const orphans = staleMutations(

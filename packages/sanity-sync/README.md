@@ -65,15 +65,27 @@ whenever the web app's env moved.
 S="pnpm --filter @workspace/sanity-sync reconcile"
 
 # The full sweep
-$S                                          # dry run
-$S -- --since 2026-08-01T00:00:00Z          # incremental, no soft-delete pass
-$S -- --write                               # actually writes
+$S                                       # dry run
+$S --since 2026-08-01T00:00:00Z          # incremental, no soft-delete pass
+$S --write                               # actually writes
 
 # One entity, which is exactly what a webhook delivery does
-$S -- --product 183                         # dry run
-$S -- --product 183 --write
-$S -- --product 183 --delete --write        # soft-delete, product and its variants
-$S -- --category 36 --write
+$S --product 183                         # dry run
+$S --product 183 --write
+$S --product 183 --delete --write        # soft-delete, product and its variants
+$S --category 36 --write
+```
+
+**No `--` before the flags.** pnpm forwards it to the script, the CLI sees it as a positional, and
+you get `Unexpected argument '--'` before anything runs. An earlier version of this file documented
+every one of these with a `--` and none of them worked.
+
+If pnpm ever does start swallowing a flag of its own, call the script directly instead — same
+behaviour, no forwarding in the way:
+
+```bash
+cd packages/sanity-sync
+pnpm exec tsx --env-file-if-exists=.env src/reconcile.ts --product 183 --write
 ```
 
 Dry run is the default everywhere. A package that ships dark shouldn't write unless you say so, and a
@@ -120,9 +132,27 @@ are no variant webhooks at all, a product event is the only signal a variant eve
 It pages `GET /v3/catalog/products?date_modified:min=` with `include=variants,options,images`, then pages
 `/v3/catalog/categories`, and builds upserts from both.
 
-The sweep is the primary mechanism, not a fallback. BigCommerce has no CRUD webhooks for variants, none
-for brands, and most product image changes fire no update event. Payloads are id-only, unordered, and can
-duplicate. See `docs/sync-design.md`.
+The sweep is the backfill, run by hand. Nothing schedules it — ROB-2608 ruled a cron out, and
+`apps/web/src/app/api/bigcommerce/webhook/route.ts` keeps Sanity current instead.
+
+What the webhooks still cannot tell you, measured against store `8jbhprizry` and written up in
+`docs/research/09-webhook-payloads.md`:
+
+Image changes fire **nothing at all**. Not through `/v3/catalog/products/{id}/images`, and not
+through the control panel either, which writes the same sub-resource. Only a whole-product save
+produces an event. The storefront reads images live from BigCommerce for this reason and treats the
+synced `store.previewImageUrl` as a fallback.
+
+Brands have no CRUD webhooks, only `store/brand/metafield/*`. This costs nothing at the current
+field scope, because only `brandId` reaches Sanity and a rename does not change an id.
+
+Variants **do** have CRUD webhooks — `store/sku/created`, `store/sku/updated`, `store/sku/deleted`.
+An earlier version of this file said they did not. Their payload nests the ids one level down:
+`data.id` is the `sku_id`, and the ones you want are `data.sku.product_id` and
+`data.sku.variant_id`.
+
+Payloads are still id-only and unordered, and the same event really does arrive twice — measured at
+455 ms apart. See `docs/sync-design.md`.
 
 Three things about the REST API the code accounts for, all confirmed against store `8jbhprizry`:
 
