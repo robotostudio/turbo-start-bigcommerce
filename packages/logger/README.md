@@ -96,13 +96,11 @@ logs are console-only. A drain covers the server.
 
 ## Known gaps
 
-**CLI output changed shape.** `pretty` is on whenever `NODE_ENV` is not
-`production`, which covers `seed`, `sync`, `verify` and the studio scripts. In
-that mode evlog writes every level to stdout through `console.log`, so
-`logger.error` no longer goes to stderr, severity is colour rather than the word
-`ERROR`, and `pnpm seed > log.txt` captures ANSI escapes. Nothing in `scripts/`
-or `.github/` reads stderr today, so nothing is broken. `initLogging({ pretty:
-false })` in a script entry point restores all three at once.
+**Output shape follows the terminal, not `NODE_ENV`.** `initLogging` turns
+pretty printing on only when stdout is a tty, so `pnpm seed` reads as one-liners
+and `pnpm seed > seed.log` gets JSON with errors on stderr and no escape codes.
+The CLI entry points call `initLogging()` for exactly this; a new script that
+skips it falls back to evlog's `NODE_ENV` rule and prints colour into pipes.
 
 **Client logs cannot reach a drain.** The browser build offers `transport`, not
 `drain`, and it POSTs to an ingest route this repo does not have. `preview-bar`
