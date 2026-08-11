@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/bigcommerce/hook-health",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

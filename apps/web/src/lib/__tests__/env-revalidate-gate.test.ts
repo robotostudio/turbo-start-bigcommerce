@@ -24,6 +24,9 @@ const OTHER_REQUIRED_ENV = {
   SANITY_API_WRITE_TOKEN: "test-write-token",
   BIGCOMMERCE_STORE_HASH: "testhash",
   BIGCOMMERCE_STOREFRONT_TOKEN: "test-storefront-token",
+  BIGCOMMERCE_ADMIN_TOKEN: "test-admin-token",
+  BIGCOMMERCE_WEBHOOK_DESTINATION: "https://test.example.com/api/webhook",
+  CRON_SECRET: "test-cron-secret",
 } as const;
 
 const CASE_ENV = ["SANITY_REVALIDATE_SECRET", "SKIP_ENV_VALIDATION"] as const;
