@@ -103,10 +103,10 @@ logs are console-only. A drain covers the server.
 
 ## Output shape follows the terminal, not `NODE_ENV`
 
-`initLogging` turns pretty printing on only when stdout is a tty, so `pnpm seed`
-reads as one-liners and `pnpm seed > seed.log` gets JSON, with errors on stderr
-and no escape codes. evlog's own rule is `NODE_ENV`, which is right about Vercel
-and `next dev` and wrong about every script here.
+`initCliLogging` turns pretty printing on only when stdout is a tty, so `pnpm
+seed` reads as one-liners and `pnpm seed > seed.log` gets JSON, with errors on
+stderr and no escape codes. evlog's own rule is `NODE_ENV`, which is right about
+Vercel and `next dev` and wrong about every script here.
 
 The CLI entry points call `initCliLogging()` from `@workspace/logger/cli` for
 exactly this. A new script that skips it falls back to evlog's rule and prints
