@@ -32,11 +32,12 @@ arrived in a 60-second quiet window", and the window length is stated per experi
 
 All mutations were made with Admin REST `PUT`/`POST`/`DELETE`. Original values were captured with
 `GET` before any change and restored afterwards; restores were run as their own marked actions so
-their deliveries could not be mistaken for experiment results. See "Store restored" at the end.
+their deliveries could not be mistaken for experiment results. See "Store state and cleanup" at the
+end — cleanup is not complete at the time of writing and that section says so.
 
 ## The envelope
 
-Every delivery, regardless of scope, has the same five top-level keys. Verbatim:
+Every delivery, regardless of scope, has the same six top-level keys. Verbatim:
 
 ```json
 {
@@ -189,6 +190,13 @@ REST against product 180. All nine hooks were registered and active throughout.
 | Restore thumbnail | `PUT /catalog/products/180/images/448` `{"is_thumbnail":true}` | 200 | **0** |
 
 **Nothing fired. Not `store/product/updated`, not anything else, on any of the four.**
+
+On attribution, since this document holds other people's captures to that standard: the first three
+rows — the thumbnail swap, the upload and the delete — all completed before any other worker made
+a write to this store, so their windows were provably free of third-party traffic. The fourth row,
+the thumbnail restore, ran in a window that another worker's dashboard save overlapped. That row is
+therefore weaker evidence than the other three. The conclusion does not rest on it: the swap, the
+upload and the delete are each independently clean, and each fired nothing.
 
 That is the finding, and it is a hard one for ROB-2614: over Admin REST, image changes on this
 store are invisible to every scope registered here, including the product scopes. A receiver built
@@ -445,19 +453,30 @@ throwaway: it logs and returns 200, with no authentication and no Sanity write, 
 says ROB-2616 replaces it wholesale. It is committed rather than deleted so the capture is
 reproducible and so the `?sleep=N` rig survives for whoever finishes question 7.
 
-## Store state
+## Store state and cleanup — PENDING, NOT YET DONE
 
-Product 180 and category 43 were restored and verified field by field against the `GET` snapshots
-taken before anything was touched.
+**Read this before trusting anything above about the store being tidy.**
 
-- Product 180: `name`, `price`, `sku`, `warranty`, `is_visible` all match the snapshot.
-- Variants: ids `167, 173, 177, 180, 185` present; variant 167 back to `sku=TS-P3-FAD-XS`,
-  `price=89`, `inventory_level=30`.
-- Images: exactly `448, 450, 454, 457, 461`, `sort_order` 0–4 unchanged, `is_thumbnail` on 448
-  only. The probe image uploaded during the capture was deleted.
-- Options: 118 with values 113–117, 122 with value 133. Untouched throughout.
-- Category 43: `description` restored.
+At the time of writing, cleanup has **not** run:
 
-Every hook created for this capture was deleted afterwards. A quick tunnel URL dies with the
-process, and a live hook pointing at a dead URL burns BigCommerce's 48-hour retry window and
-deactivates itself silently.
+- **Nine hooks are still live**, pointed at a `trycloudflare.com` URL that dies with the tunnel
+  process. They must be deleted. The ids are `31588702`, `31588703`, `31588704`, `31588705`,
+  `31588706`, `31588707`, `31588708`, `31588709`, `31588710`. A tenth, `31588750`, was created for
+  the header capture and has already been deleted.
+- **Product 180 was verified restored at 11:51:14Z**, field by field against the pre-experiment
+  `GET` snapshots: `name`, `price`, `sku`, `warranty`, `is_visible` matching; variants
+  `167, 173, 177, 180, 185` with 167 back to `sku=TS-P3-FAD-XS`, `price=89`, `inventory_level=30`;
+  images exactly `448, 450, 454, 457, 461` with `sort_order` 0–4 and `is_thumbnail` on 448 only;
+  options 118 (values 113–117) and 122 (value 133) untouched throughout. The probe image uploaded
+  during the capture was deleted.
+- **That verification is now stale.** Another worker began changing thumbnails on product 180 after
+  11:51:14Z. The store must be re-diffed against the snapshots before this section can claim the
+  store is as it was found.
+
+Why the hooks matter more than the rest: a quick tunnel URL dies with its process, and a live hook
+pointing at a dead URL burns BigCommerce's 48-hour retry window and then deactivates itself
+silently. Leaving them is worse than never registering them.
+
+**Outstanding work, in order:** the question 4 create path on a throwaway product; question 7 at
+`sleep=10/20/30`; re-diff product 180 and category 43 against the snapshots; delete the nine hooks
+and confirm `GET /v3/hooks` comes back empty; kill both tunnels, the dev server and the raw server.
