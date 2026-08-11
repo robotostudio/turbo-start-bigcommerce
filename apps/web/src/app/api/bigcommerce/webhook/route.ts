@@ -35,24 +35,31 @@ const SYNC: Record<
 /**
  * How long the handler will wait for a sync before it gives up and answers 500.
  *
- * **This number is not measured.** ROB-2612 set out to find BigCommerce's ACK
- * timeout and did not land one, so `docs/research/04-bigcommerce-api-semantics.md`
- * still carries it as unfound. Five seconds is ROB-2611's "absent one, cap the
- * work at a few seconds", not a figure derived from data. Replace it with the
- * real one when someone measures it.
+ * **BigCommerce's ACK timeout is between 9 and 12 seconds**, measured against
+ * store `8jbhprizry` on 2026-08-11 by holding real deliveries open for a fixed
+ * time and watching for a redelivery of the same `hash`. Holds of 5s and 9s
+ * were never redelivered; 12s and 30s always were, each retried about 71
+ * seconds after the first attempt. Method and raw log in
+ * `docs/research/09-webhook-payloads.md`.
+ *
+ * Eight seconds sits under the low end of that range with a second to spare. It
+ * is deliberately not 9: the boundary is bracketed, not pinned, and the cost of
+ * being wrong is asymmetric. Too high and BigCommerce gives up on a sync that
+ * was about to succeed, then redelivers it, so the work happens twice. Too low
+ * and we return 500 on a slow-but-fine sync and it is retried once.
  *
  * For scale: a real `syncProduct` of product 180 — one Admin REST GET, one GROQ
- * fetch, 12 mutations — took 2.3s to 3.4s against a `next dev` server on a
- * laptop, and the 404 paths took 0.4s to 0.9s. Production is expected to be well
- * under a second, but the dev margin here is thin, so treat 5s as the floor if
- * this ever needs adjusting rather than something to trim.
+ * fetch, 12 mutations — took 2.3s to 3.7s against a `next dev` server on a
+ * laptop, and the 404 paths took 0.4s to 0.9s. Production should be well under
+ * a second. Do not raise this past 9s without re-measuring; the timeout is a
+ * BigCommerce-side number and nothing stops them changing it.
  *
  * Giving up does not cancel the sync; it stops waiting for it. The abandoned
  * work is harmless: `client.mutate` sends one transaction, and every sync
  * function re-fetches the entity and writes whole rather than a delta, so the
  * retry that follows converges on the same state.
  */
-const SYNC_TIMEOUT_MS = 5000;
+const SYNC_TIMEOUT_MS = 8000;
 
 async function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;

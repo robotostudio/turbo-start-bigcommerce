@@ -480,3 +480,73 @@ silently. Leaving them is worse than never registering them.
 **Outstanding work, in order:** the question 4 create path on a throwaway product; question 7 at
 `sleep=10/20/30`; re-diff product 180 and category 43 against the snapshots; delete the nine hooks
 and confirm `GET /v3/hooks` comes back empty; kill both tunnels, the dev server and the raw server.
+
+## 7. The ACK timeout — how long BigCommerce waits before giving up
+
+Measured 2026-08-11 against store `8jbhprizry`, after the main capture. **Between 9 and 12
+seconds.**
+
+The rig was deliberately not the app. A standalone node server held each delivery open for a fixed
+time before answering 200, behind its own cloudflared tunnel, with exactly one hook registered
+(`store/product/updated`). Nothing in the repo was involved, so nothing about the receiver's own
+behaviour could confound the result.
+
+### How a timeout is detected
+
+There is no error to observe — a delivery BigCommerce gives up on still gets its 200 eventually, and
+the connection is not visibly cut. What gives it away is the **redelivery**: an event BigCommerce
+considers failed is retried, and a retry carries the same `hash`. So the question "did this hold
+exceed the timeout" becomes "did the same `hash` arrive twice".
+
+### Control first
+
+Before trusting any of it, the tunnel was checked for a timeout of its own, since one would look
+identical from here. Holds of 5s, 20s and 35s all came back `200` with `elapsed` matching the hold
+to within 140 ms. The tunnel passes long holds through untouched, so every result below is
+BigCommerce's behaviour.
+
+### Results
+
+| Hold | Deliveries of that event | Verdict |
+| --- | --- | --- |
+| 5s | 1 | inside the window |
+| 5s (second event) | 1 | inside the window |
+| 9s | 1 | inside the window |
+| 12s | 3 | **timed out**, retried |
+| 30s | 3 | **timed out**, retried |
+
+Each retry landed about 71 seconds after the event's first delivery. BigCommerce's documented first
+retry interval is 60 seconds, and it is measured from the moment the attempt is abandoned rather
+than from the moment it was sent — 71 minus 60 puts the abandonment around 11 seconds in, which
+agrees with 9 passing and 12 failing.
+
+Raw log, trimmed to the arrivals:
+
+```
+13:18:15  arrived  hold 30s  17f8c3b5f254
+13:19:26  arrived  hold 30s  17f8c3b5f254   <- retry, 71s later
+13:22:16  arrived  hold  5s  bdf7740a89ac   <- never retried
+13:24:06  arrived  hold 12s  91cd3f346af8
+13:25:17  arrived  hold 12s  91cd3f346af8   <- retry, 71s later
+13:26:52  arrived  hold  9s  0cf6559c6f3d   <- never retried
+13:28:54  arrived  hold  5s  9222b7021efe   <- never retried
+```
+
+### What this changes
+
+`SYNC_TIMEOUT_MS` in `apps/web/src/app/api/bigcommerce/webhook/route.ts` was 5000, chosen when the
+number was unknown. It is now 8000: under the low end of the measured range with a second to spare,
+and comfortably above the 2.3 to 3.7 seconds a real `syncProduct` takes against a dev server.
+
+It is deliberately not 9000. The boundary is bracketed, not pinned, and the two failure directions
+cost different amounts. Setting it too high means BigCommerce abandons a sync that was about to
+succeed and redelivers it, so the work is done twice and the Admin REST quota pays for both.
+Setting it too low means one unnecessary 500 and one retry.
+
+Nobody should raise it past 9 seconds without re-running this. The number belongs to BigCommerce
+and nothing obliges them to keep it.
+
+### Cleanup
+
+The probe hook was deleted, `GET /v3/hooks` returns zero, the tunnel and the probe server were
+killed, and product 180's `warranty` field was restored to its snapshot value of `""`.
