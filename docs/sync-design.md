@@ -1,5 +1,29 @@
 # The webhook receiver, designed and not built
 
+> **Built, 2026-08-11, and three things below are now wrong.** The receiver is
+> `apps/web/src/app/api/bigcommerce/webhook/route.ts`. Read this file for the
+> shape of the transport, not for these three decisions:
+>
+> 1. **Variants do have CRUD webhooks.** `store/sku/created`, `store/sku/updated`
+>    and `store/sku/deleted` all fire. A variant price change fires
+>    `store/sku/updated` and *nothing else* — no `store/product/updated` — so the
+>    sku hooks are required, not a latency nicety. Measured, twice, in
+>    `docs/research/09-webhook-payloads.md`. Their `data.id` is the `sku_id`, and
+>    the ids the receiver needs are `data.sku.product_id` and
+>    `data.sku.variant_id`. (ROB-2613)
+> 2. **There is no scheduled sweep.** ROB-2608 ruled its cron out. The sweep
+>    still exists as a one-off backfill you run by hand; nothing runs it for you.
+> 3. **The receiver does not use `after()`, and cannot.** `after()` answers 200
+>    before the work happens, which is only survivable "because the sweep
+>    exists" — and it does not. The sync runs inline and a failure answers 500,
+>    so BigCommerce's retry ladder repairs it. That ladder is now the only repair
+>    mechanism in the design. (ROB-2611)
+>
+> Also measured and not covered below: image changes made through the
+> `/v3/catalog/products/{id}/images` endpoint fire no event at all, on any scope.
+> The storefront reads product images live from BigCommerce and treats the synced
+> `store.previewImageUrl` as the fallback. (ROB-2614)
+
 `packages/sanity-sync` ships the write path, the reconcile sweep, and the four functions a webhook
 receiver would call. It does not ship the receiver, and that is on purpose. A live endpoint that writes
 nothing rots without anyone noticing: the hook goes green in the BigCommerce dashboard, the 200s come

@@ -36,11 +36,15 @@ const ENV = {
   NEXT_PUBLIC_SANITY_DATASET: "production",
   NEXT_PUBLIC_SANITY_API_VERSION: "2025-08-29",
   NEXT_PUBLIC_SANITY_STUDIO_URL: "http://localhost:3333",
+  SANITY_PROJECT_ID: "testproject",
+  SANITY_DATASET: "production",
   SANITY_API_READ_TOKEN: "test-read-token",
   SANITY_API_WRITE_TOKEN: "test-write-token",
   SANITY_REVALIDATE_SECRET: "test-secret",
   BIGCOMMERCE_STORE_HASH: "testhash",
   BIGCOMMERCE_STOREFRONT_TOKEN: "test-storefront-token",
+  BIGCOMMERCE_ADMIN_TOKEN: "test-admin-token",
+  BIGCOMMERCE_WEBHOOK_SECRET: "test-webhook-secret",
 } as const;
 
 async function importLive() {

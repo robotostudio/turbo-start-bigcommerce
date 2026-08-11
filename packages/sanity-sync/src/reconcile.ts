@@ -9,14 +9,14 @@ import {
   createWriteClient,
   PRODUCT_INCLUDE,
   readBigCommerceCredentials,
-} from "./client.js";
+} from "./client";
 import {
   deleteCategory,
   deleteProduct,
   type SyncResult,
   syncCategory,
   syncProduct,
-} from "./sync.js";
+} from "./sync";
 import {
   productDocuments,
   type RestCategory,
@@ -25,7 +25,7 @@ import {
   type SyncedDocument,
   toCategoryDocument,
   upsertMutations,
-} from "./upsert.js";
+} from "./upsert";
 
 /**
  * The reconcile sweep, and the CLI over both it and the single-entity core in

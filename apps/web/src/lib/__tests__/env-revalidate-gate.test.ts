@@ -20,10 +20,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  * result depend on whose machine ran it.
  */
 const OTHER_REQUIRED_ENV = {
+  SANITY_PROJECT_ID: "testproject",
+  SANITY_DATASET: "production",
   SANITY_API_READ_TOKEN: "test-read-token",
   SANITY_API_WRITE_TOKEN: "test-write-token",
   BIGCOMMERCE_STORE_HASH: "testhash",
   BIGCOMMERCE_STOREFRONT_TOKEN: "test-storefront-token",
+  BIGCOMMERCE_ADMIN_TOKEN: "test-admin-token",
+  BIGCOMMERCE_WEBHOOK_SECRET: "test-webhook-secret",
 } as const;
 
 const CASE_ENV = ["SANITY_REVALIDATE_SECRET", "SKIP_ENV_VALIDATION"] as const;
