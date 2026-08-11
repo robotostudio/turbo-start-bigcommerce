@@ -6,16 +6,23 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
+      "browser": "./src/client.ts",
       "default": "./src/index.ts"
     }
   },
   "scripts": {
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "format:check": "biome format ."
+    "format:check": "biome format .",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "evlog": "^2.25.0"
   },
   "devDependencies": {
     "@workspace/typescript-config": "workspace:*",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "^4.1.10"
   }
 }
