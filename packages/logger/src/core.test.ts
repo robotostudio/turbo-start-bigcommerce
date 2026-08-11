@@ -100,6 +100,85 @@ describe("toEvent", () => {
     );
   });
 
+  /**
+   * evlog builds the event as `{ timestamp, level, ...env, ...event }` with the
+   * caller's fields spread last, so these are takeable too. An `info` recorded
+   * as `level: "debug"` is one alerting rule never fires on.
+   */
+  it("protects the stamps evlog puts on the event, not just tag and message", () => {
+    const event = toEvent("Sync", "collide", [
+      { level: "debug", service: "hacked", timestamp: 0, region: "nowhere" },
+    ]);
+
+    expect(event).not.toHaveProperty("level");
+    expect(event).not.toHaveProperty("service");
+    expect(event).not.toHaveProperty("timestamp");
+    expect(event).not.toHaveProperty("region");
+    expect(event.shadowed).toEqual({
+      level: "debug",
+      service: "hacked",
+      timestamp: 0,
+      region: "nowhere",
+    });
+  });
+
+  /**
+   * A failed `fetch` says `fetch failed` and nothing else. The reason anyone
+   * needs is one level down. `hook-health/route.ts` logs exactly this shape.
+   */
+  it("follows the cause chain", () => {
+    const cause = Object.assign(new Error("getaddrinfo ENOTFOUND"), {
+      name: "Error",
+    });
+    const event = toEvent("HookHealth", "probe failed", [
+      new Error("fetch failed", { cause }),
+    ]);
+
+    expect(event.error).toMatchObject({
+      message: "fetch failed",
+      cause: { message: "getaddrinfo ENOTFOUND" },
+    });
+  });
+
+  it("stops following a circular cause chain", () => {
+    const a = new Error("a");
+    const b = new Error("b", { cause: a });
+    (a as Error & { cause?: unknown }).cause = b;
+
+    expect(() => toEvent("Sync", "loop", [a])).not.toThrow();
+  });
+
+  /** Sanity's ClientError carries the whole HTTP response, headers included. */
+  it("does not copy an error's other own properties", () => {
+    const error = Object.assign(new Error("Unauthorized"), {
+      response: { headers: { authorization: "Bearer sk-secret" } },
+    });
+
+    expect(toEvent("Sync", "failed", [error]).error).not.toHaveProperty(
+      "response"
+    );
+  });
+
+  it("keeps a second error instead of evicting the first", () => {
+    const event = toEvent("Sync", "both failed", [
+      new Error("first"),
+      new Error("second"),
+    ]);
+
+    expect(event.error).toMatchObject({ message: "first" });
+    expect(event.details).toMatchObject([{ message: "second" }]);
+  });
+
+  /** `Object.assign` onto a normal object runs `Object.prototype`'s setter. */
+  it("keeps a field literally named __proto__ rather than losing it", () => {
+    const event = toEvent("Sync", "odd key", [
+      JSON.parse('{"__proto__": "not a prototype", "ok": 1}'),
+    ]);
+
+    expect(event.ok).toBe(1);
+    expect(Object.getPrototypeOf(event)).toBe(Object.prototype);
+  });
+
   it("treats an array as a detail, not as fields", () => {
     expect(toEvent("Sync", "list", [[1, 2]])).toMatchObject({
       details: [[1, 2]],

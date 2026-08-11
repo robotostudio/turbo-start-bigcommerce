@@ -13,9 +13,19 @@ import { initLogging } from "@workspace/logger";
  * Until then everything goes to stdout and Vercel collects it.
  */
 export function register() {
-  // Edge gets evlog's own defaults. The Node entry point reaches for Node
-  // globals, and nothing on the edge runtime logs enough to be worth the risk.
+  // Edge runs this too, and gets evlog's own defaults rather than this call.
+  // It does reach the Node entry point: `@workspace/logger` maps `edge-light`
+  // and `worker` ahead of `browser`, because the browser runtime opens with
+  // `if (!isBrowser()) return` and would drop every edge log without a word.
+  // `apps/web/src/proxy.ts` is a live edge bundle.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  initLogging({ env: { service: "web" } });
+  initLogging({
+    env: {
+      service: "web",
+      // evlog reads NODE_ENV and never looks at VERCEL_ENV, so without this a
+      // preview deploy stamps every event `production`.
+      environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+    },
+  });
 }

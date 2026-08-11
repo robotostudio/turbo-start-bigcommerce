@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { type DrainContext, initLogging, Logger } from "./index";
 
@@ -102,5 +102,43 @@ describe("a configured drain", () => {
     new Logger("Ctx").info("nothing should reach the drain");
 
     expect(events).toHaveLength(0);
+  });
+});
+
+/**
+ * evlog serialises with a bare `JSON.stringify`, and nothing between here and
+ * there has a try/catch. Before evlog this was `console.log`, which swallows
+ * anything. The values below both raise out of the call, so the guard lives in
+ * `#emit` rather than in a serialiser.
+ *
+ * `llms.txt/route.ts` logs a rejected promise's `reason` — an arbitrary value —
+ * from inside a failure path, which is the worst place to add a new throw.
+ */
+describe("a value that cannot be serialised", () => {
+  const cyclic: Record<string, unknown> = { name: "x" };
+  cyclic.self = cyclic;
+
+  it.each([
+    ["a circular reference", cyclic],
+    ["a BigInt", { count: 1n }],
+  ])("does not throw out of the log call: %s", (_label, value) => {
+    initLogging({ env: { service: "logger-test" } });
+    const logger = new Logger("LlmsTxt");
+
+    expect(() => logger.error("Failed to load blogs", value)).not.toThrow();
+  });
+
+  it("still says what happened when it falls back", () => {
+    initLogging({ env: { service: "logger-test" } });
+    const stderr = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    new Logger("LlmsTxt").error("Failed to load blogs", cyclic);
+
+    expect(String(stderr.mock.calls.at(-1)?.[0])).toBe(
+      "[LlmsTxt] ERROR: Failed to load blogs"
+    );
+    stderr.mockRestore();
   });
 });

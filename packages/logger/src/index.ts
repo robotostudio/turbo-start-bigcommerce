@@ -5,7 +5,6 @@ import { makeLogger } from "./core";
 export const Logger = makeLogger(log);
 export type Logger = InstanceType<typeof Logger>;
 
-export { toEvent } from "./core";
 export type { DrainContext, LoggerConfig, WideEvent } from "evlog";
 
 /**
@@ -34,5 +33,14 @@ export function initLogging(config: Parameters<typeof initLogger>[0] = {}) {
   // It only bites in development, where `pretty` defaults on and there is
   // normally no drain. The combination is still one env var away, so it is
   // closed here rather than written down and forgotten.
-  initLogger(config.drain ? { pretty: false, ...config } : config);
+  //
+  // Plugins count: `drainPlugin` registers a drain that never appears on
+  // `config.drain`. Erring towards JSON output costs colour; erring the other
+  // way costs logs.
+  const draining =
+    config.drain !== undefined || (config.plugins?.length ?? 0) > 0;
+
+  // `pretty: config.pretty ?? false`, not a spread — an explicit
+  // `pretty: undefined` would otherwise put the hole straight back.
+  initLogger(draining ? { ...config, pretty: config.pretty ?? false } : config);
 }

@@ -48,7 +48,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   // evlog keeps one process-wide config, so a drain installed by a test would
   // otherwise still be collecting during the next one.
-  initLogging({ enabled: false });
+  initLogging({});
 });
 
 /** The captured edges for the populated namespace. */

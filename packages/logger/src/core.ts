@@ -35,6 +35,53 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Names evlog stamps on the event itself, in
+ * `{ timestamp, level, ...env, ...event }` — the caller's event spread last, so
+ * every one of these is takeable. An `info` call carrying `{ level: "debug" }`
+ * lands in the drain as a debug event and alerting never sees it.
+ *
+ * `tag` and `message` are ours for the same reason.
+ */
+const RESERVED = [
+  "tag",
+  "message",
+  "timestamp",
+  "level",
+  "service",
+  "environment",
+  "version",
+  "commitHash",
+  "region",
+];
+
+/**
+ * `name`, `message`, `stack` and the cause chain — deliberately not the error's
+ * other own properties. Sanity's `ClientError` carries the whole HTTP
+ * `response` on itself, headers included, and spreading that into a log is how
+ * a token ends up in a drain.
+ *
+ * `cause` earns its place: a failed `fetch` reports `fetch failed` and nothing
+ * else, and the reason anyone actually needs — `ENOTFOUND`, `ECONNREFUSED` —
+ * is only reachable through it. `hook-health/route.ts` logs exactly that.
+ */
+function flattenError(error: Error, depth = 0): Record<string, unknown> {
+  const flat: Record<string, unknown> = {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+  };
+  // Depth-capped: a cause chain can be circular, and this runs inside an error
+  // path where a stack overflow would replace the error being reported.
+  if (error.cause !== undefined && depth < 3) {
+    flat.cause =
+      error.cause instanceof Error
+        ? flattenError(error.cause, depth + 1)
+        : error.cause;
+  }
+  return flat;
+}
+
+/**
  * Turn a console-style call into a wide event.
  *
  * This is the whole reason the facade exists rather than forwarding varargs.
@@ -66,16 +113,21 @@ export function toEvent(
   message: string,
   args: unknown[]
 ): Record<string, unknown> {
-  const fields: Record<string, unknown> = {};
+  // Null prototype: `Object.assign` onto a normal object runs
+  // `Object.prototype`'s `__proto__` setter, so a caller field by that name
+  // disappears instead of being logged.
+  const fields = Object.create(null) as Record<string, unknown>;
   const details: unknown[] = [];
 
   for (const arg of args) {
     if (arg instanceof Error) {
-      fields.error = {
-        name: arg.name,
-        message: arg.message,
-        stack: arg.stack,
-      };
+      const flat = flattenError(arg);
+      // A second error does not evict the first.
+      if (fields.error === undefined) {
+        fields.error = flat;
+      } else {
+        details.push(flat);
+      }
     } else if (isPlainObject(arg)) {
       Object.assign(fields, arg);
     } else {
@@ -88,7 +140,7 @@ export function toEvent(
   }
 
   const shadowed: Record<string, unknown> = {};
-  for (const key of ["tag", "message"]) {
+  for (const key of RESERVED) {
     if (key in fields) {
       shadowed[key] = fields[key];
       delete fields[key];
@@ -120,13 +172,25 @@ export function makeLogger(log: EvlogLog) {
     }
 
     #emit(level: LogLevel, message: string, args: unknown[]) {
-      // No extra arguments means there are no fields to carry, and the
-      // tag/message form prints better than a two-key event would.
-      if (args.length === 0) {
-        log[level](this.#context, message);
-        return;
+      try {
+        // No extra arguments means there are no fields to carry, and the
+        // tag/message form prints better than a two-key event would.
+        if (args.length === 0) {
+          log[level](this.#context, message);
+          return;
+        }
+        log[level](toEvent(this.#context, message, args));
+      } catch {
+        // Logging must not be the thing that throws. evlog serialises the event
+        // with a bare `JSON.stringify`, so a circular reference or a BigInt in
+        // a caller's object raises out of the `logger.error` call — usually
+        // from inside a catch block, replacing the error being reported.
+        // Measured with both pretty settings; `console.log` never did this.
+        //
+        // `llms.txt/route.ts` logs a rejected promise's `reason`, which can be
+        // any value at all. Fall back to the shape this logger replaced.
+        console.error(`[${this.#context}] ${level.toUpperCase()}: ${message}`);
       }
-      log[level](toEvent(this.#context, message, args));
     }
 
     debug(message: string, ...args: unknown[]) {
