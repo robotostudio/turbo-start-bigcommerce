@@ -198,14 +198,49 @@ thumbnail fires `updated` only the first time one is set is therefore **neither 
 refuted** by these captures. What is established is the case that matters operationally — a store
 whose products already have thumbnails, where a swap fires nothing.
 
-One operational note found while restoring, unrelated to webhooks but load-bearing for anyone
-scripting against this endpoint: `PUT /catalog/products/{id}/images/{image_id}` with
-`{"is_thumbnail":true}` returned `200` with `"is_thumbnail": true` in the response body, and a
-`GET` three minutes later still showed the flag on the old image. An identical second `PUT` took
-effect immediately. **A 200 from that endpoint is not proof the flag moved.** Verify with a `GET`.
+### Why the images endpoint is silent, and what does fire
 
-### Not covered here: the control panel
+The mechanism is the shape of the write, not the fact that an image changed. A whole-product
+`PUT /v3/catalog/products/180` fires `store/product/updated` — that is finding 1 above, captured
+three times. A targeted `PUT`/`POST`/`DELETE` against `/v3/catalog/products/180/images/...` fires
+nothing — captured four times.
 
-These are Admin REST results only. Dashboard UI edits may fire different events — the control
-panel does not necessarily route through the same code path. That comparison was run separately by
-the orchestrator and is not part of this capture.
+So anything that saves the whole product produces an event, and anything that touches only the
+images sub-resource does not. The BigCommerce documentation's claim is accurate about the images
+endpoint and misleading about the merchant workflow, because the two paths differ.
+
+**The control-panel half of this was not established here.** A dashboard save is widely understood
+to `PUT` the whole product, which would fire by the mechanism above, but the one capture offered as
+evidence for it did not survive attribution: the delivery in question had `created_at` one second
+after a whole-product `PUT` of this worker's own, and forty-two seconds after the dashboard save.
+Every other capture in this document shows a 1–2 second gap between the request and `created_at`.
+No delivery arrived in the two minutes covering the dashboard save. Whether a control-panel image
+edit fires an event is therefore **unresolved**, and worth one clean capture with no concurrent
+API writes before anyone relies on it.
+
+For ROB-2614 the practical consequence is unchanged either way: a change made through the images
+API is silent, so a receiver built on these hooks will not learn about it.
+
+## Deliveries are not unique — the same event arrived twice
+
+Not one of the ticket's questions, but it fell out of the captures and it changes ROB-2616.
+
+One event was delivered **twice**, 455 milliseconds apart:
+
+```
+2026-08-11T11:45:54.755Z  hash 492a381a00feb901335931d8fa5df722cde657a5  created_at 1786448752
+2026-08-11T11:45:55.210Z  hash 492a381a00feb901335931d8fa5df722cde657a5  created_at 1786448752
+```
+
+Same `hash`, same `webhook-id` header, same `created_at`, same `data`. The stub returned `200`
+immediately to the first one — there was no sleep configured and no failure to retry from. 455ms
+is far too short for a retry backoff in any case.
+
+**This is a duplicate delivery, not a retry.** BigCommerce delivers at-least-once, and the receiver
+has to be idempotent. `hash` (equivalently the `webhook-id` header) is the deduplication key: it is
+stable across copies of the same event and differs between distinct events, including two events
+on the same entity seconds apart.
+
+The sync's writes are already idempotent by construction — deterministic document ids, whole-object
+writes — so a duplicate costs a redundant Admin REST fetch and a redundant Sanity write rather than
+corrupting anything. Worth deduplicating on `hash` anyway, to halve the quota cost.
