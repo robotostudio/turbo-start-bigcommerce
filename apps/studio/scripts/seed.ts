@@ -22,9 +22,14 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { initCliLogging } from "@workspace/logger/cli";
 import { Logger } from "@workspace/logger";
 
 const log = new Logger("seed");
+// Pretty one-liners on a terminal, JSON when this is redirected or piped.
+// Without it evlog decides from NODE_ENV, which is always "development" here,
+// so a redirected log fills with ANSI escapes and errors never reach stderr.
+initCliLogging();
 
 /** `apps/studio/scripts` → repo root. */
 const ROOT = dirname(dirname(dirname(dirname(fileURLToPath(import.meta.url)))));

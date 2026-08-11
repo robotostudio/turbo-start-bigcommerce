@@ -22,11 +22,16 @@
  */
 
 import { createClient } from "@sanity/client";
+import { initCliLogging } from "@workspace/logger/cli";
 import { Logger } from "@workspace/logger";
 import { catalogGet } from "@workspace/sanity-sync/client";
 import { slugFromPath } from "@workspace/sanity-sync/upsert";
 
 const log = new Logger("verify");
+// Pretty one-liners on a terminal, JSON when this is redirected or piped.
+// Without it evlog decides from NODE_ENV, which is always "development" here,
+// so a redirected log fills with ANSI escapes and errors never reach stderr.
+initCliLogging();
 
 /** Storefront paging cap. The demo catalog is 12 products; a bigger fork pages. */
 const STOREFRONT_PAGE = 50;
