@@ -103,16 +103,23 @@ export function InstagramEmbed({ url }: { url?: string | null }) {
  * Portable Text blocks shared by the product body and blog rich text. Both
  * fields permit these types, so both need to render them — an unhandled type
  * falls back to a `display: none` div and vanishes silently.
+ *
+ * A function rather than a constant so `liveImages` can reach the hotspot cards.
+ * Resolving them here instead would mean importing the `server-only` fetch into
+ * a module the client page builder also bundles, which does not build. The
+ * caller that has a server pass resolves them and passes them down; the ones
+ * that do not pass nothing, and every card falls back to its synced Sanity URL.
  */
-export const sharedPortableTextTypes: NonNullable<
-  Partial<PortableTextReactComponents>["types"]
-> = {
+export const sharedPortableTextTypes = (
+  liveImages?: Record<number, string>
+): NonNullable<Partial<PortableTextReactComponents>["types"]> => ({
   imageWithProductHotspots: ({ value }) => {
     if (!value?.image) return null;
     return (
       <div className="my-6">
         <ProductHotspotsImage
           image={value.image}
+          liveImages={liveImages}
           productHotspots={value.productHotspots}
           showHotspots={value.showHotspots}
         />
@@ -157,4 +164,4 @@ export const sharedPortableTextTypes: NonNullable<
     );
   },
   instagram: ({ value }) => <InstagramEmbed url={value?.url} />,
-};
+});

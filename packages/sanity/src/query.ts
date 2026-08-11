@@ -137,6 +137,10 @@ const productWithVariantFragment = /* groq */ `
         _id,
         "slug": store.slug.current,
         store{
+          // Needed to re-read the image live from BigCommerce at request time,
+          // which is what \`previewImageUrl\` below is now only the fallback for.
+          // See apps/web/src/lib/bigcommerce/hotspot-images.ts.
+          entityId,
           title,
           previewImageUrl,
           // A synced product carries one price, not a min/max range. The

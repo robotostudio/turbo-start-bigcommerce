@@ -1,55 +1,138 @@
-import { appendFileSync } from "node:fs";
+import { env } from "@workspace/env/server";
+import { Logger } from "@workspace/logger";
+import {
+  deleteCategory,
+  deleteProduct,
+  syncCategory,
+  syncProduct,
+} from "@workspace/sanity-sync/sync";
+
+import {
+  claimDelivery,
+  releaseDelivery,
+  routeEvent,
+  secretMatches,
+  type SyncAction,
+} from "@/lib/bigcommerce/webhook";
 
 /**
- * THROWAWAY CAPTURE STUB — ROB-2612.
+ * The BigCommerce catalog webhook receiver — the only thing that keeps Sanity's
+ * synced catalog documents in step with the store. Design: `docs/sync-design.md`,
+ * amended by ROB-2611, ROB-2613 and ROB-2614; captured traffic:
+ * `docs/research/09-webhook-payloads.md`.
  *
- * Logs every BigCommerce webhook delivery verbatim and returns 200. No auth
- * check, no Sanity write, no parsing. The real receiver is ROB-2616 and
- * replaces this file wholesale.
- *
- * `?sleep=N` delays the response by N seconds without delaying the log write,
- * so a delivery that BigCommerce gives up on still leaves a record of when the
- * origin actually finished. That is what separates a BigCommerce ACK timeout
- * from a tunnel timeout.
+ * Node, not edge: `crypto.timingSafeEqual` and the Admin REST token both need it.
  */
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
-const LOG = process.env.WEBHOOK_CAPTURE_LOG ?? "/tmp/bc-webhooks.log";
+const logger = new Logger("BigCommerceWebhook");
 
-export async function POST(request: Request) {
-  const receivedAt = new Date().toISOString();
-  const body = await request.text();
-  const sleepSeconds = Number(
-    new URL(request.url).searchParams.get("sleep") ?? 0
-  );
+const SYNC: Record<
+  SyncAction,
+  (entityId: number, options: { write: true }) => Promise<unknown>
+> = { syncProduct, deleteProduct, syncCategory, deleteCategory };
 
-  appendFileSync(
-    LOG,
-    `${JSON.stringify({
-      event: "received",
-      receivedAt,
-      url: request.url,
-      method: request.method,
-      headers: Object.fromEntries(request.headers),
-      body,
-    })}\n`
-  );
+/**
+ * How long the handler will wait for a sync before it gives up and answers 500.
+ *
+ * **This number is not measured.** ROB-2612 set out to find BigCommerce's ACK
+ * timeout and did not land one, so `docs/research/04-bigcommerce-api-semantics.md`
+ * still carries it as unfound. Five seconds is ROB-2611's "absent one, cap the
+ * work at a few seconds", not a figure derived from data. Replace it with the
+ * real one when someone measures it.
+ *
+ * For scale: a real `syncProduct` of product 180 — one Admin REST GET, one GROQ
+ * fetch, 12 mutations — took 2.3s to 3.4s against a `next dev` server on a
+ * laptop, and the 404 paths took 0.4s to 0.9s. Production is expected to be well
+ * under a second, but the dev margin here is thin, so treat 5s as the floor if
+ * this ever needs adjusting rather than something to trim.
+ *
+ * Giving up does not cancel the sync; it stops waiting for it. The abandoned
+ * work is harmless: `client.mutate` sends one transaction, and every sync
+ * function re-fetches the entity and writes whole rather than a delta, so the
+ * retry that follows converges on the same state.
+ */
+const SYNC_TIMEOUT_MS = 5000;
 
-  if (sleepSeconds > 0) {
-    await new Promise((resolve) => setTimeout(resolve, sleepSeconds * 1000));
+async function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`sync did not finish within ${ms}ms`)),
+          ms
+        );
+      }),
+    ]);
+  } finally {
+    // The loser keeps the function alive until it fires otherwise.
+    clearTimeout(timer);
+  }
+}
+
+export async function POST(request: Request): Promise<Response> {
+  if (
+    !secretMatches(
+      request.headers.get("x-bigcommerce-webhook-secret"),
+      env.BIGCOMMERCE_WEBHOOK_SECRET
+    )
+  ) {
+    logger.warn("rejected a delivery with a missing or wrong secret");
+    return new Response("Unauthorized", { status: 401 });
   }
 
-  appendFileSync(
-    LOG,
-    `${JSON.stringify({
-      event: "responded",
-      receivedAt,
-      respondedAt: new Date().toISOString(),
-      sleepSeconds,
-      status: 200,
-    })}\n`
-  );
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    logger.warn("authenticated delivery with a body that is not JSON");
+    return new Response("Ignored", { status: 200 });
+  }
 
-  return new Response("ok", { status: 200 });
+  const { hash, scope } = (payload ?? {}) as {
+    hash?: unknown;
+    scope?: unknown;
+  };
+  const route = routeEvent(payload);
+
+  if (route.action === "ignore") {
+    // 200 on purpose. A 4xx counts as a failed delivery, and eleven failures
+    // deactivate the hook — over an event this receiver was never going to act
+    // on. See `routeEvent`.
+    logger.info(`ignored: ${route.reason}`);
+    return new Response("Ignored", { status: 200 });
+  }
+
+  const deliveryId =
+    typeof hash === "string" && hash.length > 0
+      ? hash
+      : (request.headers.get("webhook-id") ?? null);
+
+  if (deliveryId && !claimDelivery(deliveryId)) {
+    logger.info(`${scope}: duplicate delivery ${deliveryId}, already claimed`);
+    return new Response("Duplicate", { status: 200 });
+  }
+
+  try {
+    await withTimeout(
+      SYNC[route.action](route.entityId, { write: true }),
+      SYNC_TIMEOUT_MS
+    );
+    logger.info(`${scope}: ${route.action}(${route.entityId}) ok`);
+    return new Response("OK", { status: 200 });
+  } catch (error) {
+    // Hand the hash back before answering, or the retry finds it claimed,
+    // answers 200, and the event is lost. The ladder — 60s, 180s, 300s, 600s,
+    // 900s, 1800s, 3600s, 7200s, 21600s, 50400s, 86400s — is the only repair
+    // this design has, since there is no scheduled sweep.
+    if (deliveryId) releaseDelivery(deliveryId);
+
+    logger.error(
+      `${scope}: ${route.action}(${route.entityId}) failed`,
+      error instanceof Error ? error.message : String(error)
+    );
+    return new Response("Sync failed", { status: 500 });
+  }
 }

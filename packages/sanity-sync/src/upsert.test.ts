@@ -17,7 +17,7 @@ import {
   toVariantDocument,
   upsertMutations,
   variantDocumentId,
-} from "./upsert.js";
+} from "./upsert";
 
 /** Trimmed from the real sandbox response for store 8jbhprizry. */
 const variant: RestVariant = {

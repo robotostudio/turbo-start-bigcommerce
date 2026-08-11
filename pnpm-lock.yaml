@@ -202,6 +202,9 @@ importers:
       '@workspace/sanity':
         specifier: workspace:*
         version: link:../../packages/sanity
+      '@workspace/sanity-sync':
+        specifier: workspace:*
+        version: link:../../packages/sanity-sync
       '@workspace/ui':
         specifier: workspace:*
         version: link:../../packages/ui

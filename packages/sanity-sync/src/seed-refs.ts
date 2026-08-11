@@ -3,7 +3,7 @@ import { parseArgs } from "node:util";
 import type { Mutation, SanityClient } from "@sanity/client";
 import { Logger } from "@workspace/logger";
 
-import { createWriteClient } from "./client.js";
+import { createWriteClient } from "./client";
 
 /**
  * Phase two of the seed: point the seeded content at this sandbox's catalog.

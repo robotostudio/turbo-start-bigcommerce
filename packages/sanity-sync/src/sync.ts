@@ -6,7 +6,7 @@ import {
   createWriteClient,
   PRODUCT_INCLUDE,
   readBigCommerceCredentials,
-} from "./client.js";
+} from "./client";
 import {
   categoryDocumentId,
   productDocumentId,
@@ -17,14 +17,19 @@ import {
   staleMutations,
   toCategoryDocument,
   upsertMutations,
-} from "./upsert.js";
+} from "./upsert";
 
 /**
  * One function per event BigCommerce delivers. This is the whole sync core, and
  * it knows nothing about how it was invoked: no `Request`, no `Response`, no
  * `process.argv`. `src/reconcile.ts` calls it from a CLI today and
- * `apps/web/src/app/api/bigcommerce/webhook/route.ts` will call the same four
- * functions from a POST handler later — see `docs/sync-design.md`.
+ * `apps/web/src/app/api/bigcommerce/webhook/route.ts` calls the same four
+ * functions from a POST handler.
+ *
+ * Relative imports in this package are extensionless on purpose. The tsconfig
+ * is `moduleResolution: Bundler`, and Next's bundler will not resolve a `.js`
+ * specifier to a `.ts` file — putting the extension back type-checks here and
+ * breaks the `apps/web` build with a module-not-found on the import above.
  *
  * Every function re-fetches the entity by id and writes the current state.
  * Never a delta: webhook payloads carry `{type, id}` and nothing else, arrive
