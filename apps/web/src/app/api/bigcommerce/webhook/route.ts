@@ -8,8 +8,6 @@ import {
 } from "@workspace/sanity-sync/sync";
 
 import {
-  claimDelivery,
-  releaseDelivery,
   routeEvent,
   secretMatches,
   type SyncAction,
@@ -98,10 +96,7 @@ export async function POST(request: Request): Promise<Response> {
     return new Response("Ignored", { status: 200 });
   }
 
-  const { hash, scope } = (payload ?? {}) as {
-    hash?: unknown;
-    scope?: unknown;
-  };
+  const { scope } = (payload ?? {}) as { scope?: unknown };
   const route = routeEvent(payload);
 
   if (route.action === "ignore") {
@@ -112,15 +107,24 @@ export async function POST(request: Request): Promise<Response> {
     return new Response("Ignored", { status: 200 });
   }
 
-  const deliveryId =
-    typeof hash === "string" && hash.length > 0
-      ? hash
-      : (request.headers.get("webhook-id") ?? null);
-
-  if (deliveryId && !claimDelivery(deliveryId)) {
-    logger.info(`${scope}: duplicate delivery ${deliveryId}, already claimed`);
-    return new Response("Duplicate", { status: 200 });
-  }
+  // No deduplication. There was, and it never once fired in production — see
+  // ROB-2618. It kept claimed hashes in a per-instance Set, which only helps if
+  // the copies of an event reach the same warm instance. They do not: one
+  // control-panel save produced three deliveries 20ms apart, and Vercel put
+  // them on three separate lambdas, each holding an empty Set.
+  //
+  // Catching them needs state shared across instances, and there is none here
+  // that does not mean a new service and a new bill. It is not worth one: the
+  // duplicates cost two extra Admin REST reads and two extra Sanity
+  // transactions per save, all idempotent, which is 0.02 requests per second at
+  // a thousand product edits a day. Hash deduplication also does nothing for
+  // the case this design actually worries about — a bulk import storm is
+  // thousands of *distinct* events, so every hash is different.
+  //
+  // Correctness never depended on it. Every sync function re-fetches its entity
+  // and writes `store` whole rather than applying a delta, so three concurrent
+  // runs converge on identical documents. That is asserted in
+  // `packages/sanity-sync/src/upsert.test.ts` and was observed in production.
 
   try {
     await withTimeout(
@@ -130,12 +134,6 @@ export async function POST(request: Request): Promise<Response> {
     logger.info(`${scope}: ${route.action}(${route.entityId}) ok`);
     return new Response("OK", { status: 200 });
   } catch (error) {
-    // Hand the hash back before answering, or the retry finds it claimed,
-    // answers 200, and the event is lost. The ladder — 60s, 180s, 300s, 600s,
-    // 900s, 1800s, 3600s, 7200s, 21600s, 50400s, 86400s — is the only repair
-    // this design has, since there is no scheduled sweep.
-    if (deliveryId) releaseDelivery(deliveryId);
-
     logger.error(
       `${scope}: ${route.action}(${route.entityId}) failed`,
       error instanceof Error ? error.message : String(error)

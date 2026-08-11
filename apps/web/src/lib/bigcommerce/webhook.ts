@@ -139,51 +139,8 @@ export function routeEvent(payload: unknown): WebhookRoute {
 }
 
 /**
- * How many delivery hashes to remember. A few hundred covers the duplicate
- * window many times over — the measured pair arrived 455ms apart — and bounds
- * what a warm serverless instance holds.
- *
- * ponytail: per-instance and in-memory, so a duplicate that lands on a cold
- * instance is not caught. That costs one redundant Admin REST fetch and one
- * redundant idempotent write, which is the whole downside; a shared store would
- * cost a network round trip on every delivery to save it.
+ * There is deliberately no deduplication here. See ROB-2618 and the comment in
+ * `route.ts`: a per-instance claim never fired in production, because the
+ * copies of one event arrive 20ms apart and land on separate lambdas. Catching
+ * them needs shared state and a new service, to save two idempotent calls.
  */
-const DELIVERY_MEMORY = 256;
-
-const claimed = new Set<string>();
-
-/**
- * Claims a delivery by its `hash` (equal to the `webhook-id` header), which is
- * stable across copies of one event and differs between distinct events.
- * Returns `false` if this delivery was already claimed — the caller answers 200
- * without doing the work again.
- *
- * Claim on *start*, not on success. BigCommerce delivered one measured event
- * twice 455ms apart, which is inside the sync's own runtime, so the two
- * overlap: a success-only record would never have been written in time to catch
- * it. The other half of that choice is `releaseDelivery` — a failed sync must
- * give the hash back, or the 60-second retry finds it claimed, answers 200, and
- * the event is lost. That retry ladder is the only repair mechanism this design
- * has (ROB-2611).
- */
-export function claimDelivery(hash: string): boolean {
-  if (claimed.has(hash)) return false;
-
-  claimed.add(hash);
-  // Set iterates in insertion order, so the first key is the oldest claim.
-  if (claimed.size > DELIVERY_MEMORY) {
-    const oldest = claimed.values().next();
-    if (!oldest.done) claimed.delete(oldest.value);
-  }
-  return true;
-}
-
-/** Gives a hash back after a failed sync, so the retry is not suppressed. */
-export function releaseDelivery(hash: string): void {
-  claimed.delete(hash);
-}
-
-/** Test seam. Nothing in the request path should need this. */
-export function resetDeliveryMemory(): void {
-  claimed.clear();
-}

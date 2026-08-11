@@ -1,12 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {
-  claimDelivery,
-  releaseDelivery,
-  resetDeliveryMemory,
-  routeEvent,
-  secretMatches,
-} from "../webhook";
+import { routeEvent, secretMatches } from "../webhook";
 
 /**
  * The captured `store/sku/updated` delivery from
@@ -183,40 +177,36 @@ describe("secretMatches", () => {
   });
 });
 
-describe("delivery deduplication", () => {
-  const hash = SKU_UPDATED.hash;
+/**
+ * There is no deduplication to test, on purpose — ROB-2618. What replaced it is
+ * a property rather than a mechanism: routing is pure, so the copies of one
+ * event all reach the same handler with the same argument, and the sync they
+ * call re-fetches and writes whole. Three deliveries converge on one outcome
+ * instead of racing to a different one.
+ *
+ * This matters because the previous mechanism looked tested and was not. It
+ * kept claims in a per-instance `Set`, and its tests exercised that `Set`
+ * directly, in one process, where it worked perfectly. Production put three
+ * copies of one event on three lambdas 20ms apart and it caught none of them.
+ * A test that calls the function it is testing in-process can never see that.
+ * Convergence can be tested here; deduplication could not.
+ */
+describe("repeat deliveries of one event", () => {
+  it("routes every copy identically, so duplicates converge instead of racing", () => {
+    const copies = [SKU_UPDATED, { ...SKU_UPDATED }, { ...SKU_UPDATED }];
+    const routes = copies.map(routeEvent);
 
-  beforeEach(() => {
-    resetDeliveryMemory();
+    expect(routes).toEqual([
+      { action: "syncProduct", entityId: PRODUCT_ID },
+      { action: "syncProduct", entityId: PRODUCT_ID },
+      { action: "syncProduct", entityId: PRODUCT_ID },
+    ]);
   });
 
-  it("claims a delivery once and refuses the duplicate", () => {
-    expect(claimDelivery(hash)).toBe(true);
-    expect(claimDelivery(hash)).toBe(false);
-  });
-
-  it("lets a different event through", () => {
-    expect(claimDelivery(hash)).toBe(true);
-    expect(claimDelivery(PRODUCT_UPDATED.hash)).toBe(true);
-  });
-
-  /**
-   * The half that keeps the retry ladder working. A failed sync gives the hash
-   * back; if it did not, the 60-second retry would land on a warm instance, find
-   * the hash claimed, answer 200, and the event would be gone for good — and
-   * that ladder is the only repair mechanism this design has.
-   */
-  it("re-claims after a release", () => {
-    expect(claimDelivery(hash)).toBe(true);
-    releaseDelivery(hash);
-    expect(claimDelivery(hash)).toBe(true);
-  });
-
-  it("evicts the oldest claims rather than growing without bound", () => {
-    expect(claimDelivery(hash)).toBe(true);
-    for (let i = 0; i < 256; i++) {
-      claimDelivery(`filler-${i}`);
-    }
-    expect(claimDelivery(hash)).toBe(true);
+  it("keeps distinct events distinct", () => {
+    expect(routeEvent(PRODUCT_UPDATED)).toEqual(routeEvent(SKU_UPDATED));
+    expect(
+      routeEvent({ ...PRODUCT_UPDATED, data: { type: "product", id: 7 } })
+    ).not.toEqual(routeEvent(PRODUCT_UPDATED));
   });
 });
