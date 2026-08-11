@@ -1,7 +1,8 @@
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import type { Mutation, SanityClient } from "@sanity/client";
-import { initLogging, Logger } from "@workspace/logger";
+import { initCliLogging } from "@workspace/logger/cli";
+import { Logger } from "@workspace/logger";
 
 import {
   type BigCommerceCredentials,
@@ -362,7 +363,7 @@ if (
   // Pretty on a terminal, JSON when redirected. Inside the guard, not at
   // module load: this file is imported as a library too, and a stray
   // initLogger would reset whatever the importing app configured.
-  initLogging();
+  initCliLogging();
 
   main().catch((error: unknown) => {
     logger.error(error instanceof Error ? error.message : String(error));

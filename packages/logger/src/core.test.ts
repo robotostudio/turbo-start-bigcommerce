@@ -176,7 +176,40 @@ describe("toEvent", () => {
     ]);
 
     expect(event.ok).toBe(1);
+    // Both halves matter: the field survives as data, and it is data — it did
+    // not become the event's prototype on the way through.
+    expect(Object.hasOwn(event, "__proto__")).toBe(true);
+    expect(Object.getOwnPropertyDescriptor(event, "__proto__")?.value).toBe(
+      "not a prototype"
+    );
     expect(Object.getPrototypeOf(event)).toBe(Object.prototype);
+  });
+
+  /**
+   * `sitemap.ts` passes `{ error: result.error }` and means it, so a caller's
+   * `error` is only displaced when this call actually produced one.
+   */
+  it("leaves a caller's error field alone when no Error was passed", () => {
+    expect(
+      toEvent("Sitemap", "failed", [{ error: "not found" }])
+    ).toMatchObject({ error: "not found" });
+  });
+
+  it("does not let a caller's error field land on top of a real Error", () => {
+    const event = toEvent("Sync", "failed", [
+      new Error("the real one"),
+      { error: "a string" },
+    ]);
+
+    expect(event.error).toMatchObject({ message: "the real one" });
+    expect(event.shadowed).toEqual({ error: "a string" });
+  });
+
+  it("does not let a caller's details field discard collected values", () => {
+    const event = toEvent("Sync", "mixed", ["a string", { details: "mine" }]);
+
+    expect(event.details).toEqual(["a string"]);
+    expect(event.shadowed).toEqual({ details: "mine" });
   });
 
   it("treats an array as a detail, not as fields", () => {

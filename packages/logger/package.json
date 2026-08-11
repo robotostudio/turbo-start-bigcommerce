@@ -10,6 +10,10 @@
       "worker": "./src/index.ts",
       "browser": "./src/client.ts",
       "default": "./src/index.ts"
+    },
+    "./cli": {
+      "types": "./src/cli.ts",
+      "default": "./src/cli.ts"
     }
   },
   "scripts": {

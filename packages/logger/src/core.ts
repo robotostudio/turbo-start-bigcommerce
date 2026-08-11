@@ -118,13 +118,14 @@ export function toEvent(
   // disappears instead of being logged.
   const fields = Object.create(null) as Record<string, unknown>;
   const details: unknown[] = [];
+  let flatError: Record<string, unknown> | undefined;
 
   for (const arg of args) {
     if (arg instanceof Error) {
       const flat = flattenError(arg);
       // A second error does not evict the first.
-      if (fields.error === undefined) {
-        fields.error = flat;
+      if (flatError === undefined) {
+        flatError = flat;
       } else {
         details.push(flat);
       }
@@ -135,22 +136,31 @@ export function toEvent(
     }
   }
 
+  // Held apart from `fields` until now, so that a caller's `{ error: ... }`
+  // arriving after an `Error` cannot land on top of the flattened one.
+  const generated: Record<string, unknown> = {};
+  if (flatError !== undefined) {
+    generated.error = flatError;
+  }
   if (details.length > 0) {
-    fields.details = details;
+    generated.details = details;
   }
 
   const shadowed: Record<string, unknown> = {};
-  for (const key of RESERVED) {
+  // Only the names actually generated on this call are protected. When nothing
+  // produced an `error`, a caller's own `error` field is theirs to set —
+  // `sitemap.ts` passes `{ error: result.error }` and means it.
+  for (const key of [...RESERVED, "shadowed", ...Object.keys(generated)]) {
     if (key in fields) {
       shadowed[key] = fields[key];
       delete fields[key];
     }
   }
   if (Object.keys(shadowed).length > 0) {
-    fields.shadowed = shadowed;
+    generated.shadowed = shadowed;
   }
 
-  return { ...fields, tag: context, message };
+  return { ...fields, ...generated, tag: context, message };
 }
 
 /**
@@ -188,8 +198,10 @@ export function makeLogger(log: EvlogLog) {
         // Measured with both pretty settings; `console.log` never did this.
         //
         // `llms.txt/route.ts` logs a rejected promise's `reason`, which can be
-        // any value at all. Fall back to the shape this logger replaced.
-        console.error(`[${this.#context}] ${level.toUpperCase()}: ${message}`);
+        // any value at all. Fall back to the shape this logger replaced —
+        // through the console method for the level it was called at, so a
+        // `debug` that failed to serialise does not surface as an error.
+        console[level](`[${this.#context}] ${level.toUpperCase()}: ${message}`);
       }
     }
 

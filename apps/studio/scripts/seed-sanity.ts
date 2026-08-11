@@ -30,13 +30,14 @@ import { fileURLToPath } from "node:url";
 
 import "dotenv/config";
 import { createClient } from "@sanity/client";
-import { initLogging, Logger } from "@workspace/logger";
+import { initCliLogging } from "@workspace/logger/cli";
+import { Logger } from "@workspace/logger";
 
 const log = new Logger("seed-sanity");
 // Pretty one-liners on a terminal, JSON when this is redirected or piped.
 // Without it evlog decides from NODE_ENV, which is always "development" here,
 // so a redirected log fills with ANSI escapes and errors never reach stderr.
-initLogging();
+initCliLogging();
 
 /** `apps/studio` — where the CLI finds sanity.cli.ts and the local binary. */
 const STUDIO_DIR = dirname(dirname(fileURLToPath(import.meta.url)));

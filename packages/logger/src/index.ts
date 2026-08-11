@@ -40,20 +40,11 @@ export function initLogging(config: Parameters<typeof initLogger>[0] = {}) {
   const draining =
     config.drain !== undefined || (config.plugins?.length ?? 0) > 0;
 
-  // Otherwise: pretty when a person is watching, JSON when they are not.
-  //
-  // evlog decides this from NODE_ENV, which is the wrong question. It is right
-  // about Vercel and about `next dev`, and wrong about every CLI script here:
-  // `pnpm seed > seed.log` fills the file with `^[[31m`, and `pnpm verify
-  // 2>errors` captures nothing, because pretty mode writes every level to
-  // stdout through `console.log`. `isTTY` asks the question that actually
-  // matters, and answers the same as NODE_ENV in both cases evlog got right.
-  //
-  // `?.` because the edge runtime has a `process` with no `stdout`.
-  const pretty =
-    config.pretty ?? (draining ? false : Boolean(process.stdout?.isTTY));
-
   // Assigned, not spread — an explicit `pretty: undefined` would otherwise put
-  // the drain hole straight back.
-  initLogger({ ...config, pretty });
+  // the hole straight back. With no drain, evlog's own NODE_ENV default stands;
+  // CLI entry points want a better rule than that and get it from
+  // `@workspace/logger/cli`, which is a separate module because reading
+  // `process.stdout` is a build error in the edge runtime and this one is
+  // bundled for it.
+  initLogger(draining ? { ...config, pretty: config.pretty ?? false } : config);
 }

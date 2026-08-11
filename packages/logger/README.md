@@ -2,9 +2,9 @@
 
 Logging for the monorepo, on top of [evlog](https://www.evlog.dev/).
 
-Output goes to stdout, which is what Vercel collects today. Nothing else is
-wired up yet — the package exists in this shape so that adding a log drain
-later is one edit in one file.
+Output goes to stdout, with errors on stderr, and Vercel collects both. Nothing
+else is wired up yet — the package exists in this shape so that adding a log
+drain later is one edit in one file.
 
 ## Usage
 
@@ -108,8 +108,11 @@ reads as one-liners and `pnpm seed > seed.log` gets JSON, with errors on stderr
 and no escape codes. evlog's own rule is `NODE_ENV`, which is right about Vercel
 and `next dev` and wrong about every script here.
 
-The CLI entry points call `initLogging()` for exactly this. A new script that
-skips it falls back to evlog's rule and prints colour into pipes.
+The CLI entry points call `initCliLogging()` from `@workspace/logger/cli` for
+exactly this. A new script that skips it falls back to evlog's rule and prints
+colour into pipes. It is a separate export path because reading
+`process.stdout` is a build error in the edge runtime, and `src/index.ts` is
+bundled for it.
 
 ## Known gaps
 
@@ -122,3 +125,4 @@ and `featured-products` log to the browser console and stop there.
 - `src/core.ts` — the class and the argument sorting, with no evlog import
 - `src/index.ts` — server entry, plus `initLogging`
 - `src/client.ts` — browser entry
+- `src/cli.ts` — `@workspace/logger/cli`, for commands run in a terminal
