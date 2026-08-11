@@ -40,11 +40,18 @@ logger.error("sync failed", { entityId: 180, scope: "store/product/updated" });
 ```
 
 - a plain object becomes fields
-- an `Error` becomes `error`, flattened, with its stack — spreading one gives
-  you `{}`, because an Error's own properties are non-enumerable
+- an `Error` becomes `error` — `name`, `message`, `stack` and the cause chain,
+  and deliberately none of its other properties, because Sanity's `ClientError`
+  carries the whole HTTP response on itself, headers included
 - anything else lands in `details`, so it is not silently dropped
-- `tag` and `message` always win, so a caller's `{ message }` cannot blank the
-  line out
+- the names evlog stamps on the event — `tag`, `message`, `level`, `service`,
+  `environment`, `timestamp`, `version`, `commitHash`, `region` — always win.
+  evlog spreads the caller's fields last, so without this an `info` carrying
+  `{ level: "debug" }` records as a debug event. What was displaced moves to
+  `shadowed` rather than being dropped
+- a call cannot throw. evlog serialises with a bare `JSON.stringify`, so a
+  circular reference or a `BigInt` would otherwise raise out of `logger.error`,
+  usually from inside a `catch`
 
 `logger.error(\`sync failed for ${id}\`)` still works and still reads fine in a
 terminal. It just gives a drain a string to grep instead of a number to filter,
@@ -94,13 +101,17 @@ build has no drain at all, only a `transport` that POSTs to an ingest route this
 repo does not have, so `src/client.ts` deliberately does not export it. Client
 logs are console-only. A drain covers the server.
 
-## Known gaps
+## Output shape follows the terminal, not `NODE_ENV`
 
-**Output shape follows the terminal, not `NODE_ENV`.** `initLogging` turns
-pretty printing on only when stdout is a tty, so `pnpm seed` reads as one-liners
-and `pnpm seed > seed.log` gets JSON with errors on stderr and no escape codes.
-The CLI entry points call `initLogging()` for exactly this; a new script that
-skips it falls back to evlog's `NODE_ENV` rule and prints colour into pipes.
+`initLogging` turns pretty printing on only when stdout is a tty, so `pnpm seed`
+reads as one-liners and `pnpm seed > seed.log` gets JSON, with errors on stderr
+and no escape codes. evlog's own rule is `NODE_ENV`, which is right about Vercel
+and `next dev` and wrong about every script here.
+
+The CLI entry points call `initLogging()` for exactly this. A new script that
+skips it falls back to evlog's rule and prints colour into pipes.
+
+## Known gaps
 
 **Client logs cannot reach a drain.** The browser build offers `transport`, not
 `drain`, and it POSTs to an ingest route this repo does not have. `preview-bar`
