@@ -358,14 +358,29 @@ written down anywhere in the fork base:
 2. **Soft-delete with a flag. Never remove the document.** Skipping this is exactly why the fork base
    needed a separate manual cleanup script.
 
-The reconcile sweep is the primary mechanism, not a fallback. BigCommerce has no CRUD webhooks for
-variants, none for brands, and most product image changes don't fire an update event. Payloads are
-id-only, unordered, and can duplicate. A webhook-only sync is structurally incomplete.
+The reconcile sweep is the backfill. Webhooks are the sync — see ROB-2608, which ruled out putting the
+sweep on a cron. Payloads are id-only, unordered, and the same event really does arrive twice, so every
+handler re-fetches the entity and writes current state rather than applying a delta.
 
-The webhook receiver is deliberately not built. Building the transport before the write logic is proven
-leaves a live endpoint writing nothing, which rots unnoticed. Its design is documented instead, including
-the detail that the hash field on a webhook payload is an unkeyed SHA-1 for deduplication and **not a
-signature**; authentication goes in the optional headers object set at hook creation.
+Two claims in an earlier version of this section were wrong and are worth naming, because they argued
+against the architecture that shipped. Variants **do** have CRUD webhooks: `store/sku/created`,
+`store/sku/updated` and `store/sku/deleted`, and a variant edit fires one of those and no product event
+at all. Their payload nests the ids — `data.id` is the `sku_id`, and the useful ones are
+`data.sku.product_id` and `data.sku.variant_id`. Brands genuinely have none, which costs nothing while
+only `brandId` reaches Sanity, since a rename does not change an id.
+
+What webhooks truly cannot see is images. A change through `/v3/catalog/products/{id}/images` fires
+nothing on any scope, and the control panel writes the same sub-resource, so it fires nothing either.
+Only a whole-product save produces an event. The storefront reads images live from BigCommerce for that
+reason and treats the synced `store.previewImageUrl` as a fallback. All of this is measured against store
+`8jbhprizry` in `docs/research/09-webhook-payloads.md`.
+
+The webhook receiver is `apps/web/src/app/api/bigcommerce/webhook/route.ts`. It syncs inline and answers
+500 on failure, so BigCommerce's retry ladder is the repair path; it does not use `after()`, which would
+answer 200 before the work happened and lose the event. Authentication is a constant-time compare of the
+`x-bigcommerce-webhook-secret` header set at hook creation. The payload's `hash` field is an unkeyed
+SHA-1 of the body and is **not a signature** — anyone who can reach the route can compute a valid one.
+It is useful only for deduplication, which the receiver does use it for.
 
 Schema types ship exported but **not registered**. Registering them early gives editors a permanently
 blank Products list, which is worse than absent. Registration is the flip that turns the sync on.

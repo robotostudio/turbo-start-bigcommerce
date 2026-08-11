@@ -165,6 +165,10 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 | `BIGCOMMERCE_PRERENDER_LIMIT` | No | How many catalog paths to prerender at build, defaults to `100`. The rest render on demand |
 | `NEXT_PUBLIC_STORE_CURRENCY` | No | ISO 4217 code, defaults to `GBP` |
 | `SANITY_REVALIDATE_SECRET` | Yes | Shared with the Sanity webhook that publishes content changes. Without it nothing invalidates the cache and published edits never reach the site, so a build without it fails validation. See [Wiring up content revalidation](#wiring-up-content-revalidation) |
+| `BIGCOMMERCE_ADMIN_TOKEN` | Yes | Admin API token, `Information & Settings` scope. Reads `/v3/hooks`; the storefront token cannot. Same value as `packages/sanity-sync/.env` |
+| `BIGCOMMERCE_WEBHOOK_DESTINATION` | Yes | The URL the catalog webhooks are registered against. Compared character for character. See [Watching the catalog webhooks](#watching-the-catalog-webhooks) |
+| `CRON_SECRET` | Yes | Vercel sends it as a bearer token on every cron run. `openssl rand -hex 24` |
+| `HOOK_HEALTH_ALERT_WEBHOOK_URL` | No | Slack-style incoming webhook, takes `{"text": "..."}`. Without it a dead hook is a red cron run and a log line, nothing more |
 
 ### Studio (`apps/studio/.env`)
 
@@ -272,6 +276,36 @@ One deliberate limitation: the `sanity` tag is invalidated wholesale, because Sa
 content hashes rather than document ids and a webhook payload cannot be mapped to them. One publish
 therefore refreshes all Sanity-backed content, not just the document that changed. For per-route
 precision, give the route's own `sanityFetch` call an extra tag and invalidate that instead.
+
+### Watching the catalog webhooks
+
+BigCommerce retries a failing endpoint for about 48 hours of cumulative failure, then switches the hook
+off and emails whoever owns the API account. From that moment the catalog stops reaching Sanity and
+nothing raises an error: the receiver is never called, so it cannot log, and the site serves whatever the
+last delivery wrote. `/api/bigcommerce/hook-health` is what notices. A daily cron, declared in
+`apps/web/vercel.json`, lists the store's hooks and compares them against the nine scopes the sync needs.
+
+Two things it catches: a hook that exists but has been deactivated, and a hook that has gone missing.
+Both look identical from the app, which is to say they look like nothing at all.
+
+Set `BIGCOMMERCE_WEBHOOK_DESTINATION` to the exact URL the hooks were registered against. Hooks are
+matched on that URL, not on scope alone, because a developer's tunnel registers the same nine scopes
+against the same store; without the match, a tunnel that happens to be running would stand in for
+production and the check would pass while production was dark.
+
+The route answers `200` when all nine are live and `500` otherwise, so the run turns red in the Vercel
+dashboard. That is a row somebody has to go and look at, which is why `HOOK_HEALTH_ALERT_WEBHOOK_URL`
+exists — set it to a Slack incoming webhook and the alert arrives somewhere a person already is.
+
+It alerts and does not re-arm. Flipping `is_active` back on is one PUT away, and it hides the problem:
+a hook that a real outage killed will fail its way back to deactivated over the next 48 hours, and by
+then it looks like it healed itself. A hook that has been deleted cannot be re-armed at all — recreating
+it means re-supplying the shared secret it authenticates with, which is registration, not repair.
+
+Daily is the cadence, so a day is also the worst case for how long a dead hook goes unnoticed. No poll
+can do better than notice after the fact: `is_active` only flips at the end of the retry ladder, and
+until then the hook looks fine. If a tighter window is worth the invocations, change the `schedule` in
+`apps/web/vercel.json`. Vercel's Hobby plan allows one cron run a day.
 
 ### Sanity Studio
 

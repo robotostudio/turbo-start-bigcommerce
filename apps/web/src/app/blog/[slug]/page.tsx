@@ -8,6 +8,7 @@ import { BlogShare } from "@/components/blog-share";
 import { RichText } from "@/components/elements/rich-text";
 import { TableOfContent } from "@/components/elements/table-of-content";
 import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/json-ld";
+import { getHotspotImages } from "@/lib/bigcommerce/hotspot-images";
 import { fetchOrFallback } from "@/lib/build-guard";
 import { getSEOMetadata } from "@/lib/seo";
 import { getBaseUrl } from "@/utils";
@@ -89,6 +90,10 @@ export default async function BlogSlugPage({
     slug: dataSlug,
   } = data ?? {};
 
+  // Images for the body's product hotspots, read live from BigCommerce like
+  // price and stock (ROB-2614). No hotspots in the body means no request.
+  const hotspotImages = await getHotspotImages(richText);
+
   const baseUrl = getBaseUrl();
   const shareUrl = `${baseUrl}${dataSlug ?? `/blog/${slug}`}`;
   const publishedDate = formatBlogDate(publishedAt);
@@ -138,7 +143,7 @@ export default async function BlogSlugPage({
       {/* Two-column: article body + sticky sidebar (TOC + share) */}
       <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-16">
         <main className="min-w-0">
-          <RichText richText={richText} />
+          <RichText hotspotImages={hotspotImages} richText={richText} />
         </main>
 
         <aside className="hidden self-start lg:sticky lg:top-24 lg:block">
