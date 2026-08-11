@@ -52,7 +52,10 @@ Every delivery, regardless of scope, has the same five top-level keys. Verbatim:
 - `producer` — string, `stores/{store_hash}`.
 - `hash` — string, 40 hex chars. Equal to the `webhook-id` request header on the same delivery.
 - `created_at` — integer, Unix seconds. This is when BigCommerce *created* the event, not when it
-  delivered it. In the captures below it ran 3–4 seconds behind the request timestamp.
+  delivered it. Measured against the request that caused it, `created_at` ran 1–2 seconds behind;
+  the delivery itself arrived 1–4 seconds after that. `created_at` is the reliable field for
+  attributing a delivery to an action, because it is BigCommerce's own clock and no tunnel latency
+  sits between the edit and the stamp.
 - `store_id` — string, and it is **not** the store hash. Two different identifiers.
 - `scope` — string, matches the registered hook scope exactly.
 - `data` — object. Shape varies by scope. `data.type` is a short string, never the full scope.
@@ -221,6 +224,111 @@ API writes before anyone relies on it.
 For ROB-2614 the practical consequence is unchanged either way: a change made through the images
 API is silent, so a receiver built on these hooks will not learn about it.
 
+## 6. Headers
+
+### Does `x-bigcommerce-webhook-secret` arrive? Yes.
+
+Confirmed on every delivery, through two independent receivers (the Next stub and a raw
+`node:http` server on a separate tunnel), carrying exactly the value registered in the hook's
+`headers` object. Full header set on a `store/product/updated` delivery, as the Next route sees it:
+
+```
+accept-encoding:              gzip
+cdn-loop:                     cloudflare; loops=1; subreqs=1
+cf-connecting-ip:             35.226.165.250
+cf-ew-via:                    15
+cf-ipcountry:                 US
+cf-ray:                       a296e8a3bb74230f-BOM
+cf-visitor:                   {"scheme":"https"}
+cf-warp-tag-id:               9b7bdeaf-e247-453a-8298-888c01871c9a
+cf-worker:                    trycloudflare.com
+connection:                   keep-alive
+content-length:               197
+content-type:                 application/json
+host:                         continues-skill-competitions-themselves.trycloudflare.com
+user-agent:                   pekko-http/1.3.0
+webhook-id:                   64d346b71e4c02453da81c5d97cec8063a6e7a4d
+webhook-signature:            v1,Op+8O1TMMJSf6PU/SDZbpSTsqdMuVBZ1wbpYq1C3dCY=
+webhook-timestamp:            1786447831
+x-bigcommerce-webhook-secret: <64 hex chars — equals BIGCOMMERCE_WEBHOOK_SECRET>
+x-forwarded-for:              35.226.165.250
+x-forwarded-host:             continues-skill-competitions-themselves.trycloudflare.com
+x-forwarded-port:             3000
+x-forwarded-proto:            https
+```
+
+Everything from `cdn-loop` down to `cf-worker`, plus the three `x-forwarded-*` and `host`, is added
+by **cloudflared**, not BigCommerce. In production behind a real origin those disappear or change.
+BigCommerce itself sends: `accept-encoding`, `content-length`, `content-type`, `user-agent`
+(`pekko-http/1.3.0`), `webhook-id`, `webhook-signature`, `webhook-timestamp`, and the custom
+`x-bigcommerce-webhook-secret` registered on the hook. `connection: keep-alive` is hop-by-hop.
+
+### The exact casing could NOT be determined, and here is why
+
+**cloudflared rewrites header casing.** Control test, sending deliberately non-canonical names
+through the tunnel to a raw `node:http` server reading `req.rawHeaders`:
+
+| sent | arrived |
+| --- | --- |
+| `x-bigcommerce-WEBHOOK-secret` | `X-Bigcommerce-Webhook-Secret` |
+| `aLL-lower-MIXED` | `All-Lower-Mixed` |
+
+Both were canonicalised. So the `X-Bigcommerce-Webhook-Secret` casing observed on the raw server is
+**cloudflared's**, not BigCommerce's, and this capture cannot report what BigCommerce puts on the
+wire. Determining that needs BigCommerce to reach an origin directly, with no tunnel in the path —
+not possible from a laptop, and not attempted here.
+
+Two earlier readings that would have been wrong to publish, recorded so nobody repeats them:
+
+- The Next stub's header dump is lowercase, but that proves nothing: the Fetch API `Headers` object
+  lowercases every name by construction.
+- A first control sending `X-Mixed-Case-Test` arrived unchanged, which looked like proof that
+  cloudflared preserves casing. It is not — that name is *already* in canonical form, so the test
+  could not detect canonicalisation. The non-canonical control above is the valid one.
+
+**This does not matter for ROB-2616.** HTTP header names are case-insensitive per RFC 9110, and
+every reasonable lookup (`request.headers.get()` in the Fetch API, Node's `req.headers`) is
+case-insensitive. The receiver must do a case-insensitive lookup and must not compare casing. Given
+that, the unanswered question has no consequence.
+
+### `webhook-signature` — a real HMAC, and its key is not the shared secret
+
+Undocumented in the parent map, which states the shared header is the only authentication
+BigCommerce offers. It is not: every delivery also carries a Standard Webhooks signature.
+
+```
+webhook-id:        64d346b71e4c02453da81c5d97cec8063a6e7a4d
+webhook-signature: v1,Op+8O1TMMJSf6PU/SDZbpSTsqdMuVBZ1wbpYq1C3dCY=
+webhook-timestamp: 1786447831
+```
+
+Format is `v1,<base64>`, the Standard Webhooks shape: HMAC-SHA256 over
+`{webhook-id}.{webhook-timestamp}.{raw body}`. `webhook-id` equals the body's `hash`.
+
+**The signing key is not the value passed in the hook's `headers`.** Two derivations were computed
+over the exact signed string and neither matched:
+
+- secret as UTF-8 bytes → `v1,Dwp5EcYABnZhtve1E5iLloZQuP7ix8IUywG59NH2uZ4=`
+- secret hex-decoded to 32 bytes → `v1,UYJlgUzrUDjftqCp2jzEQEAfJWt5QNyvx2awniDPRXE=`
+- actual header → `v1,Op+8O1TMMJSf6PU/SDZbpSTsqdMuVBZ1wbpYq1C3dCY=`
+
+`GET /v3/hooks/signing-keys` returns 400, so the key was not retrievable from the API by guessing
+an endpoint. **Where the key comes from is unidentified.** Do not build authentication on this
+signature until someone establishes the key source; the `x-bigcommerce-webhook-secret` header is
+the mechanism that is verified to work.
+
+## `store/category/updated` — captured in passing
+
+Exercised while answering question 6. `PUT /v3/catalog/categories/43` changing `description`, and
+the restoring edit. Two deliveries, one each:
+
+```json
+{"producer":"stores/8jbhprizry","hash":"d685c597dad2af27d512dd2c5a7f9376b8257cf7","created_at":1786448882,"store_id":"1003502318","scope":"store/category/updated","data":{"type":"category","id":43}}
+```
+
+Same envelope, `data.type` is `"category"`, `data.id` is the category id. No nested object, so this
+scope has none of the id ambiguity that `store/sku/*` has.
+
 ## Deliveries are not unique — the same event arrived twice
 
 Not one of the ticket's questions, but it fell out of the captures and it changes ROB-2616.
@@ -244,3 +352,112 @@ on the same entity seconds apart.
 The sync's writes are already idempotent by construction — deterministic document ids, whole-object
 writes — so a duplicate costs a redundant Admin REST fetch and a redundant Sanity write rather than
 corrupting anything. Worth deduplicating on `hash` anyway, to halve the quota cost.
+
+## 7. What is the ACK timeout?
+
+**Partially answered: it is longer than 5 seconds. The upper bound was not established.**
+
+`docs/research/04-bigcommerce-api-semantics.md:453` lists the exact webhook ACK timeout as unfound.
+This narrows it at the bottom and leaves the top open.
+
+Method: the stub takes a `?sleep=N` query parameter that delays the response by N seconds *after*
+writing its log line, so a delivery BigCommerce gives up on still leaves a record of when the origin
+actually finished. Hook `31588703` (`store/product/updated`) was repointed at
+`.../api/bigcommerce/webhook?sleep=N`, then one `warranty` edit was made on product 180.
+Retry detection is the `hash` field, not timing — the same `hash` arriving twice is a redelivery.
+
+`sleep=5`:
+
+```
+MARK  Q7-sleep-5s          2026-08-11T11:50:26Z
+RECV  2026-08-11T11:50:30.384Z  store/product/updated  hash=8fa9a2c687ae  created_at=1786449027
+RESP  2026-08-11T11:50:35.386Z  slept=5s  status=200
+```
+
+One delivery, one origin response 5.002 seconds later, `200`. **No second delivery with that
+hash.** BigCommerce waited at least 5 seconds and accepted the late ACK.
+
+`sleep=10`, `sleep=20` and `sleep=30` were **not run.** The store was frozen for another worker's
+capture partway through the sequence and the probe was stopped. This is a gap, not a finding: the
+timeout could be anywhere above 5 seconds.
+
+Two things worth carrying to whoever finishes it:
+
+- The rig works and is in `q7-acktimeout.sh` — repoint the hook, one edit, wait `N + 120`s, look
+  for a duplicate `hash`. Finishing 10/20/30 is about seven minutes.
+- A retry arriving later than the observation window would be missed and read as "no retry".
+  BigCommerce retries over a 48-hour window, and the backoff schedule for the *first* retry is not
+  known, so a negative result inside two minutes is weaker evidence than a positive one.
+
+For ROB-2611 and ROB-2616 the practical guidance does not depend on the exact number: return `200`
+immediately and do the work after responding. The design already says this. The only thing the
+number would change is how much slack a naive synchronous receiver has before it starts
+double-processing every event, and the answer "more than 5 seconds, unknown how much more" is
+enough to say do not rely on it.
+
+## Coverage: what each registered scope actually did
+
+Nine scopes were registered and active throughout. "Not exercised" is a different claim from
+"fired nothing" and they are separated here.
+
+| Scope | Status | Evidence |
+| --- | --- | --- |
+| `store/product/updated` | **Observed** | Fires on any whole-product `PUT`. Payload in section 1. |
+| `store/sku/updated` | **Observed** | Fires on a variant `PUT` that changes a value. Payload in section 2. |
+| `store/category/updated` | **Observed** | Fires on a category `PUT`. Payload above. |
+| `store/product/created` | Not exercised | No product was created. |
+| `store/product/deleted` | Not exercised | No product was deleted. |
+| `store/sku/created` | Not exercised | No variant was created — see section 4. |
+| `store/sku/deleted` | Not exercised | No variant was deleted. |
+| `store/option/updated` | Not exercised | No option was edited. |
+| `store/modifier/updated` | Not exercised | Product 180 has no modifiers, so there was nothing to edit. |
+
+Separately, and this is the load-bearing negative: **image changes made through
+`/catalog/products/{id}/images/...` fired nothing on any of the nine.** Four different image
+actions, four quiet windows, zero deliveries. That is a fired-nothing result, not a not-exercised
+one.
+
+## What this means for the tickets downstream
+
+**ROB-2616 (build the receiver).** Three things this capture settles:
+
+1. On `store/sku/*`, read `data.sku.variant_id`. Never `data.id` — that is `sku_id`, and using it
+   writes Sanity documents at ids that never join, silently. `data.sku.product_id` gives the parent
+   product with no extra lookup.
+2. Deduplicate on `hash`. Delivery is at-least-once; one event arrived twice, 455ms apart.
+3. Authenticate on `x-bigcommerce-webhook-secret` with a case-insensitive lookup. The
+   `webhook-signature` HMAC is real but its key is unidentified, so it cannot be used yet.
+
+**ROB-2613 (which scopes to register).** The sku scopes are **not** redundant. A variant edit fires
+`store/sku/updated` and does not fire `store/product/updated`. A receiver on the product scopes
+alone misses every variant price change.
+
+**ROB-2614 (image freshness).** Image changes through the images API are invisible to all nine
+scopes. Whether a control-panel image edit fires is unresolved — see section 5.
+
+**ROB-2611 (error handling).** A no-op write fires nothing, so identical-value writes cost no
+events. The ACK timeout is over 5 seconds, upper bound unknown.
+
+## The stub
+
+`apps/web/src/app/api/bigcommerce/webhook/route.ts` is committed with this document. It is a
+throwaway: it logs and returns 200, with no authentication and no Sanity write, and its own comment
+says ROB-2616 replaces it wholesale. It is committed rather than deleted so the capture is
+reproducible and so the `?sleep=N` rig survives for whoever finishes question 7.
+
+## Store state
+
+Product 180 and category 43 were restored and verified field by field against the `GET` snapshots
+taken before anything was touched.
+
+- Product 180: `name`, `price`, `sku`, `warranty`, `is_visible` all match the snapshot.
+- Variants: ids `167, 173, 177, 180, 185` present; variant 167 back to `sku=TS-P3-FAD-XS`,
+  `price=89`, `inventory_level=30`.
+- Images: exactly `448, 450, 454, 457, 461`, `sort_order` 0–4 unchanged, `is_thumbnail` on 448
+  only. The probe image uploaded during the capture was deleted.
+- Options: 118 with values 113–117, 122 with value 133. Untouched throughout.
+- Category 43: `description` restored.
+
+Every hook created for this capture was deleted afterwards. A quick tunnel URL dies with the
+process, and a live hook pointing at a dead URL burns BigCommerce's 48-hour retry window and
+deactivates itself silently.
