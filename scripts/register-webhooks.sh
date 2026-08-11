@@ -68,16 +68,15 @@ for scope in "${SCOPES[@]}"; do
   fi
   # The header is the only authentication BigCommerce offers. The payload's
   # own `hash` is an unkeyed SHA-1 and proves nothing about the sender.
+  #
+  # Built with printf rather than a heredoc'd python one-liner: inside
+  # `-d "$(...)"` the multi-line form gets its newlines eaten and every line
+  # comes back a SyntaxError. Nothing here needs escaping — a scope is
+  # `[a-z/]`, the destination is a URL and the secret is hex.
+  body=$(printf '{"scope":"%s","destination":"%s","is_active":true,"headers":{"x-bigcommerce-webhook-secret":"%s"}}' \
+    "$scope" "$DEST" "$SECRET")
   code=$(curl -s -o /tmp/hook-resp.json -w "%{http_code}" -X POST "$API/hooks" \
-    "${AUTH[@]}" -H "Content-Type: application/json" \
-    -d "$(SCOPE="$scope" DEST="$DEST" SECRET="$SECRET" python3 -c "
-import json, os
-print(json.dumps({
-  'scope': os.environ['SCOPE'],
-  'destination': os.environ['DEST'],
-  'is_active': True,
-  'headers': {'x-bigcommerce-webhook-secret': os.environ['SECRET']},
-}))")")
+    "${AUTH[@]}" -H "Content-Type: application/json" -d "$body")
   if [ "$code" = "200" ] || [ "$code" = "201" ]; then
     echo "  $scope: registered"
   else
