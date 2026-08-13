@@ -31,10 +31,22 @@ type ProductHotspotsImageProps = {
   };
   productHotspots: HotspotData | null;
   showHotspots: boolean | null;
+  /**
+   * Live BigCommerce image URLs by `entityId`, resolved server-side by
+   * `lib/bigcommerce/hotspot-images.ts`. Typed structurally rather than
+   * imported, because that module is `server-only` and this file is bundled
+   * for the client.
+   *
+   * Absent is a legitimate state, not a bug: a body rendered from inside the
+   * client page builder has no server pass to resolve them, and every card
+   * falls back to the synced Sanity URL.
+   */
+  liveImages?: Record<number, string>;
 };
 
 export function ProductHotspotsImage({
   image,
+  liveImages,
   productHotspots,
   showHotspots,
 }: ProductHotspotsImageProps) {
@@ -80,7 +92,15 @@ export function ProductHotspotsImage({
               {activeSpot === spot._key && (
                 <div className="absolute top-full left-1/2 z-10 mt-2 w-56 -translate-x-1/2 rounded-lg border bg-popover p-1 shadow-lg">
                   <ProductCard
-                    imageUrl={product.store.previewImageUrl}
+                    // Live BigCommerce image first, synced Sanity URL second
+                    // (ROB-2614). An image changed through the images API fires
+                    // no webhook at all, so the synced one can be stale in a way
+                    // nothing here would ever learn about.
+                    imageUrl={
+                      (product.store.entityId != null
+                        ? liveImages?.[product.store.entityId]
+                        : undefined) ?? product.store.previewImageUrl
+                    }
                     mini
                     priceRange={{
                       minVariantPrice:

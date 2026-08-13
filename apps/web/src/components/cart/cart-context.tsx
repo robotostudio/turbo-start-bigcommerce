@@ -33,6 +33,12 @@ type CartStateValue = {
   isCartOpen: boolean;
   cartError: CartError | null;
   warnings: CartWarning[];
+  /**
+   * The first cart read failed. Distinct from "the cart is empty", which is
+   * what an unseeded controller looks like and what the cart used to claim
+   * while a shopper's three items sat safely in BigCommerce.
+   */
+  loadFailed: boolean;
 };
 
 type CartActionsValue = {
@@ -89,6 +95,7 @@ export function CartProvider({
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(initialCart === undefined);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     if (initialCart !== undefined) return;
@@ -98,6 +105,10 @@ export function CartProvider({
         controller.seed(cart);
       })
       .catch(() => {
+        // Seeded null so the controller is initialised either way, and flagged
+        // so the cart surfaces say "couldn't load" rather than "empty". The
+        // cart itself is untouched in BigCommerce; only this read failed.
+        if (!cancelled) setLoadFailed(true);
         controller.seed(null);
       })
       .finally(() => {
@@ -154,8 +165,9 @@ export function CartProvider({
       isCartOpen,
       cartError: snapshot.error,
       warnings: snapshot.warnings,
+      loadFailed,
     }),
-    [snapshot, isLoading, isCartOpen]
+    [snapshot, isLoading, isCartOpen, loadFailed]
   );
 
   return (

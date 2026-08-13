@@ -7,7 +7,7 @@ import {
   linkSeedRefs,
   parsePlaceholder,
   remapSeedRefs,
-} from "./seed-refs.js";
+} from "./seed-refs";
 
 /**
  * The sandbox minted its own ids: the slugs match the seed content, the numbers

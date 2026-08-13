@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 
+import { initLogging } from "@workspace/logger";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Hoisted by vitest, so both run before `client.ts` is evaluated — it derives
@@ -45,6 +46,9 @@ function mockFetch(response: unknown) {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  // evlog keeps one process-wide config, so a drain installed by a test would
+  // otherwise still be collecting during the next one.
+  initLogging({});
 });
 
 /** The captured edges for the populated namespace. */
@@ -87,13 +91,26 @@ describe("getProductMetafields", () => {
     // An absent namespace and a namespace whose metafields were written with
     // the wrong permission_set are byte-identical here, so the reader answers
     // {} for both and says why in the log rather than pretending to know.
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    //
+    // Read through a drain rather than a `console.warn` spy: which console
+    // method the logger reaches for is evlog's business and changes with the
+    // pretty setting. The event is the stable surface.
+    const logged: string[] = [];
+    initLogging({
+      silent: true,
+      drain: (ctx) => {
+        logged.push(`${ctx.event.level} ${ctx.event.message}`);
+      },
+    });
     mockFetch(UNKNOWN_NAMESPACE.response);
 
     const metafields = await getProductMetafields(189, "does_not_exist");
 
     expect(metafields).toEqual({});
-    expect(String(warn.mock.calls[0]?.[0])).toContain("permission_set");
+    // Not `logged[0]` — the client logs the request itself first.
+    expect(logged.filter((line) => line.includes("permission_set"))).toEqual([
+      expect.stringMatching(/^warn /),
+    ]);
   });
 
   it("returns an empty map when the request fails", async () => {

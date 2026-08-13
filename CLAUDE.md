@@ -66,7 +66,7 @@ packages/
   env/          → @workspace/env — T3 env validation (Zod v4), client.ts + server.ts
   sanity/       → @workspace/sanity — Sanity client, GROQ queries, live preview, generated types
   ui/           → @workspace/ui — Shadcn (new-york style) + Tailwind v4 primitives
-  logger/       → @workspace/logger — Logger class wrapping console.*
+  logger/       → @workspace/logger — Logger class on top of evlog; drain seam in apps/web/src/instrumentation.ts
   typescript-config/ → shared tsconfig presets
 ```
 

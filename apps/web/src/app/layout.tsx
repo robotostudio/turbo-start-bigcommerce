@@ -9,8 +9,8 @@ import { VisualEditing } from "next-sanity/visual-editing";
 import { preconnect, prefetchDNS } from "react-dom";
 
 import { CartToasts } from "@/components/cart/cart-toasts";
+import { CombinedJsonLd } from "@/components/combined-json-ld";
 import { FooterServer } from "@/components/footer";
-import { CombinedJsonLd } from "@/components/json-ld";
 import { Navbar } from "@/components/navbar";
 import { PreviewBar } from "@/components/preview-bar";
 import { PromoBanner } from "@/components/promo-banner";

@@ -1,9 +1,10 @@
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import type { Mutation, SanityClient } from "@sanity/client";
+import { initCliLogging } from "@workspace/logger/cli";
 import { Logger } from "@workspace/logger";
 
-import { createWriteClient } from "./client.js";
+import { createWriteClient } from "./client";
 
 /**
  * Phase two of the seed: point the seeded content at this sandbox's catalog.
@@ -260,6 +261,11 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
+  // Pretty on a terminal, JSON when redirected. Inside the guard, not at
+  // module load: this file is imported as a library too, and a stray
+  // initLogger would reset whatever the importing app configured.
+  initCliLogging();
+
   main().catch((error: unknown) => {
     logger.error(error instanceof Error ? error.message : String(error));
     process.exit(1);

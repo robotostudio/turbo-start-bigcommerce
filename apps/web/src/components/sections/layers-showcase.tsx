@@ -182,6 +182,23 @@ export function LayersShowcase({
       seed && seed.handle === productHandle ? seed.product : undefined,
   });
 
+  /**
+   * No product, nothing to show.
+   *
+   * This block is the one page-builder block whose GROQ does not compact a
+   * dangling reference away, so a deleted or unpublished product reaches it as
+   * `productHandle: null` — which disables the query. A disabled TanStack query
+   * is `isPending` with `fetchStatus: "idle"`, and `isLoading` is
+   * `isPending && isFetching`, so the skeletons below never render either: the
+   * section drew its heading beside four empty grey squares and an empty grey
+   * panel, indefinitely. The same render came from `/api/products/{handle}`
+   * failing, since `fetchProduct` turns `!res.ok` into `null`.
+   *
+   * `!isLoading && !product` rather than `!product` alone, or the first paint
+   * of a healthy block would be nothing instead of its skeleton.
+   */
+  if (!productHandle || (!isLoading && !product)) return null;
+
   const pool = product ? productImageUrls(product) : [];
   const collage = pool.length
     ? Array.from({ length: COLLAGE_CELLS }, (_, i) => pool[i % pool.length])

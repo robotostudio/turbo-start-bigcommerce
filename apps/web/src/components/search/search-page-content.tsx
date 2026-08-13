@@ -4,11 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ActiveFilters } from "@/components/collection/active-filters";
+import { FilterPanel } from "@/components/collection/filter-panel";
 import {
   type Facet,
   filterParamsOnly,
 } from "@/components/collection/filter-utils";
-import { FilterPanel } from "@/components/collection/filter-panel";
 import {
   ListingControls,
   ListingControlsProvider,
@@ -66,6 +66,25 @@ async function fetchFullResults(
   return response.json() as Promise<FullSearchResponse>;
 }
 
+/**
+ * What a failed search looks like.
+ *
+ * Without it, `data ?? EMPTY` rendered `0 results for "jacket"` and "No
+ * products found." — byte-identical to a search that genuinely matched
+ * nothing, so a shopper looking for a product the store sells was told it does
+ * not sell it. The search box stays above this, so retyping is the retry.
+ */
+function SearchUnavailable() {
+  return (
+    <div className="site-container py-16 text-center">
+      <p className="font-medium text-base">Search isn&apos;t available</p>
+      <p className="mt-1 text-muted-foreground text-sm tracking-wide">
+        Our catalogue didn&apos;t answer just now. Try again in a moment.
+      </p>
+    </div>
+  );
+}
+
 export function SearchPageContent({
   initialQuery = "",
 }: {
@@ -119,7 +138,7 @@ export function SearchPageContent({
     window.history.replaceState(null, "", url);
   }, [trimmed, listingParams]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     // Filters and sort are part of the key, or a pick would rewrite the URL and
     // serve the previous result set — in the previous order — out of the cache.
     queryKey: ["search-full", trimmed, listingQs],
@@ -150,7 +169,8 @@ export function SearchPageContent({
       </div>
 
       <div className="bg-muted/30">
-        {hasQuery ? (
+        {hasQuery && isError && <SearchUnavailable />}
+        {hasQuery && !isError && (
           <div className="site-container py-8 ">
             <ListingControlsProvider>
               <div className="mb-6 flex items-start justify-between gap-4">
@@ -196,9 +216,8 @@ export function SearchPageContent({
               products={results.products}
             />
           </div>
-        ) : (
-          <SearchEmptyState onSelectTerm={setQuery} />
         )}
+        {!hasQuery && <SearchEmptyState onSelectTerm={setQuery} />}
       </div>
     </div>
   );

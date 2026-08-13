@@ -1,8 +1,15 @@
 # @workspace/logger
 
-A simple, context-aware logger utility for the monorepo.
+Logging for the monorepo, on top of [evlog](https://www.evlog.dev/).
+
+Output goes to stdout, with errors on stderr, and Vercel collects both. Nothing
+else is wired up yet — the package exists in this shape so that a log drain has
+one place to be configured when someone wants one. On Vercel that edit is the
+first step and not the last; see [Adding a drain](#adding-a-drain).
 
 ## Usage
+
+Unchanged from before evlog:
 
 ```typescript
 import { Logger } from "@workspace/logger";
@@ -14,9 +21,109 @@ logger.warn("This is a warning");
 logger.error("An error occurred", error);
 ```
 
-## Features
+## Pass fields, not sentences
 
-- Context-aware logging with prefixes
-- Standard log levels: info, warn/warning, error
-- TypeScript support
-- Zero dependencies
+A log line is a string. A log **event** has fields something can filter on.
+Anything after the message is sorted into the event:
+
+```typescript
+logger.error("sync failed", { entityId: 180, scope: "store/product/updated" });
+```
+
+```json
+{
+  "level": "error",
+  "tag": "BigCommerceWebhook",
+  "message": "sync failed",
+  "entityId": 180,
+  "scope": "store/product/updated"
+}
+```
+
+- a plain object becomes fields
+- an `Error` becomes `error` — `name`, `message`, `stack` and the cause chain,
+  and deliberately none of its other properties, because Sanity's `ClientError`
+  carries the whole HTTP response on itself, headers included
+- anything else lands in `details`, so it is not silently dropped
+- the names evlog stamps on the event — `tag`, `message`, `level`, `service`,
+  `environment`, `timestamp`, `version`, `commitHash`, `region` — always win.
+  evlog spreads the caller's fields last, so without this an `info` carrying
+  `{ level: "debug" }` records as a debug event. What was displaced moves to
+  `shadowed` rather than being dropped
+- a call cannot throw. evlog serialises with a bare `JSON.stringify`, so a
+  circular reference or a `BigInt` would otherwise raise out of `logger.error`,
+  usually from inside a `catch`
+
+`logger.error(\`sync failed for ${id}\`)` still works and still reads fine in a
+terminal. It just gives a drain a string to grep instead of a number to filter,
+which is the difference worth caring about once one is attached.
+
+## Adding a drain
+
+One edit, in `apps/web/src/instrumentation.ts`:
+
+```typescript
+import { createAxiomDrain } from "evlog/axiom";
+
+initLogging({ env: { service: "web" }, drain: createAxiomDrain() });
+```
+
+evlog ships adapters for Axiom, Sentry, Better Stack, Datadog, PostHog, Grafana
+Loki, ClickHouse, HyperDX and OTLP — `evlog/axiom`, `evlog/sentry` and so on —
+plus `createHttpDrain` from `evlog/http` for anything else.
+
+**That snippet is not enough on Vercel.** evlog fires the drain as a floating
+promise and only awaits it when a `waitUntil` is threaded through
+(`audit-*.mjs:200`), and the `log.*` surface this package drives never passes
+one. On a lambda that freezes the moment it responds, the drain's `fetch` dies
+mid-flight — and the errors logged on the way out of a 500 are the ones most
+likely to go. Wire `evlog/next/instrumentation`, which exists for this, or
+thread Next's `after()`, before trusting anything the drain reports.
+
+**Do not turn pretty printing back on in the same breath.** evlog's
+`log.info(tag, message)` path prints and returns before the drain runs, so a
+drain configured alongside `pretty: true` never sees a log that carries no
+extra fields — which is most of them. `initLogging` defaults `pretty` to `false`
+whenever a drain is present for exactly this reason; passing `pretty: true`
+explicitly overrides that and reopens the hole.
+
+## Runtimes
+
+`package.json` maps `browser` to `src/client.ts` and everything else — including
+`edge-light` and `worker`, which are listed ahead of it on purpose — to
+`src/index.ts`. `Logger` behaves the same either way; callers never pick.
+
+The order matters. Next's edge compilation matches `browser` if you let it, and
+evlog's browser runtime opens with `if (!isBrowser()) return`, so every edge log
+would be dropped in silence. `apps/web/src/proxy.ts` is a live edge bundle.
+
+`initLogging` is the one thing that is *not* the same on both sides. The browser
+build has no drain at all, only a `transport` that POSTs to an ingest route this
+repo does not have, so `src/client.ts` deliberately does not export it. Client
+logs are console-only. A drain covers the server.
+
+## Output shape follows the terminal, not `NODE_ENV`
+
+`initCliLogging` turns pretty printing on only when stdout is a tty, so `pnpm
+seed` reads as one-liners and `pnpm seed > seed.log` gets JSON, with errors on
+stderr and no escape codes. evlog's own rule is `NODE_ENV`, which is right about
+Vercel and `next dev` and wrong about every script here.
+
+The CLI entry points call `initCliLogging()` from `@workspace/logger/cli` for
+exactly this. A new script that skips it falls back to evlog's rule and prints
+colour into pipes. It is a separate export path because reading
+`process.stdout` is a build error in the edge runtime, and `src/index.ts` is
+bundled for it.
+
+## Known gaps
+
+**Client logs cannot reach a drain.** The browser build offers `transport`, not
+`drain`, and it POSTs to an ingest route this repo does not have. `preview-bar`
+and `featured-products` log to the browser console and stop there.
+
+## Files
+
+- `src/core.ts` — the class and the argument sorting, with no evlog import
+- `src/index.ts` — server entry, plus `initLogging`
+- `src/client.ts` — browser entry
+- `src/cli.ts` — `@workspace/logger/cli`, for commands run in a terminal

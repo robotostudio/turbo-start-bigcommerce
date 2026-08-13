@@ -86,7 +86,9 @@ function SocialLinks({ data }: SocialLinksProps) {
   );
 }
 
-function FooterColumns({ columns }: Pick<FooterProps["data"], "columns">) {
+export function FooterColumns({
+  columns,
+}: Pick<FooterProps["data"], "columns">) {
   if (!(Array.isArray(columns) && columns.length > 0)) {
     return null;
   }
@@ -98,20 +100,32 @@ function FooterColumns({ columns }: Pick<FooterProps["data"], "columns">) {
           <h3 className="mb-2 text-muted-foreground text-sm">
             {column?.title}
           </h3>
-          {column?.links && column.links.length > 0 && (
+          {/* `href` is null when the link's internal reference is missing,
+           * unpublished or tombstoned — `hrefFragment` has no arm that fires
+           * for a dangling ref, so its "#" fallback never applies. The navbar
+           * drops such a link (`navbar.tsx`, `menu-link.tsx`); this column used
+           * to render it as a "#" anchor that looked clickable and did nothing.
+           * Same behaviour everywhere is the point. */}
+          {column?.links?.some((link) => link.href) && (
             <ul className="space-y-1">
-              {column.links.map((link, columnIndex) => (
-                <li key={`${link?._key}-${columnIndex}-column-${column?._key}`}>
-                  <Link
-                    className="text-foreground text-sm hover:underline"
-                    href={link.href ?? "#"}
-                    rel={link.openInNewTab ? "noopener noreferrer" : undefined}
-                    target={link.openInNewTab ? "_blank" : undefined}
+              {column.links
+                .filter((link) => link.href)
+                .map((link, columnIndex) => (
+                  <li
+                    key={`${link?._key}-${columnIndex}-column-${column?._key}`}
                   >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
+                    <Link
+                      className="text-foreground text-sm hover:underline"
+                      href={link.href ?? "#"}
+                      rel={
+                        link.openInNewTab ? "noopener noreferrer" : undefined
+                      }
+                      target={link.openInNewTab ? "_blank" : undefined}
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
             </ul>
           )}
         </div>

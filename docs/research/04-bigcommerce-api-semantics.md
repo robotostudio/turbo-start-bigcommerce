@@ -450,7 +450,10 @@ an unversioned GraphQL API plus no stated notice period means the changelog is y
 6. A dedicated faceted product-search root field in GraphQL Storefront (overview claims search; products guide names no query)
 7. `generateSessionSyncJwt` argument list — from the GraphQL reference index, not the session-syncing guide
 8. Catalyst specifically on Core — inference from three quotes, not a citation
-9. Webhook payload body size limit; exact webhook ACK timeout in seconds
+9. Webhook payload body size limit. ~~Exact webhook ACK timeout in seconds~~ — **answered
+   2026-08-11 by measurement, not by documentation: between 9 and 12 seconds.** Holds of 5s and 9s
+   were never redelivered, 12s and 30s always were. Method, raw log and the consequence for
+   `SYNC_TIMEOUT_MS` are in `docs/research/09-webhook-payloads.md`.
 10. RSS/Atom feed URL for the changelog
 
 ## Two useful method notes

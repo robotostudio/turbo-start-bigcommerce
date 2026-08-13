@@ -3,18 +3,18 @@ import { defineArrayMember, defineField, defineType } from "sanity";
 /**
  * The three synced document types.
  *
- * **Exported, deliberately NOT registered** in `apps/studio/schemaTypes/index.ts`.
- * Registering them before the sync runs gives editors a permanently blank
- * "Products" list, which is worse than the types being absent — an empty list
- * reads as "the integration is broken", an absent one reads as "not yet".
- * Registration is the flip that turns the sync on.
+ * Registered in `apps/studio/schemaTypes/index.ts`, and only once the catalog
+ * had been backfilled (ROB-2609/ROB-2610). Registering them before the sync
+ * runs gives editors a permanently blank "Products" list, which is worse than
+ * the types being absent — an empty list reads as "the integration is broken",
+ * an absent one reads as "not yet".
  *
  * Every field under `store` is `readOnly`: it is machine-owned and the reconcile
  * sweep overwrites it wholesale. Editor-owned fields are siblings of `store`,
  * never inside it — that separation is what makes the subtree patch in
- * `upsert.ts` safe. `hero`, `modules` and `seo` attach here at the flip, using
- * the studio's own definitions; only `body` is stubbed, as the one sibling the
- * upsert test asserts survives a sync.
+ * `upsert.ts` safe. `body` is the only sibling there is — an earlier plan to
+ * attach `hero`, `modules` and `seo` at the flip was never carried out — and it
+ * is the one the upsert test asserts survives a sync.
  */
 
 const syncedSlug = defineField({
@@ -126,7 +126,7 @@ export const bigcommerceProductVariant = defineType({
   title: "Product variant",
   type: "document",
   description:
-    "A BigCommerce variant. Synced only by the reconcile sweep — BigCommerce has no CRUD webhooks for variants.",
+    "A BigCommerce variant. Written whenever its product syncs, which a store/sku/* webhook triggers as well as a store/product/* one.",
   fields: [
     defineField({
       name: "store",
@@ -225,7 +225,7 @@ export const bigcommerceCategory = defineType({
   },
 });
 
-/** Spread into `schemaTypes/index.ts` at the flip. Not spread anywhere today. */
+/** Spread into `apps/studio/schemaTypes/index.ts`. */
 export const syncSchemaTypes = [
   bigcommerceProduct,
   bigcommerceProductVariant,

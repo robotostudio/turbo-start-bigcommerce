@@ -3,11 +3,23 @@
 import { Button } from "@workspace/ui/components/button";
 import Link from "next/link";
 
-import { useCartActions } from "./cart-context";
+import { useCartActions, useCartState } from "./cart-context";
 import { CartRecommendations } from "./cart-recommendations";
+import { CartUnavailable } from "./cart-unavailable";
 
 export function CartEmptyState() {
   const { closeCart } = useCartActions();
+  const { loadFailed } = useCartState();
+
+  // An empty cart and a cart we could not read are different things, and only
+  // one of them should invite a shopper to start shopping again.
+  if (loadFailed) {
+    return (
+      <div className="-mx-8 flex flex-1 flex-col justify-center overflow-y-auto px-8">
+        <CartUnavailable />
+      </div>
+    );
+  }
 
   return (
     <div className="-mx-8 flex flex-1 flex-col overflow-y-auto px-8">

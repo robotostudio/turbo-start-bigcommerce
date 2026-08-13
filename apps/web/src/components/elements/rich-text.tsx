@@ -12,7 +12,9 @@ import { SanityImage } from "./sanity-image";
 
 const logger = new Logger("RichText");
 
-const components: Partial<PortableTextReactComponents> = {
+const buildComponents = (
+  hotspotImages?: Record<number, string>
+): Partial<PortableTextReactComponents> => ({
   block: {
     h2: ({ children, value }) => {
       const slug = parseChildrenToSlug(value.children);
@@ -93,7 +95,7 @@ const components: Partial<PortableTextReactComponents> = {
   },
   marks: sharedPortableTextMarks,
   types: {
-    ...sharedPortableTextTypes,
+    ...sharedPortableTextTypes(hotspotImages),
     image: ({ value }) => {
       if (!value?.id) {
         return null;
@@ -116,14 +118,22 @@ const components: Partial<PortableTextReactComponents> = {
     },
   },
   hardBreak: () => <br />,
-};
+});
 
 export function RichText<T extends SanityRichTextProps>({
   richText,
   className,
+  hotspotImages,
 }: {
   richText?: T | null;
   className?: string;
+  /**
+   * Live BigCommerce product images by `entityId`, for the hotspot cards
+   * (ROB-2614). Only a server caller can resolve them — see
+   * `lib/bigcommerce/hotspot-images.ts` — so leaving this out is normal, and
+   * the cards fall back to the synced Sanity URL.
+   */
+  hotspotImages?: Record<number, string>;
 }) {
   if (!richText) {
     return null;
@@ -137,7 +147,7 @@ export function RichText<T extends SanityRichTextProps>({
       )}
     >
       <PortableText
-        components={components}
+        components={buildComponents(hotspotImages)}
         onMissingComponent={(_, { nodeType, type }) => {
           logger.warn(`Missing component: ${nodeType} for type: ${type}`);
         }}

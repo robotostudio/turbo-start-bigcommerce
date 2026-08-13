@@ -162,3 +162,15 @@ type CleanFetch = <const QueryString extends string>(
 }>;
 
 export const sanityFetch = fetchWithFallback as CleanFetch;
+
+/**
+ * Spread into a `sanityFetch` for a surface that is never a preview: the
+ * sitemap, llms.txt, the Markdown views, the OG images. Each is a machine-read
+ * artifact served to crawlers and agents, so a draft-mode session must not
+ * change what it says, and the invisible characters stega adds have nowhere to
+ * be clicked — in a URL or a rendered PNG they are corruption, not an overlay.
+ *
+ * Pages and shared chrome deliberately do not use this. Their whole point is
+ * that the Presentation Tool can show an editor their unpublished work.
+ */
+export const PUBLISHED = { perspective: "published", stega: false } as const;
