@@ -1,8 +1,11 @@
 "use client";
 import { Button } from "@workspace/ui/components/button";
 import { LoaderCircle } from "lucide-react";
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { subscribeToNewsletter } from "@/app/actions";
+import { newsletterInitialState } from "@/lib/newsletter-state";
 import type { PagebuilderType } from "@/types";
 import { RichText } from "../elements/rich-text";
 import { SanityImage } from "../elements/sanity-image";
@@ -38,6 +41,14 @@ export function SubscribeNewsletter({
   helperText,
   image,
 }: SubscribeNewsletterProps) {
+  // `useActionState` over a click handler: the state it returns is produced by
+  // the server render that follows the POST, so the confirmation shows up with
+  // JavaScript disabled exactly as it does hydrated.
+  const [state, formAction] = useActionState(
+    subscribeToNewsletter,
+    newsletterInitialState
+  );
+
   return (
     <section
       className="relative px-4 py-12 md:px-8 md:py-20 overflow-hidden lg:aspect-2/1 flex justify-center items-center bg-zinc-100 dark:bg-zinc-900"
@@ -71,10 +82,13 @@ export function SubscribeNewsletter({
               richText={subTitle}
             />
           )}
-          <form className="mb-4 max-w-md" onSubmit={(e) => e.preventDefault()}>
+          <form action={formAction} className="mb-4 max-w-md">
             <div className="flex items-stretch overflow-hidden bg-white dark:bg-white">
               <input
                 className="flex-1 rounded-none bg-transparent px-4 py-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-900"
+                defaultValue={
+                  state.status === "error" ? (state.email ?? "") : ""
+                }
                 name="email"
                 placeholder="Enter your email address"
                 required
@@ -84,6 +98,18 @@ export function SubscribeNewsletter({
                 <SubscribeNewsletterButton />
               </div>
             </div>
+            {state.status !== "idle" && (
+              <p
+                aria-live="polite"
+                className={
+                  state.status === "error"
+                    ? "mt-2 text-destructive text-xs"
+                    : "mt-2 text-muted-foreground text-xs"
+                }
+              >
+                {state.message}
+              </p>
+            )}
           </form>
           {helperText && (
             <RichText
