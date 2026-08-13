@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { BreadcrumbJsonLd } from "@/components/json-ld";
 import { PageBuilder } from "@/components/pagebuilder";
+import { resolvePageBuilderData } from "@/components/pagebuilder-data.server";
 import { fetchOrFallback } from "@/lib/build-guard";
 import { getSEOMetadata } from "@/lib/seo";
 import { capitalize, getBaseUrl } from "@/utils";
@@ -90,6 +91,10 @@ export default async function SlugPage({
 
   const breadcrumb = <BreadcrumbJsonLd items={breadcrumbItems} />;
 
+  const blockData = Array.isArray(pageBuilder)
+    ? await resolvePageBuilderData(pageBuilder)
+    : {};
+
   return !Array.isArray(pageBuilder) || pageBuilder?.length === 0 ? (
     <div className="flex min-h-[50vh] flex-col items-center justify-center p-4 text-center">
       {breadcrumb}
@@ -101,7 +106,12 @@ export default async function SlugPage({
   ) : (
     <>
       {breadcrumb}
-      <PageBuilder id={_id} pageBuilder={pageBuilder} type={_type} />
+      <PageBuilder
+        blockData={blockData}
+        id={_id}
+        pageBuilder={pageBuilder}
+        type={_type}
+      />
     </>
   );
 }

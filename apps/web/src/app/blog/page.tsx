@@ -11,6 +11,7 @@ import { BlogHeader } from "@/components/blog-card";
 import { BlogPageContent } from "@/components/blog-page-content";
 import { BreadcrumbJsonLd } from "@/components/json-ld";
 import { PageBuilder } from "@/components/pagebuilder";
+import { resolvePageBuilderData } from "@/components/pagebuilder-data.server";
 import { getSEOMetadata } from "@/lib/seo";
 import {
   calculatePaginationMetadata,
@@ -94,6 +95,14 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
     notFound();
   }
 
+  // The blog index carries the same `pageBuilderField` as the home page, so it
+  // can hold the product-backed blocks too. Resolved once here and handed to
+  // every PageBuilder below — including the two error paths — so those blocks
+  // ship real markup rather than skeletons a browser with JS off never fills.
+  const blockData = await resolvePageBuilderData(
+    indexPageData.pageBuilder ?? []
+  );
+
   if (errTotalCount || totalCount === null || totalCount === undefined) {
     return (
       <main className="site-container my-16">
@@ -105,6 +114,7 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
         </div>
         {indexPageData.pageBuilder && indexPageData.pageBuilder.length > 0 && (
           <PageBuilder
+            blockData={blockData}
             id={indexPageData._id}
             pageBuilder={indexPageData.pageBuilder}
             type={indexPageData._type}
@@ -145,6 +155,7 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
         </div>
         {indexPageData.pageBuilder && indexPageData.pageBuilder.length > 0 && (
           <PageBuilder
+            blockData={blockData}
             id={indexPageData._id}
             pageBuilder={indexPageData.pageBuilder}
             type={indexPageData._type}
@@ -163,6 +174,7 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
       />
       <BlogPageContent
         activeCategory={activeCategory}
+        blockData={blockData}
         blogs={blogs}
         categories={errCategories ? [] : (categories ?? [])}
         indexPageData={indexPageData}

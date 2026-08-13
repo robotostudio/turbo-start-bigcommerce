@@ -2,6 +2,7 @@ import { sanityFetch } from "@workspace/sanity/live";
 import { queryHomePageData } from "@workspace/sanity/query";
 
 import { PageBuilder } from "@/components/pagebuilder";
+import { resolvePageBuilderData } from "@/components/pagebuilder-data.server";
 import { getSEOMetadata } from "@/lib/seo";
 
 async function fetchHomePageData() {
@@ -43,16 +44,32 @@ export default async function Page() {
     (b: { _type: string }) => (b._type as string) !== "hero"
   );
 
+  // Resolved across the whole page rather than per group, so the two
+  // PageBuilder instances below share one round of catalog reads. The map is
+  // keyed by block `_key`, so handing the same one to both is safe — each
+  // instance only ever looks up the blocks it renders.
+  const blockData = await resolvePageBuilderData(blocks);
+
   return (
     <main className="flex flex-col">
       {heroBlock.length > 0 && (
         <div className="[&>main]:my-0">
-          <PageBuilder id={_id} pageBuilder={heroBlock} type={_type} />
+          <PageBuilder
+            blockData={blockData}
+            id={_id}
+            pageBuilder={heroBlock}
+            type={_type}
+          />
         </div>
       )}
 
       {remainingBlocks.length > 0 && (
-        <PageBuilder id={_id} pageBuilder={remainingBlocks} type={_type} />
+        <PageBuilder
+          blockData={blockData}
+          id={_id}
+          pageBuilder={remainingBlocks}
+          type={_type}
+        />
       )}
     </main>
   );

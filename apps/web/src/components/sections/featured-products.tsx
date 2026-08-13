@@ -5,6 +5,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import Link from "next/link";
 
+import type { FeaturedProductsSeed } from "@/components/pagebuilder-data";
 import {
   ProductCard,
   type ProductCardProps,
@@ -23,6 +24,12 @@ type FeaturedProductsProps = {
    * "whatever is newest", which is what the resolver falls back to.
    */
   productHandles?: (string | null)[] | null;
+  /**
+   * Cards the server already resolved for this block, so the products are in
+   * the HTML rather than behind a fetch the browser has to run. Absent when
+   * that read failed, which puts the block back on the client-fetch path.
+   */
+  seed?: FeaturedProductsSeed;
 };
 
 /**
@@ -52,11 +59,13 @@ function CardSkeleton() {
 export function FeaturedProducts({
   heading,
   productHandles,
+  seed,
 }: FeaturedProductsProps) {
   const handles = (productHandles ?? []).filter((h): h is string => Boolean(h));
+  const handleKey = handles.join(",");
 
   const { data: cards, isPending } = useQuery({
-    queryKey: ["featured-products-cards", handles.join(",")],
+    queryKey: ["featured-products-cards", handleKey],
     queryFn: async () => {
       const query = handles.length > 0 ? `?handles=${handles.join(",")}` : "";
       const res = await fetch(`/api/featured-products/cards${query}`);
@@ -64,10 +73,24 @@ export function FeaturedProducts({
       const data: { cards: ProductCardProps[] } = await res.json();
       return data.cards;
     },
+    // Only seed the key the server actually answered. The seed is built from
+    // the same filtered-then-joined handles, so an inequality here means the
+    // props moved on and those cards describe some other set of products —
+    // attached anyway they would paint the wrong grid until the refetch lands,
+    // the trap collection-products.tsx documents at its own initialData.
+    // staleTime stays at the default so React Query still revalidates on mount.
+    initialData:
+      seed !== undefined && seed.queryKey === handleKey
+        ? seed.cards
+        : undefined,
   });
 
   // Gated on isPending, not cards.length: a block whose handles all fail must
   // render nothing, not a skeleton that never resolves (the ROB-2561 scenario).
+  // A seed keeps that distinction rather than blurring it — initialData settles
+  // the query, so an empty seed is "resolved to nothing" and falls through to
+  // null here, while an absent seed leaves isPending true and the skeletons are
+  // still an honest description of a fetch that is genuinely in flight.
   if (!isPending && !cards?.length) return null;
 
   const skeletonCount =

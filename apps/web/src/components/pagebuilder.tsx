@@ -6,6 +6,7 @@ import type { QueryHomePageDataResult } from "@workspace/sanity/types";
 import { createDataAttribute } from "next-sanity";
 import { useCallback, useMemo } from "react";
 
+import type { PageBuilderData } from "./pagebuilder-data";
 import { CollectionBanner } from "./sections/collection-banner";
 import { CTABlock } from "./sections/cta";
 import { EditorialTwoUp } from "./sections/editorial-two-up";
@@ -28,6 +29,17 @@ export type PageBuilderProps = {
   readonly pageBuilder?: PageBuilderBlock[];
   readonly id: string;
   readonly type: string;
+  /**
+   * Catalog data the page resolved server-side, keyed by block `_key`. Passed
+   * through untouched to the blocks that asked for it, as a `seed` prop.
+   *
+   * This component cannot resolve it itself: it is `"use client"` because
+   * `useOptimistic` powers live editing, and a client component cannot render
+   * an async server component. Resolving in the page and threading the result
+   * down is what lets the product blocks paint real HTML without JavaScript
+   * while visual editing keeps working.
+   */
+  readonly blockData?: PageBuilderData;
 };
 
 type SanityDataAttributeConfig = {
@@ -115,7 +127,11 @@ function useOptimisticPageBuilder(
 /**
  * Custom hook for block component rendering logic
  */
-function useBlockRenderer(id: string, type: string) {
+function useBlockRenderer(
+  id: string,
+  type: string,
+  blockData: PageBuilderData | undefined
+) {
   const createBlockDataAttribute = useCallback(
     (blockKey: string) =>
       createSanityDataAttribute({
@@ -141,17 +157,24 @@ function useBlockRenderer(id: string, type: string) {
         );
       }
 
+      // Absent for every block type that needs no catalog read, and for one
+      // whose read failed — so `seed` stays off the props rather than arriving
+      // as an explicit undefined that reads like a resolved empty answer. An
+      // optimistic edit in the Studio can also mint a block whose `_key` was
+      // never resolved, which lands here the same way: no seed, client fetch.
+      const seed = blockData?.[block._key];
+
       return (
         <div
           data-sanity={createBlockDataAttribute(block._key)}
           key={`${block._type}-${block._key}`}
         >
           {/** biome-ignore lint/suspicious/noExplicitAny: <any is used to allow for dynamic component rendering> */}
-          <Component {...(block as any)} />
+          <Component {...(block as any)} {...(seed ? { seed } : {})} />
         </div>
       );
     },
-    [createBlockDataAttribute]
+    [createBlockDataAttribute, blockData]
   );
 
   return { renderBlock };
@@ -164,9 +187,10 @@ export function PageBuilder({
   pageBuilder: initialBlocks = [],
   id,
   type,
+  blockData,
 }: PageBuilderProps) {
   const blocks = useOptimisticPageBuilder(initialBlocks, id);
-  const { renderBlock } = useBlockRenderer(id, type);
+  const { renderBlock } = useBlockRenderer(id, type, blockData);
 
   const containerDataAttribute = useMemo(
     () => createSanityDataAttribute({ id, type, path: "pageBuilder" }),

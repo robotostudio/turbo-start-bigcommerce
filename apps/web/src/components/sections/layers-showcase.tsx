@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { useCartActions } from "@/components/cart/cart-context";
+import type { LayersShowcaseSeed } from "@/components/pagebuilder-data";
 import type { CardVariant } from "@/components/product/product-card";
 import { StoreImage as Image } from "@/components/product/store-image";
 import { merchandiseId } from "@/components/product/variant-utils";
@@ -22,6 +23,7 @@ type LayersShowcaseProps = {
   description?: string | null;
   productHandle?: string | null;
   productTitle?: string | null;
+  seed?: LayersShowcaseSeed;
 };
 
 const COLLAGE_CELLS = 4;
@@ -55,6 +57,20 @@ function productImageUrls(product: CatalogProduct): string[] {
     ...(product.images.edges ?? []).map((edge) => edge.node.url),
   ].filter((url): url is string => Boolean(url));
   return Array.from(new Set(urls));
+}
+
+/**
+ * The no-JS half of the purchase bar is injected as a string rather than as
+ * JSX. With scripting enabled a browser parses `<noscript>` children as raw
+ * text, so React finds no elements to hydrate against and warns on the
+ * mismatch; `dangerouslySetInnerHTML` sidesteps that, at the cost of escaping
+ * the href by hand.
+ */
+function escapeAttribute(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll('"', "&quot;");
 }
 
 /** Bottom bar: add-to-cart action, size selector, and price. */
@@ -97,19 +113,29 @@ function PurchaseBar({ product }: { product: CatalogProduct }) {
     void addLine(merchandiseId(product.entityId, variant.id), 1, metadata);
   }
 
+  // The bar reveals itself on hover in pure CSS, so it is in the server HTML
+  // whether or not the page ever hydrates. Adding to the cart is not: it needs
+  // the cart context. Rather than leave a button that silently does nothing,
+  // the no-JS branch hides it and offers the product page instead — the honest
+  // version of "you can still buy this, just not from here". The size list is
+  // left visible as static text (it is real information about the product) but
+  // made inert, so nothing invites a click that cannot land.
+  const noScriptMarkup = `<style>.layers-showcase-add{display:none}.layers-showcase-sizes{pointer-events:none}</style><a class="font-medium text-foreground text-sm underline underline-offset-4" href="${escapeAttribute(product.path)}">View product</a>`;
+
   return (
     <div className="absolute inset-x-2 bottom-2 z-10 flex items-center justify-between gap-3 bg-background p-3 opacity-0 transition-opacity duration-200 md:group-hover:opacity-100">
       <button
-        className="cursor-pointer font-medium text-foreground text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        className="layers-showcase-add cursor-pointer font-medium text-foreground text-sm disabled:cursor-not-allowed disabled:opacity-50"
         disabled={!canAdd}
         onClick={handleAdd}
         type="button"
       >
         Add to cart
       </button>
+      <noscript dangerouslySetInnerHTML={{ __html: noScriptMarkup }} />
       <div className="flex items-center gap-3">
         {sizes.length > 0 && (
-          <div className="flex items-center gap-2.5">
+          <div className="layers-showcase-sizes flex items-center gap-2.5">
             {sizes.map((size) => (
               <button
                 className={cn(
@@ -138,12 +164,22 @@ export function LayersShowcase({
   description,
   productHandle,
   productTitle,
+  seed,
 }: LayersShowcaseProps) {
+  // The seed is only usable for the handle the server actually read, so it is
+  // matched against the raw prop — the same string that forms the query key,
+  // stega markers and all. A `null` product is a settled answer (the handle no
+  // longer resolves), not a failure; a missing seed means the read failed or
+  // never ran, and the block falls back to fetching on the client behind the
+  // skeletons. `staleTime` means a seeded block skips the refetch for a
+  // minute, which is the behaviour the client path already had.
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", productHandle],
     queryFn: () => (productHandle ? fetchProduct(productHandle) : null),
     enabled: Boolean(productHandle),
     staleTime: 60_000,
+    initialData:
+      seed && seed.handle === productHandle ? seed.product : undefined,
   });
 
   const pool = product ? productImageUrls(product) : [];
