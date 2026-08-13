@@ -19,7 +19,6 @@ import type { ProductCardProps } from "./product/product-card";
  * `collection-products.tsx` documents. Consumers must compare before they seed.
  */
 
-/** Seed for a `featuredProducts` block. */
 export type FeaturedProductsSeed = {
   readonly _type: "featuredProducts";
   /**
@@ -34,7 +33,6 @@ export type FeaturedProductsSeed = {
   readonly cards: ProductCardProps[];
 };
 
-/** Seed for a `layersShowcase` block. */
 export type LayersShowcaseSeed = {
   readonly _type: "layersShowcase";
   /** The block's `productHandle`, as its `["product", handle]` key spells it. */

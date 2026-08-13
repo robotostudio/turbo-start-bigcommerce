@@ -16,10 +16,6 @@ export async function disableDraftMode() {
   await Promise.allSettled([disable, delay]);
 }
 
-// ---------------------------------------------------------------------------
-// Newsletter
-// ---------------------------------------------------------------------------
-
 // `NewsletterState` and `newsletterInitialState` live in
 // `@/lib/newsletter-state` rather than here: Next rewrites *every* export of a
 // `"use server"` module into a server reference, so a constant exported from
