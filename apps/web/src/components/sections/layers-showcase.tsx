@@ -117,10 +117,16 @@ function PurchaseBar({ product }: { product: CatalogProduct }) {
   // whether or not the page ever hydrates. Adding to the cart is not: it needs
   // the cart context. Rather than leave a button that silently does nothing,
   // the no-JS branch hides it and offers the product page instead — the honest
-  // version of "you can still buy this, just not from here". The size list is
-  // left visible as static text (it is real information about the product) but
-  // made inert, so nothing invites a click that cannot land.
-  const noScriptMarkup = `<style>.layers-showcase-add{display:none}.layers-showcase-sizes{pointer-events:none}</style><a class="font-medium text-foreground text-sm underline underline-offset-4" href="${escapeAttribute(product.path)}">View product</a>`;
+  // version of "you can still buy this, just not from here". The size buttons
+  // are hidden too — pointer-events alone would leave them keyboard-focusable
+  // with nothing behind them — and the sizes reappear here as plain text, since
+  // they are real information about the product.
+  const noScriptSizes = sizes.length
+    ? `<span class="ml-3 text-muted-foreground text-xs">${sizes
+        .map(escapeAttribute)
+        .join(" · ")}</span>`
+    : "";
+  const noScriptMarkup = `<style>.layers-showcase-add,.layers-showcase-sizes{display:none}</style><a class="font-medium text-foreground text-sm underline underline-offset-4" href="${escapeAttribute(product.path)}">View product</a>${noScriptSizes}`;
 
   return (
     <div className="absolute inset-x-2 bottom-2 z-10 flex items-center justify-between gap-3 bg-background p-3 opacity-0 transition-opacity duration-200 md:group-hover:opacity-100">

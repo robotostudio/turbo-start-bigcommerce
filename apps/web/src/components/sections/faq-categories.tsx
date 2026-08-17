@@ -55,7 +55,10 @@ function switcherStyles(scope: string, count: number) {
 export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
   const groups = categories ?? [];
   const allFaqs = groups.flatMap((category) => category?.faqs ?? []);
-  const scope = `faq-${_key}`;
+  // Studio mints alphanumeric `_key`s, but a programmatic import can put any
+  // string there — and this one is interpolated into selectors, ids and the
+  // radio `name`, so it has to stay CSS-safe.
+  const scope = `faq-${_key.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   // `hydrated` gates every motion prop. Motion serialises a variant's initial
   // styles into the server HTML, so leaving the variants on during SSR would
@@ -82,7 +85,11 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
           {title}
         </h2>
 
-        <div className="[--faq-tab-active:var(--color-zinc-900)] dark:[--faq-tab-active:var(--color-zinc-100)]">
+        {/* A fieldset so the radio group carries a programmatic name; the
+            legend is first, so the inputs are still preceding siblings of the
+            grid and the `~` selectors above keep working. */}
+        <fieldset className="min-w-0 [--faq-tab-active:var(--color-zinc-900)] dark:[--faq-tab-active:var(--color-zinc-100)]">
+          <legend className="sr-only">{title ?? "FAQ categories"}</legend>
           <style>{switcherStyles(scope, groups.length)}</style>
 
           {/* Kept out of the grid so the `~` combinator can reach both columns.
@@ -93,7 +100,7 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
               className="sr-only"
               defaultChecked={index === 0}
               id={`${scope}-input-${index}`}
-              key={category?._key}
+              key={category?._key ?? index}
               name={scope}
               onChange={() => setActiveIndex(index)}
               type="radio"
@@ -110,7 +117,7 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
                   data-faq-tab={index}
                   htmlFor={`${scope}-input-${index}`}
                   id={`${scope}-label-${index}`}
-                  key={category?._key}
+                  key={category?._key ?? index}
                 >
                   {category?.title}
                 </label>
@@ -130,7 +137,7 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
                     className="hidden"
                     data-faq-panel={index}
                     initial={false}
-                    key={category?._key}
+                    key={category?._key ?? index}
                     role="group"
                     variants={hydrated ? listVariants : undefined}
                   >
@@ -157,7 +164,7 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
               })}
             </div>
           </div>
-        </div>
+        </fieldset>
       </div>
     </section>
   );

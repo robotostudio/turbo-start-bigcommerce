@@ -59,10 +59,11 @@ export async function subscribeToNewsletter(
   // TODO: hand the address to the email provider here — the Klaviyo
   // `/api/profile-subscription-bulk-create-jobs` call, the Mailchimp
   // `/lists/{id}/members` call, or whichever list the client ends up on. This
-  // starter deliberately ships no provider integration, so the subscription is
-  // only recorded in the server log; wire the call in and map its failures
-  // onto the `error` branch above.
-  logger.info(`Newsletter subscription: ${parsed.data}`);
+  // starter deliberately ships no provider integration, so nothing but this
+  // log line happens; wire the call in and map its failures onto the `error`
+  // branch above. The address itself stays out of the log — it is PII, and a
+  // server log is neither a subscriber list nor a place to retain one.
+  logger.info("Newsletter subscription received");
 
   return {
     status: "success",

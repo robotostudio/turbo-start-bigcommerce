@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@workspace/ui/components/button";
 import { LoaderCircle } from "lucide-react";
-import { useActionState } from "react";
+import { useActionState, useId } from "react";
 import { useFormStatus } from "react-dom";
 
 import { subscribeToNewsletter } from "@/app/actions";
@@ -48,6 +48,9 @@ export function SubscribeNewsletter({
     subscribeToNewsletter,
     newsletterInitialState
   );
+  // `useId` rather than a fixed id: this is a page-builder block, so nothing
+  // stops an editor placing it on a page twice.
+  const emailId = useId();
 
   return (
     <section
@@ -83,12 +86,16 @@ export function SubscribeNewsletter({
             />
           )}
           <form action={formAction} className="mb-4 max-w-md">
+            <label className="sr-only" htmlFor={emailId}>
+              Email address
+            </label>
             <div className="flex items-stretch overflow-hidden bg-white dark:bg-white">
               <input
                 className="flex-1 rounded-none bg-transparent px-4 py-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-900"
                 defaultValue={
                   state.status === "error" ? (state.email ?? "") : ""
                 }
+                id={emailId}
                 name="email"
                 placeholder="Enter your email address"
                 required
