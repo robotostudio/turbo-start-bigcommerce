@@ -91,11 +91,10 @@ export default async function SlugPage({
 
   const breadcrumb = <BreadcrumbJsonLd items={breadcrumbItems} />;
 
-  const blockData = Array.isArray(pageBuilder)
-    ? await resolvePageBuilderData(pageBuilder)
-    : {};
+  const blocks = pageBuilder ?? [];
+  const blockData = await resolvePageBuilderData(blocks);
 
-  return !Array.isArray(pageBuilder) || pageBuilder?.length === 0 ? (
+  return blocks.length === 0 ? (
     <div className="flex min-h-[50vh] flex-col items-center justify-center p-4 text-center">
       {breadcrumb}
       <h1 className="mb-4 font-semibold text-2xl capitalize">{title}</h1>
@@ -109,7 +108,7 @@ export default async function SlugPage({
       <PageBuilder
         blockData={blockData}
         id={_id}
-        pageBuilder={pageBuilder}
+        pageBuilder={blocks}
         type={_type}
       />
     </>
