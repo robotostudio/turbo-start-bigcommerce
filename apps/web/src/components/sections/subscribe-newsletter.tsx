@@ -51,6 +51,8 @@ export function SubscribeNewsletter({
   // `useId` rather than a fixed id: this is a page-builder block, so nothing
   // stops an editor placing it on a page twice.
   const emailId = useId();
+  const messageId = `${emailId}-message`;
+  const hasError = state.status === "error";
 
   return (
     <section
@@ -91,10 +93,10 @@ export function SubscribeNewsletter({
             </label>
             <div className="flex items-stretch overflow-hidden bg-white dark:bg-white">
               <input
+                aria-describedby={hasError ? messageId : undefined}
+                aria-invalid={hasError}
                 className="flex-1 rounded-none bg-transparent px-4 py-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-900"
-                defaultValue={
-                  state.status === "error" ? (state.email ?? "") : ""
-                }
+                defaultValue={hasError ? (state.email ?? "") : ""}
                 id={emailId}
                 name="email"
                 placeholder="Enter your email address"
@@ -109,10 +111,11 @@ export function SubscribeNewsletter({
               <p
                 aria-live="polite"
                 className={
-                  state.status === "error"
+                  hasError
                     ? "mt-2 text-destructive text-xs"
                     : "mt-2 text-muted-foreground text-xs"
                 }
+                id={messageId}
               >
                 {state.message}
               </p>

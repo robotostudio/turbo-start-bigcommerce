@@ -57,8 +57,13 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
   const allFaqs = groups.flatMap((category) => category?.faqs ?? []);
   // Studio mints alphanumeric `_key`s, but a programmatic import can put any
   // string there — and this one is interpolated into selectors, ids and the
-  // radio `name`, so it has to stay CSS-safe.
-  const scope = `faq-${_key.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  // radio `name`, so it has to stay CSS-safe. Escaped rather than stripped,
+  // because stripping is not injective (`a#b` and `ab` would share a scope):
+  // an unsafe character becomes `_<hex>_` and a literal underscore doubles,
+  // so distinct keys always produce distinct scopes.
+  const scope = `faq-${_key.replace(/[^a-zA-Z0-9-]/g, (char) =>
+    char === "_" ? "__" : `_${char.codePointAt(0)?.toString(16)}_`
+  )}`;
 
   // `hydrated` gates every motion prop. Motion serialises a variant's initial
   // styles into the server HTML, so leaving the variants on during SSR would
@@ -100,7 +105,7 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
               className="sr-only"
               defaultChecked={index === 0}
               id={`${scope}-input-${index}`}
-              key={category?._key ?? index}
+              key={category?._key ? `key-${category._key}` : `index-${index}`}
               name={scope}
               onChange={() => setActiveIndex(index)}
               type="radio"
@@ -117,7 +122,7 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
                   data-faq-tab={index}
                   htmlFor={`${scope}-input-${index}`}
                   id={`${scope}-label-${index}`}
-                  key={category?._key ?? index}
+                  key={category?._key ? `key-${category._key}` : `index-${index}`}
                 >
                   {category?.title}
                 </label>
@@ -137,7 +142,9 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
                     className="hidden"
                     data-faq-panel={index}
                     initial={false}
-                    key={category?._key ?? index}
+                    key={
+                      category?._key ? `key-${category._key}` : `index-${index}`
+                    }
                     role="group"
                     variants={hydrated ? listVariants : undefined}
                   >
