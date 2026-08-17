@@ -18,17 +18,26 @@ export type OptimisticAction = {
  * Reorders the already-resolved blocks to match the raw document's `_key`
  * sequence. Keys with no resolved block (a just-inserted one) are dropped until
  * revalidation projects them.
+ *
+ * Returns `null` when the sequence cannot describe an order: a missing `_key`
+ * would silently drop a resolved block, a repeated one would render it twice.
  */
 function reorderByRawKeys(
   currentBlocks: PageBuilderBlock[],
   rawBlocks: readonly unknown[]
-): PageBuilderBlock[] {
+): PageBuilderBlock[] | null {
   const resolved = new Map(currentBlocks.map((block) => [block._key, block]));
   const reordered: PageBuilderBlock[] = [];
+  const seen = new Set<string>();
 
   for (const raw of rawBlocks) {
-    const key = (raw as { _key?: string } | null)?._key;
-    const block = key ? resolved.get(key) : undefined;
+    const key = (raw as { _key?: unknown } | null)?._key;
+    if (typeof key !== "string" || !key || seen.has(key)) {
+      return null;
+    }
+    seen.add(key);
+
+    const block = resolved.get(key);
     if (block) {
       reordered.push(block);
     }
@@ -52,15 +61,24 @@ export function applyOptimisticPageBuilder(
     return currentBlocks;
   }
 
-  // Sanity unsets an emptied array, so an absent `pageBuilder` means every
-  // block was deleted. A truthy non-array is malformed — keep what we have
-  // rather than throwing out of `for...of` mid-render.
-  const rawBlocks = action.document?.pageBuilder ?? [];
+  // The stream hands us no document at all when the local snapshot is gone (a
+  // delete, a discarded draft). Reading that as "all blocks deleted" blanks the
+  // page.
+  if (!action.document) {
+    return currentBlocks;
+  }
+
+  // Sanity unsets an emptied array, so an absent `pageBuilder` here means every
+  // block was deleted. A non-array is malformed — keep what we have, don't throw.
+  const rawBlocks = action.document.pageBuilder ?? [];
   if (!Array.isArray(rawBlocks)) {
     return currentBlocks;
   }
 
   const reordered = reorderByRawKeys(currentBlocks, rawBlocks);
+  if (!reordered) {
+    return currentBlocks;
+  }
 
   // Nothing resolved against a non-empty array means every `_key` is new at
   // once (the whole array was replaced). Keep rendering what we have rather

@@ -53,6 +53,29 @@ describe("page builder optimistic reducer", () => {
     expect(apply({ id: DOC, document: {} })).toEqual([]);
   });
 
+  it("holds the last render when the document itself is gone", () => {
+    // A delete or a discarded draft leaves no local snapshot. Reading that as
+    // an emptied array would blank the page, which is the ROB-2619 symptom.
+    expect(apply({ id: DOC })).toBe(RESOLVED);
+    expect(apply({ id: DOC, document: null })).toBe(RESOLVED);
+  });
+
+  it("keeps the current blocks when a raw entry carries no usable key", () => {
+    // Skipping the entry instead would silently drop a block that renders fine.
+    const partial = (second: unknown) =>
+      apply({ id: DOC, document: { pageBuilder: [{ _key: "a" }, second] } });
+
+    expect(partial({})).toBe(RESOLVED);
+    expect(partial(null)).toBe(RESOLVED);
+    expect(partial({ _key: "" })).toBe(RESOLVED);
+    expect(partial({ _key: 7 })).toBe(RESOLVED);
+  });
+
+  it("keeps the current blocks when a key repeats", () => {
+    // The same block twice would collide on its React key.
+    expect(apply(raw("a", "a", "b"))).toBe(RESOLVED);
+  });
+
   it("keeps the current blocks when the action says nothing usable", () => {
     // Same order — an unrelated field edit replaying through the reducer.
     expect(apply(raw("a", "b", "c"))).toBe(RESOLVED);
