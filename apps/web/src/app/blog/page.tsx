@@ -11,7 +11,7 @@ import { BlogHeader } from "@/components/blog-card";
 import { BlogPageContent } from "@/components/blog-page-content";
 import { BreadcrumbJsonLd } from "@/components/json-ld";
 import { PageBuilder } from "@/components/pagebuilder";
-import { resolvePageBuilderData } from "@/components/pagebuilder-data.server";
+import { pageBuilderSeeds } from "@/components/pagebuilder-data.server";
 import { getSEOMetadata } from "@/lib/seo";
 import {
   calculatePaginationMetadata,
@@ -96,12 +96,10 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
   }
 
   // The blog index carries the same `pageBuilderField` as the home page, so it
-  // can hold the product-backed blocks too. Resolved once here and handed to
-  // every PageBuilder below — including the two error paths — so those blocks
-  // ship real markup rather than skeletons a browser with JS off never fills.
-  const blockData = await resolvePageBuilderData(
-    indexPageData.pageBuilder ?? []
-  );
+  // can hold the product-backed blocks too. The reads start once here, and the
+  // map goes to every PageBuilder below — including the two error paths — with
+  // each block awaiting its own entry behind Suspense.
+  const blockData = pageBuilderSeeds(indexPageData.pageBuilder ?? []);
 
   if (errTotalCount || totalCount === null || totalCount === undefined) {
     return (

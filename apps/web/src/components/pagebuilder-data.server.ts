@@ -13,8 +13,6 @@ import type {
 } from "./pagebuilder-data";
 import { featuredCards } from "./product/featured-cards";
 
-type ResolvedSeed = { key: string; seed: PageBuilderBlockSeed };
-
 /**
  * A handle that reaches us from a stega-enabled fetch carries invisible
  * markers, which BigCommerce would reject as a path. The seed's identity field
@@ -28,7 +26,7 @@ function toPath(handle: string): string {
 
 async function resolveFeaturedProducts(
   block: ResolvablePageBuilderBlock
-): Promise<ResolvedSeed | null> {
+): Promise<FeaturedProductsSeed | null> {
   const handles = (block.productHandles ?? []).filter(
     (handle): handle is string => Boolean(handle)
   );
@@ -45,18 +43,15 @@ async function resolveFeaturedProducts(
   }
 
   return {
-    key: block._key,
-    seed: {
-      _type: "featuredProducts",
-      queryKey: handles.join(","),
-      cards,
-    },
+    _type: "featuredProducts",
+    queryKey: handles.join(","),
+    cards,
   };
 }
 
 async function resolveLayersShowcase(
   block: ResolvablePageBuilderBlock
-): Promise<ResolvedSeed | null> {
+): Promise<LayersShowcaseSeed | null> {
   const handle = block.productHandle;
   if (!handle) {
     return null;
@@ -80,48 +75,38 @@ async function resolveLayersShowcase(
     return null;
   }
 
-  return {
-    key: block._key,
-    seed: { _type: "layersShowcase", handle, product },
-  };
+  return { _type: "layersShowcase", handle, product };
 }
 
 /**
- * Resolves, server-side, the catalog data the product-backed page-builder
- * blocks need, so their first paint is real markup rather than a skeleton the
- * browser has to fill in. Without this the home page renders nothing but a
- * heading with JavaScript disabled.
+ * Starts, server-side, the catalog reads the product-backed page-builder
+ * blocks need, and returns the still-pending promises keyed by block `_key` —
+ * deliberately without awaiting any of them. Each block unwraps its own entry
+ * behind a Suspense boundary in `pagebuilder.tsx`, so a slow read suspends
+ * that block rather than the page, while a static build still waits for every
+ * boundary and ships complete HTML — which is what keeps the first paint real
+ * markup with JavaScript disabled.
  *
- * Only the two block types that read from BigCommerce cost a request; the rest
- * of the page builder is already server-rendered from Sanity. The reads run
- * together rather than in sequence, so a page with a showcase and two featured
- * rows waits for the slowest of them instead of the sum.
+ * Only the two block types that read from BigCommerce appear in the map; the
+ * rest of the page builder is already server-rendered from Sanity. The reads
+ * begin here, together, so a page with a showcase and two featured rows runs
+ * them concurrently.
  *
- * Every read is wrapped in `fetchOrFallback`: a block whose products cannot be
- * reached is left out of the map entirely, which puts it back on exactly the
- * client-fetch path it used before. A dead storefront token degrades the first
- * paint, it does not blank the page.
+ * Every read is wrapped in `fetchOrFallback`, so no promise ever rejects — a
+ * block whose products cannot be reached resolves to `null`, which puts it
+ * back on exactly the client-fetch path it used before. A dead storefront
+ * token degrades the first paint, it does not blank the page.
  */
-export async function resolvePageBuilderData(
+export function pageBuilderSeeds(
   blocks: readonly ResolvablePageBuilderBlock[]
-): Promise<PageBuilderData> {
-  const pending = blocks.flatMap((block) => {
+): PageBuilderData {
+  const entries: [string, Promise<PageBuilderBlockSeed | null>][] = [];
+  for (const block of blocks) {
     if (block._type === "featuredProducts") {
-      return [resolveFeaturedProducts(block)];
+      entries.push([block._key, resolveFeaturedProducts(block)]);
+    } else if (block._type === "layersShowcase") {
+      entries.push([block._key, resolveLayersShowcase(block)]);
     }
-    if (block._type === "layersShowcase") {
-      return [resolveLayersShowcase(block)];
-    }
-    return [];
-  });
-
-  if (pending.length === 0) {
-    return {};
   }
-
-  const resolved = await Promise.all(pending);
-
-  return Object.fromEntries(
-    resolved.flatMap((entry) => (entry ? [[entry.key, entry.seed]] : []))
-  );
+  return Object.fromEntries(entries);
 }

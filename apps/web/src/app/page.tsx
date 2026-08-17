@@ -4,7 +4,7 @@ import { Button } from "@workspace/ui/components/button";
 import Link from "next/link";
 
 import { PageBuilder } from "@/components/pagebuilder";
-import { resolvePageBuilderData } from "@/components/pagebuilder-data.server";
+import { pageBuilderSeeds } from "@/components/pagebuilder-data.server";
 import { getSEOMetadata } from "@/lib/seo";
 
 async function fetchHomePageData() {
@@ -63,11 +63,11 @@ export default async function Page() {
     (b: { _type: string }) => (b._type as string) !== "hero"
   );
 
-  // Resolved across the whole page rather than per group, so the two
-  // PageBuilder instances below share one round of catalog reads. The map is
-  // keyed by block `_key`, so handing the same one to both is safe — each
+  // Starts the catalog reads without awaiting them — each product-backed block
+  // suspends on its own entry inside PageBuilder. The map is keyed by block
+  // `_key`, so handing the same one to both instances below is safe — each
   // instance only ever looks up the blocks it renders.
-  const blockData = await resolvePageBuilderData(blocks);
+  const blockData = pageBuilderSeeds(blocks);
 
   return (
     <main className="flex flex-col">

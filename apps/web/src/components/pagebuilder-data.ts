@@ -44,11 +44,18 @@ export type LayersShowcaseSeed = {
 export type PageBuilderBlockSeed = FeaturedProductsSeed | LayersShowcaseSeed;
 
 /**
- * Seeds keyed by block `_key`. A block whose read failed is simply absent, so
- * the lookup returning undefined is the signal to fall back to fetching on the
- * client rather than an error state of its own.
+ * Pending seed reads keyed by block `_key` — promises, not resolved seeds. The
+ * pages start the reads and each product-backed block awaits its own entry
+ * behind a Suspense boundary in `pagebuilder.tsx`, so a slow read suspends one
+ * block rather than the page. A block absent from the map needs no catalog
+ * read; an entry that resolves `null` is a read that failed, and the block
+ * falls back to fetching on the client. The promises never reject —
+ * `fetchOrFallback` resolves every failure to `null` instead.
  */
-export type PageBuilderData = Record<string, PageBuilderBlockSeed>;
+export type PageBuilderData = Record<
+  string,
+  Promise<PageBuilderBlockSeed | null>
+>;
 
 /**
  * The shape the resolver needs off a page-builder block, structural rather than
