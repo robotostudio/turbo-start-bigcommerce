@@ -122,7 +122,9 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
                   data-faq-tab={index}
                   htmlFor={`${scope}-input-${index}`}
                   id={`${scope}-label-${index}`}
-                  key={category?._key ? `key-${category._key}` : `index-${index}`}
+                  key={
+                    category?._key ? `key-${category._key}` : `index-${index}`
+                  }
                 >
                   {category?.title}
                 </label>
