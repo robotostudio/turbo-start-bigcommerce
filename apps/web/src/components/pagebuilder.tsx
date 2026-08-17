@@ -24,7 +24,8 @@ import { LayersShowcase } from "./sections/layers-showcase";
 import { SubscribeNewsletter } from "./sections/subscribe-newsletter";
 
 export type PageBuilderProps = {
-  readonly pageBuilder?: PageBuilderBlock[];
+  // GROQ projects an unset array as `null`, so callers pass it through unguarded.
+  readonly pageBuilder?: PageBuilderBlock[] | null;
   readonly id: string;
   readonly type: string;
 };
@@ -155,11 +156,11 @@ function useBlockRenderer(id: string, type: string) {
  * PageBuilder component for rendering dynamic content blocks from Sanity CMS
  */
 export function PageBuilder({
-  pageBuilder: initialBlocks = [],
+  pageBuilder: initialBlocks,
   id,
   type,
 }: PageBuilderProps) {
-  const blocks = useOptimisticPageBuilder(initialBlocks, id);
+  const blocks = useOptimisticPageBuilder(initialBlocks ?? [], id);
   const { renderBlock } = useBlockRenderer(id, type);
 
   const containerDataAttribute = useMemo(
@@ -167,11 +168,12 @@ export function PageBuilder({
     [id, type]
   );
 
-  // Rendered even when empty: without the element there is no `pageBuilder`
-  // drop target, so an editor who deleted the last block cannot drag onto it.
+  // A `div`, not a `main`: every route here owns its own `main`, and nesting is
+  // invalid. Rendered even when empty, or an editor who deleted the last block
+  // has no `pageBuilder` drop target left.
   return (
-    <main className="flex flex-col" data-sanity={containerDataAttribute}>
+    <div className="flex flex-col" data-sanity={containerDataAttribute}>
       {blocks.map(renderBlock)}
-    </main>
+    </div>
   );
 }

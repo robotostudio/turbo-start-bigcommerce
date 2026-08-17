@@ -90,18 +90,22 @@ export default async function SlugPage({
 
   const breadcrumb = <BreadcrumbJsonLd items={breadcrumbItems} />;
 
-  return !Array.isArray(pageBuilder) || pageBuilder?.length === 0 ? (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center p-4 text-center">
+  const blocks = Array.isArray(pageBuilder) ? pageBuilder : [];
+
+  // The empty state sits alongside PageBuilder, not instead of it: deleting the
+  // last block must still leave the `pageBuilder` container as a drop target.
+  return (
+    <main>
       {breadcrumb}
-      <h1 className="mb-4 font-semibold text-2xl capitalize">{title}</h1>
-      <p className="mb-6 text-muted-foreground">
-        This page has no content blocks yet.
-      </p>
-    </div>
-  ) : (
-    <>
-      {breadcrumb}
-      <PageBuilder id={_id} pageBuilder={pageBuilder} type={_type} />
-    </>
+      {blocks.length === 0 && (
+        <div className="flex min-h-[50vh] flex-col items-center justify-center p-4 text-center">
+          <h1 className="mb-4 font-semibold text-2xl capitalize">{title}</h1>
+          <p className="mb-6 text-muted-foreground">
+            This page has no content blocks yet.
+          </p>
+        </div>
+      )}
+      <PageBuilder id={_id} pageBuilder={blocks} type={_type} />
+    </main>
   );
 }

@@ -54,8 +54,11 @@ export default async function Page() {
 
   const { _id, _type, pageBuilder } = homePageData ?? {};
 
-  // One PageBuilder over the whole array. Splitting the hero into a second
-  // instance gave both the same document id, so each optimistic reducer only
-  // saw its own slice and a drag across the boundary never moved anything.
-  return <PageBuilder id={_id} pageBuilder={pageBuilder ?? []} type={_type} />;
+  // One PageBuilder over the whole array: two instances shared the document id,
+  // so each reducer saw only its own slice and a drag across them moved nothing.
+  return (
+    <main>
+      <PageBuilder id={_id} pageBuilder={pageBuilder ?? []} type={_type} />
+    </main>
+  );
 }
