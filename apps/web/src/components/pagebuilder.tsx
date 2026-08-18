@@ -2,10 +2,14 @@
 
 import { useOptimistic } from "@sanity/visual-editing/react";
 import { env } from "@workspace/env/client";
-import type { QueryHomePageDataResult } from "@workspace/sanity/types";
 import { createDataAttribute } from "next-sanity";
 import { useCallback, useMemo } from "react";
 
+import {
+  applyOptimisticPageBuilder,
+  type OptimisticDocument,
+  type PageBuilderBlock,
+} from "./pagebuilder-reducer";
 import { CollectionBanner } from "./sections/collection-banner";
 import { CTABlock } from "./sections/cta";
 import { EditorialTwoUp } from "./sections/editorial-two-up";
@@ -19,13 +23,9 @@ import { ImageLinkCards } from "./sections/image-link-cards";
 import { LayersShowcase } from "./sections/layers-showcase";
 import { SubscribeNewsletter } from "./sections/subscribe-newsletter";
 
-// More specific and descriptive type aliases
-type PageBuilderBlock = NonNullable<
-  NonNullable<QueryHomePageDataResult>["pageBuilder"]
->[number];
-
 export type PageBuilderProps = {
-  readonly pageBuilder?: PageBuilderBlock[];
+  // GROQ projects an unset array as `null`, so callers pass it through unguarded.
+  readonly pageBuilder?: PageBuilderBlock[] | null;
   readonly id: string;
   readonly type: string;
 };
@@ -100,15 +100,10 @@ function useOptimisticPageBuilder(
   initialBlocks: PageBuilderBlock[],
   documentId: string
 ) {
-  // biome-ignore lint/suspicious/noExplicitAny: <any is used to allow for dynamic component rendering>
-  return useOptimistic<PageBuilderBlock[], any>(
+  return useOptimistic<PageBuilderBlock[], OptimisticDocument>(
     initialBlocks,
-    (currentBlocks, action) => {
-      if (action.id === documentId && action.document?.pageBuilder) {
-        return action.document.pageBuilder;
-      }
-      return currentBlocks;
-    }
+    (currentBlocks, action) =>
+      applyOptimisticPageBuilder(currentBlocks, action, documentId)
   );
 }
 
@@ -161,11 +156,11 @@ function useBlockRenderer(id: string, type: string) {
  * PageBuilder component for rendering dynamic content blocks from Sanity CMS
  */
 export function PageBuilder({
-  pageBuilder: initialBlocks = [],
+  pageBuilder: initialBlocks,
   id,
   type,
 }: PageBuilderProps) {
-  const blocks = useOptimisticPageBuilder(initialBlocks, id);
+  const blocks = useOptimisticPageBuilder(initialBlocks ?? [], id);
   const { renderBlock } = useBlockRenderer(id, type);
 
   const containerDataAttribute = useMemo(
@@ -173,13 +168,12 @@ export function PageBuilder({
     [id, type]
   );
 
-  if (!blocks.length) {
-    return null;
-  }
-
+  // A `div`, not a `main`: every route here owns its own `main`, and nesting is
+  // invalid. Rendered even when empty, or an editor who deleted the last block
+  // has no `pageBuilder` drop target left.
   return (
-    <main className="flex flex-col" data-sanity={containerDataAttribute}>
+    <div className="flex flex-col" data-sanity={containerDataAttribute}>
       {blocks.map(renderBlock)}
-    </main>
+    </div>
   );
 }

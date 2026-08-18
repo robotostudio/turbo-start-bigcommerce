@@ -103,13 +103,11 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
             Unable to load blog posts at the moment.
           </p>
         </div>
-        {indexPageData.pageBuilder && indexPageData.pageBuilder.length > 0 && (
-          <PageBuilder
-            id={indexPageData._id}
-            pageBuilder={indexPageData.pageBuilder}
-            type={indexPageData._type}
-          />
-        )}
+        <PageBuilder
+          id={indexPageData._id}
+          pageBuilder={indexPageData.pageBuilder}
+          type={indexPageData._type}
+        />
       </main>
     );
   }
@@ -143,13 +141,11 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
             No blog posts available at the moment.
           </p>
         </div>
-        {indexPageData.pageBuilder && indexPageData.pageBuilder.length > 0 && (
-          <PageBuilder
-            id={indexPageData._id}
-            pageBuilder={indexPageData.pageBuilder}
-            type={indexPageData._type}
-          />
-        )}
+        <PageBuilder
+          id={indexPageData._id}
+          pageBuilder={indexPageData.pageBuilder}
+          type={indexPageData._type}
+        />
       </main>
     );
   }

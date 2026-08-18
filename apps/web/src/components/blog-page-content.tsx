@@ -116,9 +116,7 @@ export function BlogPageContent({
         </div>
       </div>
 
-      {pageBuilder && pageBuilder.length > 0 && (
-        <PageBuilder id={_id} pageBuilder={pageBuilder} type={_type} />
-      )}
+      <PageBuilder id={_id} pageBuilder={pageBuilder} type={_type} />
     </main>
   );
 }

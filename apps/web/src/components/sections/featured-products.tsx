@@ -73,10 +73,8 @@ export function FeaturedProducts({
    * catalog — so a curated row quietly became whatever shipped most recently,
    * under the editor's own heading, with nothing anywhere saying so.
    *
-   * `Array.isArray` rather than a length check on a possibly-absent field: in
-   * Presentation, `useOptimistic` swaps in the raw draft document, where
-   * `productHandles` was never computed at all. That is not the same as GROQ
-   * computing it and finding nothing left.
+   * `Array.isArray` rather than a length check: every pick dangling is not the
+   * same as the field never being projected, and only the first suppresses.
    */
   const picksAllDangled =
     Array.isArray(productHandles) &&
