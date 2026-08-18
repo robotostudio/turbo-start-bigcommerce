@@ -98,8 +98,15 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
   // The blog index carries the same `pageBuilderField` as the home page, so it
   // can hold the product-backed blocks too. The reads start once here, and the
   // map goes to every PageBuilder below — including the two error paths — with
-  // each block awaiting its own entry behind Suspense.
+  // each block unwrapping its own entry behind Suspense.
+  //
+  // They are also awaited before the render: this route reads `searchParams`,
+  // so it renders per request, and a boundary that actually suspends streams a
+  // fallback only JavaScript can swap out — skeletons forever for a no-JS
+  // visitor. A resolved promise never suspends, so waiting here keeps the
+  // first paint complete while the block-level boundaries stay in place.
   const blockData = pageBuilderSeeds(indexPageData.pageBuilder ?? []);
+  await Promise.all(Object.values(blockData));
 
   if (errTotalCount || totalCount === null || totalCount === undefined) {
     return (

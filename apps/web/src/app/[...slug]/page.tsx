@@ -92,7 +92,13 @@ export default async function SlugPage({
   const breadcrumb = <BreadcrumbJsonLd items={breadcrumbItems} />;
 
   const blocks = pageBuilder ?? [];
+  // Awaited because `dynamicParams` is true: a path missed by
+  // `generateStaticParams` renders per request, where a suspended boundary
+  // streams a fallback only JavaScript can swap out. Resolved promises never
+  // suspend, so waiting keeps the no-JS paint complete; for prerendered paths
+  // the build waits for every boundary anyway, and this changes nothing.
   const blockData = pageBuilderSeeds(blocks);
+  await Promise.all(Object.values(blockData));
 
   return blocks.length === 0 ? (
     <div className="flex min-h-[50vh] flex-col items-center justify-center p-4 text-center">
