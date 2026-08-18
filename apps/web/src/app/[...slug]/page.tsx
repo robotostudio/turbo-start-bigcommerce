@@ -100,23 +100,25 @@ export default async function SlugPage({
   const blockData = pageBuilderSeeds(blocks);
   await Promise.all(Object.values(blockData));
 
-  return blocks.length === 0 ? (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center p-4 text-center">
+  // The empty state sits alongside PageBuilder, not instead of it: deleting the
+  // last block must still leave the `pageBuilder` container as a drop target.
+  return (
+    <main>
       {breadcrumb}
-      <h1 className="mb-4 font-semibold text-2xl capitalize">{title}</h1>
-      <p className="mb-6 text-muted-foreground">
-        This page has no content blocks yet.
-      </p>
-    </div>
-  ) : (
-    <>
-      {breadcrumb}
+      {blocks.length === 0 && (
+        <div className="flex min-h-[50vh] flex-col items-center justify-center p-4 text-center">
+          <h1 className="mb-4 font-semibold text-2xl capitalize">{title}</h1>
+          <p className="mb-6 text-muted-foreground">
+            This page has no content blocks yet.
+          </p>
+        </div>
+      )}
       <PageBuilder
         blockData={blockData}
         id={_id}
         pageBuilder={blocks}
         type={_type}
       />
-    </>
+    </main>
   );
 }

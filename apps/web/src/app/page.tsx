@@ -54,42 +54,22 @@ export default async function Page() {
   }
 
   const { _id, _type, pageBuilder } = homePageData ?? {};
-  const blocks = pageBuilder ?? [];
 
-  const heroBlock = blocks.filter(
-    (b: { _type: string }) => (b._type as string) === "hero"
-  );
-  const remainingBlocks = blocks.filter(
-    (b: { _type: string }) => (b._type as string) !== "hero"
-  );
+  // The catalog reads start here without being awaited — each product-backed
+  // block suspends on its own entry inside PageBuilder, and the prerendered
+  // build waits for every boundary before shipping HTML.
+  const blockData = pageBuilderSeeds(pageBuilder ?? []);
 
-  // Starts the catalog reads without awaiting them — each product-backed block
-  // suspends on its own entry inside PageBuilder. The map is keyed by block
-  // `_key`, so handing the same one to both instances below is safe — each
-  // instance only ever looks up the blocks it renders.
-  const blockData = pageBuilderSeeds(blocks);
-
+  // One PageBuilder over the whole array: two instances shared the document id,
+  // so each reducer saw only its own slice and a drag across them moved nothing.
   return (
-    <main className="flex flex-col">
-      {heroBlock.length > 0 && (
-        <div className="[&>main]:my-0">
-          <PageBuilder
-            blockData={blockData}
-            id={_id}
-            pageBuilder={heroBlock}
-            type={_type}
-          />
-        </div>
-      )}
-
-      {remainingBlocks.length > 0 && (
-        <PageBuilder
-          blockData={blockData}
-          id={_id}
-          pageBuilder={remainingBlocks}
-          type={_type}
-        />
-      )}
+    <main>
+      <PageBuilder
+        blockData={blockData}
+        id={_id}
+        pageBuilder={pageBuilder ?? []}
+        type={_type}
+      />
     </main>
   );
 }

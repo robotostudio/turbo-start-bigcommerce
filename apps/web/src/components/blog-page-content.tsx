@@ -120,14 +120,12 @@ export function BlogPageContent({
         </div>
       </div>
 
-      {pageBuilder && pageBuilder.length > 0 && (
-        <PageBuilder
-          blockData={blockData}
-          id={_id}
-          pageBuilder={pageBuilder}
-          type={_type}
-        />
-      )}
+      <PageBuilder
+        blockData={blockData}
+        id={_id}
+        pageBuilder={pageBuilder}
+        type={_type}
+      />
     </main>
   );
 }
