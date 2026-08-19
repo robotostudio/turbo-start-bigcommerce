@@ -4,6 +4,7 @@ import { Button } from "@workspace/ui/components/button";
 import Link from "next/link";
 
 import { PageBuilder } from "@/components/pagebuilder";
+import { pageBuilderSeeds } from "@/components/pagebuilder-data.server";
 import { getSEOMetadata } from "@/lib/seo";
 
 async function fetchHomePageData() {
@@ -54,11 +55,21 @@ export default async function Page() {
 
   const { _id, _type, pageBuilder } = homePageData ?? {};
 
+  // The catalog reads start here without being awaited — each product-backed
+  // block suspends on its own entry inside PageBuilder, and the prerendered
+  // build waits for every boundary before shipping HTML.
+  const blockData = pageBuilderSeeds(pageBuilder ?? []);
+
   // One PageBuilder over the whole array: two instances shared the document id,
   // so each reducer saw only its own slice and a drag across them moved nothing.
   return (
     <main>
-      <PageBuilder id={_id} pageBuilder={pageBuilder ?? []} type={_type} />
+      <PageBuilder
+        blockData={blockData}
+        id={_id}
+        pageBuilder={pageBuilder ?? []}
+        type={_type}
+      />
     </main>
   );
 }

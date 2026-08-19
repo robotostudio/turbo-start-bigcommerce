@@ -11,6 +11,7 @@ import { BlogList } from "@/components/blog-list";
 import { BlogPagination } from "@/components/blog-pagination";
 import { BlogSearchResults } from "@/components/blog-search-results";
 import { PageBuilder } from "@/components/pagebuilder";
+import type { PageBuilderData } from "@/components/pagebuilder-data";
 import { useBlogSearch } from "@/hooks/use-blog-search";
 import type { Blog } from "@/types";
 import type { PaginationMetadata } from "@/utils";
@@ -21,6 +22,8 @@ type BlogPageContentProps = {
   categories: QueryBlogCategoriesResult;
   activeCategory: string;
   paginationMetadata: PaginationMetadata;
+  /** Catalog data the page resolved server-side; see `pagebuilder-data.ts`. */
+  blockData?: PageBuilderData;
 };
 
 export function BlogPageContent({
@@ -29,6 +32,7 @@ export function BlogPageContent({
   categories,
   activeCategory,
   paginationMetadata,
+  blockData,
 }: BlogPageContentProps) {
   const {
     title,
@@ -116,7 +120,12 @@ export function BlogPageContent({
         </div>
       </div>
 
-      <PageBuilder id={_id} pageBuilder={pageBuilder} type={_type} />
+      <PageBuilder
+        blockData={blockData}
+        id={_id}
+        pageBuilder={pageBuilder}
+        type={_type}
+      />
     </main>
   );
 }

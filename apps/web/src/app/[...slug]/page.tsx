@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { BreadcrumbJsonLd } from "@/components/json-ld";
 import { PageBuilder } from "@/components/pagebuilder";
+import { pageBuilderSeeds } from "@/components/pagebuilder-data.server";
 import { fetchOrFallback } from "@/lib/build-guard";
 import { getSEOMetadata } from "@/lib/seo";
 import { capitalize, getBaseUrl } from "@/utils";
@@ -90,7 +91,14 @@ export default async function SlugPage({
 
   const breadcrumb = <BreadcrumbJsonLd items={breadcrumbItems} />;
 
-  const blocks = Array.isArray(pageBuilder) ? pageBuilder : [];
+  const blocks = pageBuilder ?? [];
+  // Awaited because `dynamicParams` is true: a path missed by
+  // `generateStaticParams` renders per request, where a suspended boundary
+  // streams a fallback only JavaScript can swap out. Resolved promises never
+  // suspend, so waiting keeps the no-JS paint complete; for prerendered paths
+  // the build waits for every boundary anyway, and this changes nothing.
+  const blockData = pageBuilderSeeds(blocks);
+  await Promise.all(Object.values(blockData));
 
   // The empty state sits alongside PageBuilder, not instead of it: deleting the
   // last block must still leave the `pageBuilder` container as a drop target.
@@ -105,7 +113,12 @@ export default async function SlugPage({
           </p>
         </div>
       )}
-      <PageBuilder id={_id} pageBuilder={blocks} type={_type} />
+      <PageBuilder
+        blockData={blockData}
+        id={_id}
+        pageBuilder={blocks}
+        type={_type}
+      />
     </main>
   );
 }

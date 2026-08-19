@@ -6,12 +6,11 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import { draftMode } from "next/headers";
 import { VisualEditing } from "next-sanity/visual-editing";
-import { Suspense } from "react";
 import { preconnect, prefetchDNS } from "react-dom";
 
 import { CartToasts } from "@/components/cart/cart-toasts";
-import { FooterServer, FooterSkeleton } from "@/components/footer";
 import { CombinedJsonLd } from "@/components/combined-json-ld";
+import { FooterServer } from "@/components/footer";
 import { Navbar } from "@/components/navbar";
 import { PreviewBar } from "@/components/preview-bar";
 import { PromoBanner } from "@/components/promo-banner";
@@ -61,9 +60,13 @@ export default async function RootLayout({
             <div className="flex-1" id="main-content" tabIndex={-1}>
               {children}
             </div>
-            <Suspense fallback={<FooterSkeleton />}>
-              <FooterServer />
-            </Suspense>
+            {/* Deliberately not wrapped in Suspense. A boundary here streams
+             * the resolved footer into a trailing `<div hidden>` and swaps it
+             * in with an inline script, so with JavaScript off every page on
+             * the site ended in a permanent skeleton. Blocking on it instead
+             * puts the real footer in the initial HTML; the data is cached
+             * Sanity content shared by every route, so the cost is small. */}
+            <FooterServer />
           </div>
           {modal}
           <CartToasts />

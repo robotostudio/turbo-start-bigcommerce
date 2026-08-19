@@ -1,10 +1,9 @@
 import "server-only";
 
-import { getProductDetail, getProductDetailById } from "./fetch-product";
-import type { ProductCardProps } from "./product-card";
-
 import { getNewestProductIds } from "@/lib/bigcommerce/featured";
 import { productToCardProps } from "@/lib/bigcommerce/product-card";
+import { getProductDetail, getProductDetailById } from "./fetch-product";
+import type { ProductCardProps } from "./product-card";
 
 /** How many products a Featured Products block falls back to. */
 const FEATURED_FALLBACK_COUNT = 4;
@@ -12,10 +11,11 @@ const FEATURED_FALLBACK_COUNT = 4;
 /**
  * Cards for one Featured Products block.
  *
- * Lives here rather than in the page because two callers need it: the home page
- * resolves it server-side for the first paint, and `/api/featured-products/cards`
- * re-resolves it on the client so a prerendered row cannot outlive the catalog
- * it describes.
+ * Lives here rather than in the page because two callers need it:
+ * `pagebuilder-data.server.ts` resolves it while the page renders, so the row
+ * ships as real HTML and works without JavaScript, and
+ * `/api/featured-products/cards` re-resolves it once the block hydrates so a
+ * prerendered row cannot outlive the catalog it describes.
  *
  * The full `ProductDetail` read, not the lean card fragment, because these
  * cards carry swatches, sizes, badges and a hover add-to-cart — all of which

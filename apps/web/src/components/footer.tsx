@@ -31,8 +31,8 @@ type FooterProps = {
 };
 
 export async function FooterServer() {
-  // No guard needed: `sanityFetch` degrades to null data when the Content Lake
-  // is unreachable, and the skeleton below is already the empty-data path.
+  // Awaited by the root layout without a Suspense boundary, so this resolves
+  // before any HTML is flushed and the footer survives JavaScript being off.
   const [response, settingsResponse] = await Promise.all([
     sanityFetch({
       query: queryFooterData,
@@ -42,8 +42,11 @@ export async function FooterServer() {
     }),
   ]);
 
+  // `sanityFetch` degrades to null data when the Content Lake is unreachable.
+  // Nothing is the honest answer here: this is no longer a loading state, and
+  // a pulsing skeleton that will never resolve reads as a broken page.
   if (!(response?.data && settingsResponse?.data)) {
-    return <FooterSkeleton />;
+    return null;
   }
   return <Footer data={response.data} settingsData={settingsResponse.data} />;
 }
@@ -166,31 +169,6 @@ function HostingCredits() {
         Powered by BigCommerce
       </a>
     </div>
-  );
-}
-
-export function FooterSkeleton() {
-  return (
-    <footer className="mt-20 border-t py-9">
-      <div className="site-container">
-        <div className="flex flex-col justify-between gap-10 lg:flex-row">
-          <div className="h-32 w-full max-w-84 animate-pulse rounded bg-muted" />
-          <div className="grid grid-cols-2 gap-8 sm:flex sm:gap-14">
-            {[1, 2, 3, 4].map((col) => (
-              <div className="space-y-3" key={col}>
-                <div className="h-4 w-16 animate-pulse rounded bg-muted" />
-                {[1, 2, 3].map((item) => (
-                  <div
-                    className="h-4 w-20 animate-pulse rounded bg-muted"
-                    key={item}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </footer>
   );
 }
 

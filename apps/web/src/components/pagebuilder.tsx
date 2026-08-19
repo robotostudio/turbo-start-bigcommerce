@@ -3,8 +3,9 @@
 import { useOptimistic } from "@sanity/visual-editing/react";
 import { env } from "@workspace/env/client";
 import { createDataAttribute } from "next-sanity";
-import { useCallback, useMemo } from "react";
+import { Suspense, use, useCallback, useMemo } from "react";
 
+import type { PageBuilderBlockSeed, PageBuilderData } from "./pagebuilder-data";
 import {
   applyOptimisticPageBuilder,
   type OptimisticDocument,
@@ -28,6 +29,18 @@ export type PageBuilderProps = {
   readonly pageBuilder?: PageBuilderBlock[] | null;
   readonly id: string;
   readonly type: string;
+  /**
+   * Catalog reads the page started server-side, keyed by block `_key` — still
+   * pending, and unwrapped per block inside a Suspense boundary below, so the
+   * resolve happens at block level rather than in the page.
+   *
+   * The promises have to be created in the page: this component is
+   * `"use client"` because `useOptimistic` powers live editing, and only a
+   * server render can start a catalog read. Threading the pending reads down
+   * and suspending per block is what lets the product blocks paint real HTML
+   * without JavaScript while visual editing keeps working.
+   */
+  readonly blockData?: PageBuilderData;
 };
 
 type SanityDataAttributeConfig = {
@@ -94,6 +107,28 @@ function UnknownBlockError({
 }
 
 /**
+ * Unwraps a block's pending catalog read inside its own Suspense boundary.
+ * `use` suspends this subtree — and only it — until the read lands; the
+ * boundary's fallback is the same block without a seed, which is exactly its
+ * skeleton state. A `null` result is a read that failed: the `seed` prop stays
+ * off the block, which falls back to fetching from the browser as before.
+ */
+function SeededBlock({
+  block,
+  component: Component,
+  seedPromise,
+}: {
+  block: PageBuilderBlock;
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic block component mapping requires any
+  component: React.ComponentType<any>;
+  seedPromise: Promise<PageBuilderBlockSeed | null>;
+}) {
+  const seed = use(seedPromise);
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic block component mapping requires any
+  return <Component {...(block as any)} {...(seed ? { seed } : {})} />;
+}
+
+/**
  * Hook to handle optimistic updates for page builder blocks
  */
 function useOptimisticPageBuilder(
@@ -110,7 +145,11 @@ function useOptimisticPageBuilder(
 /**
  * Custom hook for block component rendering logic
  */
-function useBlockRenderer(id: string, type: string) {
+function useBlockRenderer(
+  id: string,
+  type: string,
+  blockData: PageBuilderData | undefined
+) {
   const createBlockDataAttribute = useCallback(
     (blockKey: string) =>
       createSanityDataAttribute({
@@ -136,17 +175,37 @@ function useBlockRenderer(id: string, type: string) {
         );
       }
 
+      // Absent for every block type that needs no catalog read. An optimistic
+      // edit in the Studio can also mint a block whose `_key` was never read,
+      // which lands here the same way: no pending read, plain client fetch.
+      const seedPromise = blockData?.[block._key];
+
       return (
         <div
           data-sanity={createBlockDataAttribute(block._key)}
           key={`${block._type}-${block._key}`}
         >
-          {/** biome-ignore lint/suspicious/noExplicitAny: <any is used to allow for dynamic component rendering> */}
-          <Component {...(block as any)} />
+          {seedPromise ? (
+            <Suspense
+              fallback={
+                /** biome-ignore lint/suspicious/noExplicitAny: <any is used to allow for dynamic component rendering> */
+                <Component {...(block as any)} />
+              }
+            >
+              <SeededBlock
+                block={block}
+                component={Component}
+                seedPromise={seedPromise}
+              />
+            </Suspense>
+          ) : (
+            /** biome-ignore lint/suspicious/noExplicitAny: <any is used to allow for dynamic component rendering> */
+            <Component {...(block as any)} />
+          )}
         </div>
       );
     },
-    [createBlockDataAttribute]
+    [createBlockDataAttribute, blockData]
   );
 
   return { renderBlock };
@@ -159,9 +218,10 @@ export function PageBuilder({
   pageBuilder: initialBlocks,
   id,
   type,
+  blockData,
 }: PageBuilderProps) {
   const blocks = useOptimisticPageBuilder(initialBlocks ?? [], id);
-  const { renderBlock } = useBlockRenderer(id, type);
+  const { renderBlock } = useBlockRenderer(id, type, blockData);
 
   const containerDataAttribute = useMemo(
     () => createSanityDataAttribute({ id, type, path: "pageBuilder" }),
