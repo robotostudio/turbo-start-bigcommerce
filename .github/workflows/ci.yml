@@ -19,6 +19,7 @@ permissions:
 
 jobs:
   ci:
+    name: Lint, Format, Type Check & Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
