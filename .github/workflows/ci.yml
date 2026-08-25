@@ -25,6 +25,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       # No `version` input on purpose: pnpm/action-setup reads the version from
       # the root package.json `packageManager` field. Passing both makes it
