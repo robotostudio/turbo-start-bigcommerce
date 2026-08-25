@@ -31,7 +31,7 @@ jobs:
       # No `version` input on purpose: pnpm/action-setup reads the version from
       # the root package.json `packageManager` field. Passing both makes it
       # throw "Multiple versions of pnpm specified".
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
 
       - uses: actions/setup-node@v5
         with:
