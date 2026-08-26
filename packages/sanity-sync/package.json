@@ -26,9 +26,9 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@workspace/typescript-config": "workspace:*",
-    "sanity": "^6.9.1",
+    "sanity": "catalog:",
     "tsx": "^4.21.0",
     "typescript": "catalog:",
-    "vitest": "^4.1.10"
+    "vitest": "catalog:"
   }
 }
