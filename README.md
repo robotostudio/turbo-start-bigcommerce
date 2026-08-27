@@ -4,8 +4,8 @@ A headless commerce starter: BigCommerce, Sanity, and Next.js 16 in a Turborepo 
 
 Built by [Roboto Studio](https://robotostudio.com).
 
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-10.28-orange)](https://pnpm.io/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D24-brightgreen)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-11.24-orange)](https://pnpm.io/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
 [![Sanity](https://img.shields.io/badge/Sanity-v5-red)](https://www.sanity.io/)
 [![BigCommerce](https://img.shields.io/badge/BigCommerce-GraphQL%20Storefront-blue)](https://developer.bigcommerce.com/docs/storefront/graphql)
@@ -52,8 +52,8 @@ packages/
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) >= 22
-- [pnpm](https://pnpm.io/) 10.28+
+- [Node.js](https://nodejs.org/) >= 24
+- [pnpm](https://pnpm.io/) 11.24+
 - A [Sanity](https://www.sanity.io/) account (free)
 - A [BigCommerce](https://developer.bigcommerce.com/docs/start/sandbox) store. A free partner sandbox is enough for everything here except faceted search, which is plan-gated.
 

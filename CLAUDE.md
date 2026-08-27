@@ -105,9 +105,9 @@ packages/
 
 ## Tooling
 
-- **Node**: >=22.12 (Sanity v6 requires it)
-- **Package manager**: pnpm 10.28.0 (workspace protocol, catalog for shared versions in `pnpm-workspace.yaml`)
-- **Formatter/Linter**: Biome 2.3.8 — double quotes, semicolons, 2-space indent, 80 char width, trailing commas es5
+- **Node**: >=24.0.0
+- **Package manager**: pnpm 11.24.0 (workspace protocol, catalog for shared versions in `pnpm-workspace.yaml`)
+- **Formatter/Linter**: Biome 2.5.10 — double quotes, semicolons, 2-space indent, 80 char width, trailing commas es5
 - **Import order** (Biome): URL/Node → packages → blank line → aliases/paths
 - **TypeScript**: strict, `noUncheckedIndexedAccess`, module NodeNext, target ES2022
 - **Tailwind CSS v4**: CSS-first config via `@import "tailwindcss"`, OKLCH color tokens, dark mode via `@custom-variant`
