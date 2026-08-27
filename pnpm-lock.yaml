@@ -81,9 +81,6 @@ importers:
 
   apps/studio:
     dependencies:
-      '@sanity/asset-utils':
-        specifier: ^2.3.0
-        version: 2.3.0
       '@sanity/assist':
         specifier: ^6.1.21
         version: 6.1.21(200129a04b86f4ab47f1a395f3c9d07d)
@@ -190,9 +187,6 @@ importers:
       '@portabletext/markdown':
         specifier: ^2.0.0
         version: 2.0.0
-      '@sanity/asset-utils':
-        specifier: ^2.3.0
-        version: 2.3.0
       '@sanity/client':
         specifier: 'catalog:'
         version: 7.26.2

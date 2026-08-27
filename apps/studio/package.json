@@ -24,7 +24,6 @@
     "sanity"
   ],
   "dependencies": {
-    "@sanity/asset-utils": "^2.3.0",
     "@sanity/assist": "^6.1.21",
     "@sanity/client": "catalog:",
     "@sanity/functions": "^1.6.9",
