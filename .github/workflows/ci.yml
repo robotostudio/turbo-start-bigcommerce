@@ -24,18 +24,18 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       # No `version` input on purpose: pnpm/action-setup reads the version from
       # the root package.json `packageManager` field. Passing both makes it
       # throw "Multiple versions of pnpm specified".
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
