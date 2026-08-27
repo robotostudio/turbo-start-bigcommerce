@@ -2,7 +2,7 @@ export function LinkedinIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
-      fill="none"
+      fill="currentColor"
       height="18"
       viewBox="0 0 18 18"
       width="18"
@@ -18,7 +18,7 @@ export function XIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
-      fill="none"
+      fill="currentColor"
       height="18"
       viewBox="0 0 20 18"
       width="20"
@@ -34,7 +34,7 @@ export function YoutubeIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
-      fill="none"
+      fill="currentColor"
       height="16"
       viewBox="0 0 20 16"
       width="20"

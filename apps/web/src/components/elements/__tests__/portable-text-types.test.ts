@@ -75,8 +75,8 @@ describe("accordion portable text type", () => {
   it("renders a link annotation inside a group as an anchor with an href", () => {
     const Accordion = sharedPortableTextTypes().accordion;
     if (typeof Accordion !== "function") throw new Error("no accordion type");
-    // biome-ignore lint/suspicious/noExplicitAny: Portable Text render props
     const body = findPortableText(
+      // biome-ignore lint/suspicious/noExplicitAny: Portable Text render props
       (Accordion as any)({ value: accordionWithLink })
     );
     expect(body).not.toBeNull();

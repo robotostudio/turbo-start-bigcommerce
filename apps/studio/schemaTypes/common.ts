@@ -1,3 +1,4 @@
+import { iconNames } from "lucide-react/dynamic.mjs";
 import {
   defineField,
   type ImageRule,
@@ -63,10 +64,13 @@ export const iconField = defineField({
   name: "icon",
   title: "Icon",
   options: {
-    // storeSvg: true,
-    // providers: ["fi"],
+    // The picker lists icons from its own lucide-react (1.0.3 pins ^0.532.0)
+    // while both renderers resolve DynamicIcon from the catalog's 1.34.0. A
+    // name only the picker knows saves fine, then silently renders the fallback
+    // triangle -- the brand icons v1 dropped, plus the picker's kebab-case bug
+    // on digit suffixes ("volume2" where lucide names it "volume-2").
+    allowedIcons: iconNames,
   },
-  // type: "iconPicker",
   type: "lucide-icon",
   description:
     "Choose a small picture symbol to represent this item, like a home icon or shopping cart",

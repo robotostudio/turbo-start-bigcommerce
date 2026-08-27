@@ -43,7 +43,7 @@ export function ProductAccordion({
             {section.isHtml ? (
               <div
                 className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground leading-relaxed"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized upstream with sanitize-html
+                // sanitized upstream with sanitize-html
                 dangerouslySetInnerHTML={{ __html: section.content }}
               />
             ) : (

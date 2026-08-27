@@ -24,7 +24,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "evlog": "^2.25.0"
+    "evlog": "^2.27.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",
