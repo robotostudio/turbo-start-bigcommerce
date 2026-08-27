@@ -14,12 +14,11 @@ on:
   # default branch, so this does nothing until it is merged to `main`.
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   ci:
     name: Lint, Format, Type Check & Tests
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
