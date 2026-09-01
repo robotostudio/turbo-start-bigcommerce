@@ -8,9 +8,10 @@ import { BlogShare } from "@/components/blog-share";
 import { RichText } from "@/components/elements/rich-text";
 import { TableOfContent } from "@/components/elements/table-of-content";
 import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/json-ld";
+import { getJsonLdSettings } from "@/lib/json-ld-data";
 import { getHotspotImages } from "@/lib/bigcommerce/hotspot-images";
 import { fetchOrFallback } from "@/lib/build-guard";
-import { getSEOMetadata } from "@/lib/seo";
+import { seoFromDocument } from "@/lib/seo";
 import { getBaseUrl } from "@/utils";
 
 function formatBlogDate(date: string | null | undefined) {
@@ -22,10 +23,11 @@ function formatBlogDate(date: string | null | undefined) {
   });
 }
 
-async function fetchBlogSlugPageData(slug: string) {
+async function fetchBlogSlugPageData(slug: string, stega = true) {
   return await sanityFetch({
     query: queryBlogSlugPageData,
     params: { slug: `/blog/${slug}` },
+    stega,
   });
 }
 
@@ -35,23 +37,10 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const { data } = await fetchBlogSlugPageData(slug);
-  return getSEOMetadata(
-    data
-      ? {
-          title: data?.title ?? data?.seoTitle ?? "",
-          description: data?.description ?? data?.seoDescription ?? "",
-          slug: data?.slug,
-          contentId: data?._id,
-          contentType: data?._type,
-          pageType: "article",
-          // The Studio's "hide from search engines" toggle. It rides through on
-          // the query's bare `...` spread, so forgetting it here is silent —
-          // the editor ticks the box and the post still ships `index, follow`.
-          seoNoIndex: data?.seoNoIndex ?? false,
-        }
-      : {}
-  );
+  // `stega: false`: on a preview deployment the encoding puts zero-width
+  // characters into `<title>` and `og:title`, where no overlay can decode them.
+  const { data } = await fetchBlogSlugPageData(slug, false);
+  return seoFromDocument(data, { slug: `/blog/${slug}`, pageType: "article" });
 }
 
 export async function generateStaticParams() {
@@ -92,7 +81,12 @@ export default async function BlogSlugPage({
 
   // Images for the body's product hotspots, read live from BigCommerce like
   // price and stock (ROB-2614). No hotspots in the body means no request.
-  const hotspotImages = await getHotspotImages(richText);
+  // Settings ride along for the article's `publisher`: without them every post
+  // declared an organisation literally named "Website".
+  const [hotspotImages, settings] = await Promise.all([
+    getHotspotImages(richText),
+    getJsonLdSettings(),
+  ]);
 
   const baseUrl = getBaseUrl();
   const shareUrl = `${baseUrl}${dataSlug ?? `/blog/${slug}`}`;
@@ -101,7 +95,7 @@ export default async function BlogSlugPage({
 
   return (
     <div className=" site-container px-4 py-16 md:px-8">
-      <ArticleJsonLd article={data} />
+      <ArticleJsonLd article={data} settings={settings} />
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: baseUrl },

@@ -4,10 +4,11 @@ import { querySlugPageData, querySlugPagePaths } from "@workspace/sanity/query";
 import { notFound } from "next/navigation";
 
 import { BreadcrumbJsonLd } from "@/components/json-ld";
+import { PageBuilderJsonLd } from "@/components/page-builder-json-ld";
 import { PageBuilder } from "@/components/pagebuilder";
 import { pageBuilderSeeds } from "@/components/pagebuilder-data.server";
 import { fetchOrFallback } from "@/lib/build-guard";
-import { getSEOMetadata } from "@/lib/seo";
+import { seoFromDocument } from "@/lib/seo";
 import { capitalize, getBaseUrl } from "@/utils";
 
 async function fetchSlugPageData(slug: string, stega = true) {
@@ -26,21 +27,9 @@ export async function generateMetadata({
   const { slug } = await params;
   const slugString = slug.join("/");
   const { data: pageData } = await fetchSlugPageData(slugString, false);
-  return getSEOMetadata(
-    pageData
-      ? {
-          title: pageData?.title ?? pageData?.seoTitle ?? "",
-          description: pageData?.description ?? pageData?.seoDescription ?? "",
-          slug: pageData?.slug,
-          contentId: pageData?._id,
-          contentType: pageData?._type,
-          // The Studio's "hide from search engines" toggle. It rides through on
-          // the query's bare `...` spread, so forgetting it here is silent —
-          // the editor ticks the box and the page still ships `index, follow`.
-          seoNoIndex: pageData?.seoNoIndex ?? false,
-        }
-      : {}
-  );
+  // `seoNoIndex` and the Open Graph overrides reach here on the query's bare
+  // `...` spread, so nothing below names them.
+  return seoFromDocument(pageData, { slug: `/${slugString}` });
 }
 
 export async function generateStaticParams() {
@@ -105,6 +94,7 @@ export default async function SlugPage({
   return (
     <main>
       {breadcrumb}
+      <PageBuilderJsonLd pageBuilder={blocks} />
       {blocks.length === 0 && (
         <div className="flex min-h-[50vh] flex-col items-center justify-center p-4 text-center">
           <h1 className="mb-4 font-semibold text-2xl capitalize">{title}</h1>

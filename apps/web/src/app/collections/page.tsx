@@ -9,7 +9,7 @@ import {
   getCategoryTree,
 } from "@/lib/bigcommerce/catalog";
 import { categoryToCardProps } from "@/lib/collection-card";
-import { getSEOMetadata } from "@/lib/seo";
+import { seoFromDocument } from "@/lib/seo";
 import { getBaseUrl } from "@/utils";
 
 /**
@@ -25,11 +25,13 @@ export async function generateMetadata() {
     query: queryCollectionsIndexPageData,
   });
 
-  return getSEOMetadata({
-    title: data?.seoTitle ?? data?.title ?? "Collections",
-    description:
-      data?.seoDescription ?? data?.subtitle ?? "Browse all collections",
+  // `subtitle` is this document's stand-in for `description`, so it is passed
+  // as the fallback rather than read by `seoFromDocument`, which only knows
+  // the fields every Sanity-backed route shares.
+  return seoFromDocument(data, {
     slug: "/collections",
+    title: "Collections",
+    description: data?.subtitle ?? "Browse all collections",
   });
 }
 

@@ -31,6 +31,13 @@ vi.mock("@workspace/env/client", () => ({
   },
 }));
 
+// Reached transitively through `@/lib/seo`; `defineLive` refuses to be
+// evaluated in this environment at all.
+vi.mock("@workspace/sanity/live", () => ({
+  PUBLISHED: {},
+  sanityFetch: () => Promise.resolve({ data: null }),
+}));
+
 const NOT_FOUND = "NEXT_NOT_FOUND";
 vi.mock("next/navigation", () => ({
   notFound: () => {

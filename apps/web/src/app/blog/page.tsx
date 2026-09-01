@@ -10,9 +10,10 @@ import { notFound } from "next/navigation";
 import { BlogHeader } from "@/components/blog-card";
 import { BlogPageContent } from "@/components/blog-page-content";
 import { BreadcrumbJsonLd } from "@/components/json-ld";
+import { PageBuilderJsonLd } from "@/components/page-builder-json-ld";
 import { PageBuilder } from "@/components/pagebuilder";
 import { pageBuilderSeeds } from "@/components/pagebuilder-data.server";
-import { getSEOMetadata } from "@/lib/seo";
+import { seoFromDocument } from "@/lib/seo";
 import {
   calculatePaginationMetadata,
   getBaseUrl,
@@ -50,24 +51,6 @@ async function fetchBlogCategories() {
   return res.data;
 }
 
-export async function generateMetadata() {
-  const { data: result } = await sanityFetch({
-    query: queryBlogIndexPageData,
-    stega: false,
-  });
-  return getSEOMetadata(
-    result
-      ? {
-          title: result?.title ?? result?.seoTitle ?? "",
-          description: result?.description ?? result?.seoDescription ?? "",
-          slug: result?.slug,
-          contentId: result?._id,
-          contentType: result?._type,
-        }
-      : {}
-  );
-}
-
 type BlogPageProps = {
   searchParams: Promise<{
     page?: string;
@@ -75,9 +58,51 @@ type BlogPageProps = {
   }>;
 };
 
+/**
+ * `Number(page)` alone accepted `1.5`, `-3`, `1e3` and `Infinity`, all of which
+ * reached the slice arithmetic and rendered an empty list at HTTP 200 — a soft
+ * 404 a crawler reads as a real page.
+ */
+function parsePageParam(raw: string | undefined): number | null {
+  if (raw === undefined) {
+    return 1;
+  }
+  if (!/^[1-9][0-9]*$/.test(raw)) {
+    return null;
+  }
+  return Number(raw);
+}
+
+export async function generateMetadata({ searchParams }: BlogPageProps) {
+  const { page } = await searchParams;
+  const { data: result } = await sanityFetch({
+    query: queryBlogIndexPageData,
+    stega: false,
+  });
+  // Self-referencing: page 3 canonicalising to page 1 claims the posts only
+  // listed on page 3 belong to a URL that does not show them. An `alternates`
+  // override, not the `slug`, which also feeds the `.md` twin — that stays
+  // `/blog.md`.
+  const currentPage = parsePageParam(page);
+  const meta = await seoFromDocument(result, { slug: "/blog" });
+  if (!currentPage || currentPage === 1) {
+    return meta;
+  }
+  return {
+    ...meta,
+    alternates: {
+      ...meta.alternates,
+      canonical: `${getBaseUrl()}/blog?page=${currentPage}`,
+    },
+  };
+}
+
 export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
   const { page, category } = await searchParams;
-  const currentPage = page ? Number(page) : 1;
+  const currentPage = parsePageParam(page);
+  if (currentPage === null) {
+    notFound();
+  }
   const activeCategory = category ?? "";
 
   // Fetch page data, categories, and total count in parallel
@@ -117,6 +142,7 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
             Unable to load blog posts at the moment.
           </p>
         </div>
+        <PageBuilderJsonLd pageBuilder={indexPageData.pageBuilder} />
         <PageBuilder
           blockData={blockData}
           id={indexPageData._id}
@@ -138,6 +164,11 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
     currentPage
   );
 
+  // Page 1 stays 200 on an empty blog; past the last page is not a page.
+  if (currentPage > 1 && currentPage > paginationMetadata.totalPages) {
+    notFound();
+  }
+
   const { start, end } = getBlogPaginationStartEnd(currentPage);
   const blogStart = currentPage === 1 ? 0 : start + featuredBlogsCount;
   const blogEnd =
@@ -156,6 +187,7 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
             No blog posts available at the moment.
           </p>
         </div>
+        <PageBuilderJsonLd pageBuilder={indexPageData.pageBuilder} />
         <PageBuilder
           blockData={blockData}
           id={indexPageData._id}
@@ -173,6 +205,7 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
       <BreadcrumbJsonLd
         items={[{ name: "Home", url: baseUrl }, { name: "Blog" }]}
       />
+      <PageBuilderJsonLd pageBuilder={indexPageData.pageBuilder} />
       <BlogPageContent
         activeCategory={activeCategory}
         blockData={blockData}
