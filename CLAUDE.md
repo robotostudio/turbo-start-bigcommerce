@@ -87,6 +87,12 @@ packages/
 5. Create React component in `apps/web/src/components/sections/`
 6. Register in `BLOCK_COMPONENTS` map in `apps/web/src/components/pagebuilder.tsx`
 7. Add type to `PageBuilderBlockTypes` union in `apps/web/src/types.ts`
+8. If the block carries structured data, add a case to
+   `apps/web/src/components/page-builder-json-ld.tsx` — **not** to the block
+   component. `pagebuilder.tsx` is `"use client"`, so a `<script
+   type="application/ld+json">` rendered inside a block is built in the browser
+   bundle; and a component that hard-codes its own `id` collides with itself
+   when an editor adds the block twice. Key the script on the block's `_key`.
 
 ### Sanity Studio Structure
 
@@ -99,7 +105,16 @@ packages/
 
 - **Env validation**: `@workspace/env/client` and `@workspace/env/server` — validated imports, never raw `process.env`
 - **Path aliases**: `@/*` → `apps/web/src/*`, `@workspace/ui/*` → `packages/ui/src/*`
-- **SEO**: `getSEOMetadata()` in `apps/web/src/lib/seo.ts`, OG images via `/api/og` route
+- **SEO**: `seoFromDocument()` in `apps/web/src/lib/seo.ts` is what a Sanity-backed
+  route's `generateMetadata` calls; `getSEOMetadata()` underneath it is for the
+  BigCommerce-backed routes, which have no document. Social cards resolve in
+  order: an explicit `ogImage`, then the generated `/api/og` card when the page
+  has a `contentType`/`contentId`, then `settings.ogImage`, then
+  `public/opengraph.png`
+- **Structured data**: `page-builder-json-ld.tsx` (per-block, server-rendered)
+  and `combined-json-ld.tsx` (site-wide), both reading settings through
+  `lib/json-ld-data.ts`. `components/json-ld.tsx` takes its data as props so it
+  stays importable from client components
 - **Visual editing**: `VisualEditing` from `next-sanity` + `createDataAttribute` per block, draft mode via `/api/presentation-draft`
 - **Redirects**: fetched from Sanity at Next.js build time via `queryRedirects` in `next.config.ts`
 
@@ -120,6 +135,10 @@ packages/
 - `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET`, `NEXT_PUBLIC_SANITY_API_VERSION`, `NEXT_PUBLIC_SANITY_STUDIO_URL`
 - `SANITY_API_READ_TOKEN`, `SANITY_API_WRITE_TOKEN`
 - `BIGCOMMERCE_STORE_HASH`, `BIGCOMMERCE_STOREFRONT_TOKEN`, `BIGCOMMERCE_CHANNEL_ID`, `BIGCOMMERCE_PRERENDER_LIMIT`
+- `NEXT_PUBLIC_SITE_URL` — canonical origin, no trailing slash. Checked *before* the
+  `VERCEL_*` vars, so it also overrides the generated `*.vercel.app` URL. Required off
+  Vercel: `getBaseUrl()` otherwise falls back to `localhost:3000` and every canonical, OG
+  URL and sitemap entry ships pointing there
 
 The storefront token must be a **private** one. A vanilla token stops working
 server-to-server on 2027-03-31 and its CORS allowlist caps at two origins — one short

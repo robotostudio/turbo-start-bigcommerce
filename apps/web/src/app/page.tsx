@@ -3,9 +3,10 @@ import { queryHomePageData } from "@workspace/sanity/query";
 import { Button } from "@workspace/ui/components/button";
 import Link from "next/link";
 
+import { PageBuilderJsonLd } from "@/components/page-builder-json-ld";
 import { PageBuilder } from "@/components/pagebuilder";
 import { pageBuilderSeeds } from "@/components/pagebuilder-data.server";
-import { getSEOMetadata } from "@/lib/seo";
+import { seoFromDocument } from "@/lib/seo";
 
 async function fetchHomePageData() {
   return await sanityFetch({
@@ -15,18 +16,7 @@ async function fetchHomePageData() {
 
 export async function generateMetadata() {
   const { data: homePageData } = await fetchHomePageData();
-  return getSEOMetadata(
-    homePageData
-      ? {
-          title: homePageData?.title ?? homePageData?.seoTitle ?? "",
-          description:
-            homePageData?.description ?? homePageData?.seoDescription ?? "",
-          slug: homePageData?.slug,
-          contentId: homePageData?._id,
-          contentType: homePageData?._type,
-        }
-      : {}
-  );
+  return seoFromDocument(homePageData, { slug: "/" });
 }
 
 export default async function Page() {
@@ -64,6 +54,7 @@ export default async function Page() {
   // so each reducer saw only its own slice and a drag across them moved nothing.
   return (
     <main>
+      <PageBuilderJsonLd pageBuilder={pageBuilder} />
       <PageBuilder
         blockData={blockData}
         id={_id}

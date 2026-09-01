@@ -196,7 +196,7 @@ function FullBleedHero({
               )}
             >
               <div className={pos.lockup}>
-                {title && <p className={pos.title}>{title}</p>}
+                {title && <h1 className={pos.title}>{title}</h1>}
                 {buttons?.map((button) =>
                   button.href ? (
                     <Link

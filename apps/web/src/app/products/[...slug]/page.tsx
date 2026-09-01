@@ -247,14 +247,13 @@ export default async function ProductPage({ params }: PageProps) {
         handle={handle}
         product={product}
       />
+      {/* Two crumbs, not three: the middle one linked `/collections`, which is
+       * not this URL's parent. BigCommerce returns the real category chain but
+       * not through this route's projection — see the category page's note. */}
       <BreadcrumbJsonLd
-        items={[
-          { name: "Home", url: baseUrl },
-          { name: "Collections", url: `${baseUrl}/collections` },
-          { name: title },
-        ]}
+        items={[{ name: "Home", url: baseUrl }, { name: title }]}
       />
-      <div className="site-container py-8">
+      <main className="site-container py-8">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)] xl:grid-cols-[minmax(0,1fr)_minmax(0,600px)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,760px)]">
           {/* Info column — sticky on desktop, uniform 32px rhythm */}
           <div className="flex min-w-0 max-w-2xl flex-col gap-8 self-start lg:sticky lg:top-24">
@@ -340,7 +339,7 @@ export default async function ProductPage({ params }: PageProps) {
         </div>
 
         <RelatedProducts product={product} />
-      </div>
+      </main>
     </>
   );
 }

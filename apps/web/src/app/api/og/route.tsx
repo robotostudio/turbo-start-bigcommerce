@@ -25,12 +25,17 @@ import {
 // neither of which the edge bundle carries. `ImageResponse` renders the same on
 // Node, and the hour of caching is a response header rather than a runtime.
 
-const errorContent = (
-  <div tw="flex flex-col w-full h-full items-center justify-center">
-    <div tw=" flex w-full h-full items-center justify-center ">
-      <h1 tw="text-white">Something went Wrong with image generation</h1>
-    </div>
-  </div>
+/**
+ * What an unresolvable request renders. It used to be the words "Something
+ * went Wrong with image generation", which `/collections` and `/search` shipped
+ * as their social card. `lib/seo.ts` no longer sends a card-less route here;
+ * this is the second line of defence.
+ *
+ * A function, not a constant: `OG_STATIC_IMAGE` is declared below, so a
+ * constant would read it in its temporal dead zone.
+ */
+const fallbackContent = () => (
+  <FullBleed image={OG_STATIC_IMAGE}>{null}</FullBleed>
 );
 
 type ContentProps = Record<string, string>;
@@ -120,6 +125,16 @@ const CreditDivider = () => (
   />
 );
 
+/**
+ * Sanity art arrives pre-cropped to this card's aspect (`fit=crop` honours the
+ * hotspot), so it covers cleanly. BigCommerce catalog art is the raw 1200x1607
+ * portrait, and covering 0.75:1 into a 1.9:1 card keeps 39% of the height —
+ * every anchor either beheads the model or loses the garment. Letterboxed onto
+ * the card gradient instead.
+ */
+const objectFitFor = (image?: Maybe<string>) =>
+  image?.includes("cdn11.bigcommerce.com") ? "contain" : "cover";
+
 const FullBleed = ({
   image,
   children,
@@ -145,7 +160,11 @@ const FullBleed = ({
         alt=""
         height={630}
         src={image}
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: objectFitFor(image),
+        }}
         width={1200}
       />
     ) : null}
@@ -576,8 +595,8 @@ export async function GET({ url }: Request): Promise<ImageResponse> {
   const image = block[type] ?? getGenericPageContent;
   try {
     const content = await image(para);
-    return new ImageResponse(content ? content : errorContent, options);
+    return new ImageResponse(content ?? fallbackContent(), options);
   } catch (_err) {
-    return new ImageResponse(errorContent, options);
+    return new ImageResponse(fallbackContent(), options);
   }
 }

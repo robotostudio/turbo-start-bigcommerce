@@ -4,7 +4,11 @@ import { querySitemapData } from "@workspace/sanity/query";
 import type { QuerySitemapDataResult } from "@workspace/sanity/types";
 import type { MetadataRoute } from "next";
 
-import { getCategoryPaths, getProductPaths } from "@/lib/bigcommerce/catalog";
+import {
+  ALL_PRODUCTS,
+  getCategoryPaths,
+  getProductPaths,
+} from "@/lib/bigcommerce/catalog";
 import type { StorefrontQueryResult } from "@/lib/bigcommerce/client";
 import { fetchOrFallback } from "@/lib/build-guard";
 import { getBaseUrl } from "@/utils";
@@ -54,7 +58,9 @@ const SANITY_SITEMAP_SOURCES = [
 const COMMERCE_SITEMAP_SOURCES = [
   {
     label: "products",
-    fetchPaths: getProductPaths,
+    // Not the prerender cap: that trades build time against first-visit
+    // latency, and using it here silently caps the sitemap at 100 URLs.
+    fetchPaths: () => getProductPaths(ALL_PRODUCTS),
     priority: 0.7,
     changeFrequency: "weekly",
   },
@@ -88,7 +94,11 @@ function toEntry(
 ): MetadataRoute.Sitemap[number] {
   return {
     url: `${baseUrl}${path}`,
-    lastModified: new Date(lastModified ?? Date.now()),
+    // Omitted, not defaulted to now: a catalog path carries no timestamp, and
+    // stamping build time on every commerce URL claims the whole catalog
+    // changed on every deploy — which costs the editorial URLs that do carry a
+    // real `_updatedAt` their credibility too.
+    ...(lastModified ? { lastModified: new Date(lastModified) } : {}),
     changeFrequency: rank.changeFrequency,
     priority: rank.priority,
   };
@@ -139,8 +149,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const { sanityDocs, commercePaths } = fetched;
 
+  // `blogIndex` is a singleton, neither a `page` nor a `blog`, so `/blog`
+  // belonged to no source above and was missing from the sitemap entirely.
+  const blogIndexEntry = sanityDocs?.blogIndex?.path
+    ? [
+        toEntry(
+          sanityDocs.blogIndex.path,
+          { priority: 0.6, changeFrequency: "weekly" },
+          sanityDocs.blogIndex.lastModified ?? undefined
+        ),
+      ]
+    : [];
+
   return [
     ...staticEntries,
+    ...blogIndexEntry,
 
     // `sanityDocs` is null when the Content Lake is unreachable — the commerce
     // half is already in hand, so list that rather than nothing.

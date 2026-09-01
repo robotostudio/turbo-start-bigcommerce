@@ -148,7 +148,7 @@ export default async function CollectionPage({ params }: PageProps) {
   const { products, pageInfo, filteringEnabled, facets } = listing.data;
 
   return (
-    <div className="site-container py-8">
+    <main className="site-container py-8">
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: baseUrl },
@@ -206,6 +206,6 @@ export default async function CollectionPage({ params }: PageProps) {
           />
         </Suspense>
       </ListingControlsProvider>
-    </div>
+    </main>
   );
 }

@@ -1,5 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
+
+import { StoreImage } from "@/components/product/store-image";
 
 type EditorialItem = {
   _key: string;
@@ -32,7 +33,7 @@ function EditorialColumn({ item }: { item: EditorialItem }) {
   const figure = (
     <div className="card-surface relative aspect-square overflow-hidden">
       {collectionImage ? (
-        <Image
+        <StoreImage
           alt={collectionTitle ?? ""}
           // Shared card hover language — see collection-card.tsx.
           className="object-cover transition-[opacity,scale] duration-160 ease-hover group-hover:scale-102 group-hover:duration-240 motion-reduce:group-hover:scale-100"

@@ -43,7 +43,10 @@ vi.mock("@/lib/cart/checkout-request", () => ({
 }));
 
 const { CartEmptyState } = await import("../cart-empty-state");
-const { default: CartPage } = await import("@/app/cart/page");
+// The client half, not the route: `app/cart/page.tsx` is now a server
+// component whose only job is `generateMetadata`, and importing it pulls in
+// server env validation this test has no use for.
+const { CartPageContent: CartPage } = await import("../cart-page-content");
 
 describe("cart with a failed first read", () => {
   it("tells a shopper on the cart page that the bag could not be loaded", () => {

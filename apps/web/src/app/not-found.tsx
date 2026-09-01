@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="flex h-screen flex-col items-center justify-center px-4">
+    <main className="flex h-screen flex-col items-center justify-center px-4">
       <p className="select-none text-[10rem] leading-none text-foreground md:text-[14rem] lg:text-[24rem]">
         404
       </p>
@@ -28,6 +28,6 @@ export default function NotFound() {
           </Button>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

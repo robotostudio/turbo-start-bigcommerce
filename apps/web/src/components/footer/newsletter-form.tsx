@@ -23,7 +23,9 @@ export function NewsletterForm() {
             Sign up to our newsletter
           </label>
           <input
-            className="w-full border-border border-b bg-transparent pb-1 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none"
+            // `focus-visible`, not `focus`: a text input takes focus on click too,
+            // and a ring on every click is noise.
+            className="w-full border-border border-b bg-transparent pb-1 text-foreground text-sm placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
             defaultValue={state.status === "error" ? (state.email ?? "") : ""}
             id="newsletter-email"
             name="email"

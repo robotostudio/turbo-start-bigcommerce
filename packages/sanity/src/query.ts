@@ -253,6 +253,7 @@ const blogCardFragment = /* groq */ `
   title,
   description,
   "slug":slug.current,
+  seoNoIndex,
   orderRank,
   ${imageFragment},
   publishedAt,
@@ -538,8 +539,11 @@ export const querySlugPageData = defineQuery(`
   }
   `);
 
+// `seoNoIndex != true`, matching `querySitemapData`: this feeds llms.txt, and
+// handing an agent a page the editor asked search engines to skip is the same
+// mistake in a different format.
 export const querySlugPagePaths = defineQuery(`
-  *[_type == "page" && defined(slug.current)].slug.current
+  *[_type == "page" && defined(slug.current) && seoNoIndex != true].slug.current
 `);
 
 export const queryBlogIndexPageData = defineQuery(`
@@ -610,7 +614,7 @@ const ogFieldsFragment = /* groq */ `
   ),
   "image": image.asset->url + "?w=1200&h=630&dpr=2&fit=crop",
   "dominantColor": image.asset->metadata.palette.dominant.background,
-  "seoImage": seoImage.asset->url + "?w=1200&h=630&dpr=2&fit=max",
+  "seoImage": seoImage.asset->url + "?w=1200&h=630&dpr=2&fit=crop",
   "logo": *[_type == "settings"][0].logo.asset->url + "?w=80&h=40&dpr=3&fit=max&q=100",
   "siteTitle": *[_type == "settings"][0].siteTitle,
   "date": coalesce(date, _createdAt)
@@ -658,10 +662,6 @@ export const queryPromoBannerData = defineQuery(`
 export const queryFooterData = defineQuery(`
   *[_type == "footer" && _id == "footer"][0]{
     _id,
-    subtitle,
-    backgroundImage {
-      ${imageFields}
-    },
     columns[]{
       _key,
       title,
@@ -742,12 +742,19 @@ export const queryNavbarData = defineQuery(`
 // apps/web/src/app/sitemap.ts is typed against — adding a source there without
 // a matching projection here is a typecheck failure rather than a page that is
 // silently missing from the sitemap.
+// `!= true`, not `!seoNoIndex`: the field is absent on older documents, and
+// GROQ's `!` on null is null, which would filter them all out. Search Console
+// reports the mismatch as "Submitted URL marked noindex".
 export const querySitemapData = defineQuery(`{
-  "page": *[_type == "page" && defined(slug.current)]{
+  "page": *[_type == "page" && defined(slug.current) && seoNoIndex != true]{
     "path": slug.current,
     "lastModified": _updatedAt
   },
-  "blog": *[_type == "blog" && defined(slug.current)]{
+  "blog": *[_type == "blog" && defined(slug.current) && seoNoIndex != true]{
+    "path": slug.current,
+    "lastModified": _updatedAt
+  },
+  "blogIndex": *[_type == "blogIndex" && defined(slug.current)][0]{
     "path": slug.current,
     "lastModified": _updatedAt
   }
@@ -778,6 +785,11 @@ export const querySettingsData = defineQuery(`
     siteTitle,
     siteDescription,
     "logo": logo.asset->url + "?w=80&h=40&dpr=3&fit=max",
+    favicon {
+      "svg": svg.asset->url,
+      "ico": ico.asset->url
+    },
+    "ogImage": ogImage.asset->url + "?w=1200&h=630&dpr=2&fit=max",
     "socialLinks": socialLinks,
     "contactEmail": contactEmail,
   }
@@ -823,10 +835,6 @@ export const queryCollectionsIndexPageData = defineQuery(`
     _type,
     title,
     subtitle,
-    heroTitle,
-    heroImage {
-      ${imageFields}
-    },
     ${buttonsFragment},
     "slug": slug.current
   }

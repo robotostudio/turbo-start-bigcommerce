@@ -9,6 +9,60 @@ import type { NextConfig } from "next";
 
 const logger = new Logger("NextConfig");
 
+/**
+ * Sanity's Presentation tool iframes this storefront from the Studio origin,
+ * so `X-Frame-Options` is deliberately not sent at all: its `SAMEORIGIN` has
+ * no allowlist and would break visual editing. `*.sanity.studio` covers a
+ * deployed Studio alongside the configured one.
+ */
+function studioOrigin(): string | null {
+  try {
+    return new URL(env.NEXT_PUBLIC_SANITY_STUDIO_URL).origin;
+  } catch {
+    // `SKIP_ENV_VALIDATION` hands the value through unparsed, undefined
+    // included, and this runs at module scope — throwing here takes the whole
+    // config down before Next reads any of it.
+    return null;
+  }
+}
+
+const FRAME_ANCESTORS = ["'self'", studioOrigin(), "https://*.sanity.studio"]
+  .filter(Boolean)
+  .join(" ");
+
+/**
+ * `script-src` is deliberately absent: without a per-request nonce it would
+ * need `'unsafe-inline'` for Next's own bootstrap, which buys nothing.
+ */
+/**
+ * No `preload`: it asks for the browser preload list, and getting off that list
+ * takes months. The gate below cannot tell a self-hosted staging host from
+ * production — `next build` sets `NODE_ENV=production` for both — so this stays
+ * opt-in. Add it once you submit your apex to hstspreload.org.
+ */
+const HSTS_HEADER = {
+  key: "Strict-Transport-Security",
+  value: "max-age=63072000; includeSubDomains",
+};
+
+const SECURITY_HEADERS = [
+  {
+    key: "Content-Security-Policy",
+    value: [
+      `frame-ancestors ${FRAME_ANCESTORS}`,
+      "base-uri 'self'",
+      "object-src 'none'",
+      "form-action 'self'",
+    ].join("; "),
+  },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+  },
+];
+
 const nextConfig: NextConfig = {
   transpilePackages: ["@workspace/ui"],
   reactCompiler: true,
@@ -19,9 +73,9 @@ const nextConfig: NextConfig = {
     fetches: {},
   },
   images: {
-    // Skip optimization in dev to avoid optimizer fetch timeouts on large
-    // CDN masters; Vercel optimizes normally in production.
-    unoptimized: process.env.NODE_ENV === "development",
+    // Do not add `unoptimized` back: it bypasses the custom loader, so cards
+    // fall back to the raw `url(width: 320)` rendition and render soft. Every
+    // `next/image` goes through `StoreImage`, so none reaches the optimizer.
     minimumCacheTTL: 31_536_000,
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 828, 1080, 1440, 1920, 2560, 3840],
@@ -37,6 +91,17 @@ const nextConfig: NextConfig = {
         hostname: "cdn11.bigcommerce.com",
       },
     ],
+  },
+  async headers() {
+    // Mirrors `src/app/robots.ts`. `NEXT_PUBLIC_VERCEL_ENV` is Vercel-only and
+    // defaults to "development", so keying on it alone drops HSTS from every
+    // self-hosted production deployment rather than only from previews.
+    const isProduction =
+      env.NEXT_PUBLIC_VERCEL_ENV !== "preview" && env.NODE_ENV === "production";
+    const headers = isProduction
+      ? [...SECURITY_HEADERS, HSTS_HEADER]
+      : SECURITY_HEADERS;
+    return [{ source: "/:path*", headers }];
   },
   // Not shared with `src/lib/build-guard.ts`: this file is evaluated by Next's
   // config loader, and the loss here is redirects (SEO-visible), not

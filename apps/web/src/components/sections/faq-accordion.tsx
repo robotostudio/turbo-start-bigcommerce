@@ -2,15 +2,15 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 import type { PagebuilderType } from "@/types";
-import { FaqJsonLd } from "../json-ld";
 import { FaqEntry } from "./faq-entry";
 
 type FaqAccordionProps = PagebuilderType<"faqAccordion">;
 
-export function FaqAccordion({ title, faqs, link }: FaqAccordionProps) {
+export function FaqAccordion({ _key, title, faqs, link }: FaqAccordionProps) {
   return (
-    <section className="py-12 md:py-20" id="faq">
-      <FaqJsonLd faqs={faqs} />
+    // Per-block id: an editor can place either FAQ block twice, and two
+    // sections sharing `id="faq"` leave the second unreachable by `#faq`.
+    <section className="py-12 md:py-20" id={`faq-${_key}`}>
       <div className="site-container">
         <div className="flex flex-col items-center">
           <h2 className="mb-10 font-normal text-3xl md:text-4xl">{title}</h2>
