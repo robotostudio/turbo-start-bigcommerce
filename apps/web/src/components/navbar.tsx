@@ -11,6 +11,7 @@ import { MenuLink } from "./elements/menu-link";
 import { Logo } from "./logo";
 import { MobileMenu } from "./mobile-menu";
 import { CollectionGroupDropdown } from "./nav/collection-group-dropdown";
+import { dropdownHandlers } from "./nav/dropdown-handlers";
 import { SavedItemsDrawer } from "./saved-items/saved-items-drawer";
 import { SavedItemsToggle } from "./saved-items/saved-items-toggle";
 import { SearchToggle } from "./search/search-toggle";
@@ -22,47 +23,38 @@ function DesktopColumnDropdown({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleMouseEnter = () => {
-    setIsOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    setIsOpen(false);
-  };
-
   return (
-    <div className="group relative">
+    <div className="group relative" {...dropdownHandlers(isOpen, setIsOpen)}>
       <button
         aria-expanded={isOpen}
         aria-haspopup="menu"
         className="flex items-center gap-1 py-2 font-medium text-sm tracking-[0.02em] transition-colors hover:text-foreground"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        onClick={() => setIsOpen((open) => !open)}
         type="button"
       >
         {column.title}
         <ChevronDown className="size-3 transition-transform group-hover:rotate-180" />
       </button>
-      {isOpen ? (
-        <div
-          className="fade-in-0 zoom-in-95 absolute top-full left-0 z-50 min-w-70 animate-in rounded-lg border bg-popover p-2 shadow-lg"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          role="menu"
-        >
-          <div className="grid gap-1">
-            {column.links?.map((link: ColumnLink) => (
-              <MenuLink
-                description={link.description || ""}
-                href={link.href || ""}
-                icon={link.icon}
-                key={link._key}
-                name={link.name || ""}
-              />
-            ))}
-          </div>
+      {/* `hidden`, not conditional mounting: mounting on open kept these links
+       * out of the server HTML entirely. `hidden` still drops them from the
+       * tab order while closed. */}
+      <div
+        className="fade-in-0 zoom-in-95 absolute top-full left-0 z-50 min-w-70 animate-in rounded-lg border bg-popover p-2 shadow-lg"
+        hidden={!isOpen}
+        role="menu"
+      >
+        <div className="grid gap-1">
+          {column.links?.map((link: ColumnLink) => (
+            <MenuLink
+              description={link.description || ""}
+              href={link.href || ""}
+              icon={link.icon}
+              key={link._key}
+              name={link.name || ""}
+            />
+          ))}
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

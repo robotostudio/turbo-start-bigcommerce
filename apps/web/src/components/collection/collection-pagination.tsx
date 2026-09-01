@@ -22,7 +22,7 @@ export function CollectionPagination({
         disabled={isLoading}
         onClick={onLoadMore}
         size="lg"
-        className="px-6 py-2.5 text-sm tracking-wider focus-visible:ring-0"
+        className="px-6 py-2.5 text-sm tracking-wider"
       >
         {isLoading ? (
           <>

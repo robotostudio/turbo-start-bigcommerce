@@ -18,36 +18,55 @@ type CollectionsContentProps = {
   collections: CollectionCardProps[];
 };
 
-function CollectionsGrid({ title, collections }: CollectionsContentProps) {
+function CollectionsGridInner({
+  collections,
+}: {
+  collections: CollectionCardProps[];
+}) {
   const searchParams = useSearchParams();
   const sort = (searchParams.get("sort") as SortOption) || "a-z";
-  const sorted = sortCollections(collections, sort);
+  return <Grid collections={sortCollections(collections, sort)} />;
+}
 
+function Grid({ collections }: { collections: CollectionCardProps[] }) {
+  if (collections.length === 0) {
+    return <p className="text-muted-foreground">No collections found.</p>;
+  }
   return (
-    <div className="site-container py-12">
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <h2 className="font-medium text-2xl tracking-tight md:text-[32px]">
-          {title}
-        </h2>
-        <CollectionsSortSelector />
-      </div>
-      {sorted.length === 0 ? (
-        <p className="text-muted-foreground">No collections found.</p>
-      ) : (
-        <div className="grid grid-cols-2 gap-x-1 gap-y-10 md:grid-cols-3">
-          {sorted.map((collection) => (
-            <CollectionCard key={collection.handle} {...collection} />
-          ))}
-        </div>
-      )}
+    <div className="grid grid-cols-2 gap-x-1 gap-y-10 md:grid-cols-3">
+      {collections.map((collection) => (
+        <CollectionCard key={collection.handle} {...collection} />
+      ))}
     </div>
   );
 }
 
-export function CollectionsContent(props: CollectionsContentProps) {
+/**
+ * A `useSearchParams` consumer suspends during prerender, so anything inside
+ * the boundary is missing from the static HTML — with the whole page in there,
+ * `/collections` shipped no `<main>` and no `<h1>` at all. Only the sorted grid
+ * needs the query string, and its fallback is the A-Z order the server already
+ * computed, which is what `?sort` defaults to.
+ */
+export function CollectionsContent({
+  title,
+  collections,
+}: CollectionsContentProps) {
   return (
-    <Suspense>
-      <CollectionsGrid {...props} />
-    </Suspense>
+    <main className="site-container py-12">
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <h1 className="font-medium text-2xl tracking-tight md:text-[32px]">
+          {title}
+        </h1>
+        <Suspense>
+          <CollectionsSortSelector />
+        </Suspense>
+      </div>
+      <Suspense
+        fallback={<Grid collections={sortCollections(collections, "a-z")} />}
+      >
+        <CollectionsGridInner collections={collections} />
+      </Suspense>
+    </main>
   );
 }
