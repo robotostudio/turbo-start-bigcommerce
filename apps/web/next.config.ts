@@ -87,12 +87,16 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
-    // Production only: `preload` submits the host to the browser preload list,
-    // and a throwaway preview host should not assert two years of HSTS.
-    const headers =
-      env.NEXT_PUBLIC_VERCEL_ENV === "production"
-        ? [...SECURITY_HEADERS, HSTS_HEADER]
-        : SECURITY_HEADERS;
+    // `preload` submits the host to the browser preload list, so a throwaway
+    // preview host must not assert two years of HSTS. The test has to match
+    // `src/app/robots.ts`: `NEXT_PUBLIC_VERCEL_ENV` is Vercel-only and defaults
+    // to "development", so keying on it alone drops HSTS from every
+    // self-hosted production deployment instead of only from previews.
+    const isProduction =
+      env.NEXT_PUBLIC_VERCEL_ENV !== "preview" && env.NODE_ENV === "production";
+    const headers = isProduction
+      ? [...SECURITY_HEADERS, HSTS_HEADER]
+      : SECURITY_HEADERS;
     return [{ source: "/:path*", headers }];
   },
   // Not shared with `src/lib/build-guard.ts`: this file is evaluated by Next's
