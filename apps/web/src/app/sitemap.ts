@@ -88,7 +88,11 @@ function toEntry(
 ): MetadataRoute.Sitemap[number] {
   return {
     url: `${baseUrl}${path}`,
-    lastModified: new Date(lastModified ?? Date.now()),
+    // Omitted, not defaulted to now: a catalog path carries no timestamp, and
+    // stamping build time on every commerce URL claims the whole catalog
+    // changed on every deploy — which costs the editorial URLs that do carry a
+    // real `_updatedAt` their credibility too.
+    ...(lastModified ? { lastModified: new Date(lastModified) } : {}),
     changeFrequency: rank.changeFrequency,
     priority: rank.priority,
   };
@@ -139,8 +143,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const { sanityDocs, commercePaths } = fetched;
 
+  // `blogIndex` is a singleton, neither a `page` nor a `blog`, so `/blog`
+  // belonged to no source above and was missing from the sitemap entirely.
+  const blogIndexEntry = sanityDocs?.blogIndex?.path
+    ? [
+        toEntry(
+          sanityDocs.blogIndex.path,
+          { priority: 0.6, changeFrequency: "weekly" },
+          sanityDocs.blogIndex.lastModified ?? undefined
+        ),
+      ]
+    : [];
+
   return [
     ...staticEntries,
+    ...blogIndexEntry,
 
     // `sanityDocs` is null when the Content Lake is unreachable — the commerce
     // half is already in hand, so list that rather than nothing.

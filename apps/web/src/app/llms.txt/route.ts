@@ -1,6 +1,10 @@
 import { Logger } from "@workspace/logger";
 import { PUBLISHED, sanityFetch } from "@workspace/sanity/live";
-import { queryBlogPaths, querySlugPagePaths } from "@workspace/sanity/query";
+import {
+  queryAllBlogDataForSearch,
+  querySettingsData,
+  querySlugPagePaths,
+} from "@workspace/sanity/query";
 
 import { getCategoryPaths, getProductPaths } from "@/lib/bigcommerce/catalog";
 import type { StorefrontQueryResult } from "@/lib/bigcommerce/client";
@@ -10,31 +14,84 @@ import { getBaseUrl } from "@/utils";
 
 const logger = new Logger("LlmsTxt");
 
-const SITE_TITLE = "Roboto Studio Demo";
+/** The no-CMS state, matching `lib/seo.ts` — the real identity is in Sanity. */
+const FALLBACK_SITE_TITLE = "Turbo Start BigCommerce";
 const SITE_DESCRIPTION =
   "Headless commerce storefront. Append .md to any URL, or send Accept: text/markdown, to get a structured Markdown view of a page.";
+
+/**
+ * Paired with the route's `revalidate` below, which is what stops the origin
+ * re-running five upstream reads per miss — 446 ms a request before it existed.
+ */
+const CACHE_CONTROL = "public, s-maxage=3600, stale-while-revalidate=86400";
 
 /** Absolute `.md` URL for an internal path. */
 function mdUrl(base: string, path: string): string {
   return `${base}${toMarkdownHref(normalizeMarkdownPath(path))}`;
 }
 
-function section(title: string, links: string[]): string | null {
-  if (links.length === 0) return null;
-  return `## ${title}\n${links.map((line) => `- ${line}`).join("\n")}`;
+/**
+ * A label for entries with no title of their own: `/collections/mens-outerwear`
+ * becomes "Mens Outerwear". A wall of bare URLs tells a reading agent nothing.
+ */
+function slugToTitle(slug: string): string {
+  return (
+    slug
+      .replace(/^\//, "")
+      .split("/")
+      .filter(Boolean)
+      .map((segment) =>
+        segment
+          .split("-")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ")
+      )
+      .join(" / ") || "Home"
+  );
 }
+
+type LlmsLink = { title: string; path: string };
+
+function section(
+  base: string,
+  title: string,
+  links: LlmsLink[]
+): string | null {
+  if (links.length === 0) return null;
+  const lines = links.map(
+    (link) => `- [${link.title}](${mdUrl(base, link.path)})`
+  );
+  return `## ${title}\n${lines.join("\n")}`;
+}
+
+/**
+ * `strip` drops the routing segment the section heading already carries, so a
+ * category reads "Tops / Henleys" under `## Collections`, not
+ * "Collections / Tops / Henleys".
+ */
+function toLinks(paths: string[], strip?: string): LlmsLink[] {
+  return paths.map((path) => ({
+    title: slugToTitle(strip ? path.replace(`/${strip}/`, "/") : path),
+    path,
+  }));
+}
+
+/** Refreshed hourly rather than per request; nothing here changes faster. */
+export const revalidate = 3600;
 
 export async function GET(): Promise<Response> {
   const base = getBaseUrl();
 
   // Editorial paths come from Sanity; catalog paths come from BigCommerce —
   // the same enumeration `generateStaticParams` and the sitemap use.
-  const [pages, blogs, products, collections] = await Promise.allSettled([
-    sanityFetch({ query: querySlugPagePaths, ...PUBLISHED }),
-    sanityFetch({ query: queryBlogPaths, ...PUBLISHED }),
-    getProductPaths(),
-    getCategoryPaths(),
-  ]);
+  const [settings, pages, blogs, products, collections] =
+    await Promise.allSettled([
+      sanityFetch({ query: querySettingsData, ...PUBLISHED }),
+      sanityFetch({ query: querySlugPagePaths, ...PUBLISHED }),
+      sanityFetch({ query: queryAllBlogDataForSearch, ...PUBLISHED }),
+      getProductPaths(),
+      getCategoryPaths(),
+    ]);
 
   const sanityValue = <T>(
     result: PromiseSettledResult<{ data: T }>,
@@ -63,30 +120,31 @@ export async function GET(): Promise<Response> {
   const pagePaths = (sanityValue(pages, "pages") ?? []).filter(
     (slug): slug is string => Boolean(slug)
   );
-  const blogPaths = (sanityValue(blogs, "blogs") ?? []).filter(
-    (slug): slug is string => Boolean(slug)
+  // `queryAllBlogDataForSearch` carries real titles and honours
+  // `seoHideFromLists`, which the bare path query did not.
+  const blogPosts = (sanityValue(blogs, "blogs") ?? []).filter(
+    (post) => post?.slug
   );
   const productPaths = catalogValue(products, "products");
   const categoryPaths = catalogValue(collections, "collections");
+  const siteTitle =
+    sanityValue(settings, "settings")?.siteTitle || FALLBACK_SITE_TITLE;
 
   const body = [
-    `# ${SITE_TITLE}`,
+    `# ${siteTitle}`,
     `> ${SITE_DESCRIPTION}`,
-    section("Pages", [
-      mdUrl(base, "/"),
-      ...pagePaths.map((path) => mdUrl(base, path)),
+    section(base, "Pages", [
+      { title: "Home", path: "/" },
+      ...toLinks(pagePaths),
     ]),
-    section(
-      "Collections",
-      categoryPaths.map((path) => mdUrl(base, path))
-    ),
-    section(
-      "Products",
-      productPaths.map((path) => mdUrl(base, path))
-    ),
-    section("Blog", [
-      mdUrl(base, "/blog"),
-      ...blogPaths.map((path) => mdUrl(base, path)),
+    section(base, "Collections", toLinks(categoryPaths, "collections")),
+    section(base, "Products", toLinks(productPaths, "products")),
+    section(base, "Blog", [
+      { title: "Blog", path: "/blog" },
+      ...blogPosts.map((post) => ({
+        title: post.title || slugToTitle(post.slug),
+        path: post.slug,
+      })),
     ]),
   ]
     .filter((part): part is string => Boolean(part))
@@ -96,7 +154,7 @@ export async function GET(): Promise<Response> {
     status: 200,
     headers: {
       "content-type": "text/plain; charset=utf-8",
-      "cache-control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      "cache-control": CACHE_CONTROL,
     },
   });
 }
