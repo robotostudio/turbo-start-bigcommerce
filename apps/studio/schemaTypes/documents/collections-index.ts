@@ -1,10 +1,6 @@
 import { defineField, defineType } from "sanity";
 
-import {
-  buttonsField,
-  documentSlugField,
-  imageWithAltField,
-} from "@/schemaTypes/common";
+import { buttonsField, documentSlugField } from "@/schemaTypes/common";
 import { GROUP, GROUPS } from "@/utils/constants";
 import { ogFields } from "@/utils/og-fields";
 import { seoFields } from "@/utils/seo-fields";
@@ -30,20 +26,6 @@ export const collectionsIndex = defineType({
       rows: 2,
       description:
         "A short summary below the heading describing the collections page",
-      group: GROUP.CONTENT,
-    }),
-    defineField({
-      name: "heroTitle",
-      type: "string",
-      title: "Hero Title",
-      description: "Large overlay text displayed on the hero banner image",
-      group: GROUP.CONTENT,
-    }),
-    imageWithAltField({
-      name: "heroImage",
-      title: "Hero Image",
-      description:
-        "Full-bleed background image for the hero banner at the top of the page",
       group: GROUP.CONTENT,
     }),
     { ...buttonsField, group: GROUP.CONTENT },
