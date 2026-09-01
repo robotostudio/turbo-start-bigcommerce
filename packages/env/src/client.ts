@@ -42,6 +42,15 @@ const env = createEnv({
 
     /** ISO 4217 currency code used to format prices (e.g. in OG images). */
     NEXT_PUBLIC_STORE_CURRENCY: z.string().default("GBP"),
+
+    /**
+     * Canonical origin. Required off Vercel, where the `VERCEL_*` vars above
+     * are never injected; on Vercel it still wins over `*.vercel.app`.
+     */
+    NEXT_PUBLIC_SITE_URL: z
+      .url()
+      .optional()
+      .transform((url) => url?.replace(/\/+$/, "")),
   },
 
   experimental__runtimeEnv: {
@@ -57,6 +66,7 @@ const env = createEnv({
     NEXT_PUBLIC_SANITY_PROJECT_ID: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
     NEXT_PUBLIC_SANITY_DATASET: process.env.NEXT_PUBLIC_SANITY_DATASET,
     NEXT_PUBLIC_STORE_CURRENCY: process.env.NEXT_PUBLIC_STORE_CURRENCY,
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
   },
 
   emptyStringAsUndefined: true,

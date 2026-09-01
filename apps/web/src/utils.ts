@@ -2,11 +2,24 @@ import { env } from "@workspace/env/client";
 import type { PortableTextBlock } from "next-sanity";
 import slugify from "slugify";
 
+/**
+ * The canonical origin, no trailing slash.
+ *
+ * `NEXT_PUBLIC_SITE_URL` first: the `VERCEL_*` vars are Vercel-only, so
+ * elsewhere they fall through to `localhost:3000` and every canonical, OG url
+ * and sitemap entry ships pointing there. It wins on Vercel too, where
+ * `*.vercel.app` is rarely canonical.
+ */
 export const getBaseUrl = () => {
+  if (env.NEXT_PUBLIC_SITE_URL) {
+    return env.NEXT_PUBLIC_SITE_URL;
+  }
+
   if (env.NEXT_PUBLIC_VERCEL_ENV === "production") {
     return env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL;
   }
 
+  // Preview deploys keep their own generated url so each self-references.
   if (env.NEXT_PUBLIC_VERCEL_ENV === "preview") {
     return env.NEXT_PUBLIC_VERCEL_URL;
   }
