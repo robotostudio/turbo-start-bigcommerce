@@ -6,9 +6,14 @@ import { getBaseUrl } from "@/utils";
 const baseUrl = getBaseUrl();
 
 export default function robots(): MetadataRoute.Robots {
-  // `getBaseUrl` returns the preview host outside production, so without this
-  // every preview URL self-canonicalises and competes with production.
-  if (env.NEXT_PUBLIC_VERCEL_ENV !== "production") {
+  // Preview deploys self-canonicalise to their own host, so they must not be
+  // indexed. `NEXT_PUBLIC_VERCEL_ENV` alone is not the test: nothing injects it
+  // off Vercel, where it defaults to "development" — gating on it disallowed a
+  // self-hosted production storefront's entire catalog.
+  if (
+    env.NEXT_PUBLIC_VERCEL_ENV === "preview" ||
+    env.NODE_ENV !== "production"
+  ) {
     return {
       rules: {
         userAgent: "*",
