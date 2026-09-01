@@ -54,7 +54,8 @@ function toOffer(
 function buildOffers(
   variants: CatalogVariant[],
   url: string,
-  fallbackCurrency?: string
+  fallbackCurrency?: string,
+  truncated = false
 ): Offer | AggregateOffer | undefined {
   const first = variants[0];
   if (!first) {
@@ -67,7 +68,10 @@ function buildOffers(
   const prices = variants.map((variant) => variant.prices?.price.value ?? 0);
   return {
     "@type": "AggregateOffer",
-    offerCount: variants.length,
+    // Omitted when the read was truncated: the query takes one page of
+    // variants, so that page's length is not the offer count. The range still
+    // describes what was read — narrow at worst, never a false total.
+    ...(truncated ? {} : { offerCount: variants.length }),
     lowPrice: Math.min(...prices).toFixed(2),
     highPrice: Math.max(...prices).toFixed(2),
     priceCurrency: first.prices?.price.currencyCode ?? fallbackCurrency,
@@ -111,7 +115,12 @@ export function ProductJsonLd({
           reviewCount: rating.count,
         }
       : undefined,
-    offers: buildOffers(variants, url, product.prices?.price.currencyCode),
+    offers: buildOffers(
+      variants,
+      url,
+      product.prices?.price.currencyCode,
+      product.variants.pageInfo?.hasNextPage ?? false
+    ),
   };
 
   return <JsonLdScript data={jsonLd} id={`product-json-ld-${handle}`} />;
