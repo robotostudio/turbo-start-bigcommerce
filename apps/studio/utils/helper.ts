@@ -1,7 +1,31 @@
 import { isPortableTextTextBlock, type StringOptions } from "sanity";
 
-export const isRelativeUrl = (url: string) =>
-  url.startsWith("/") || url.startsWith("#") || url.startsWith("?");
+/**
+ * `startsWith("/")` alone accepts `//evil.example`, `/\\evil.example` and
+ * `/\tevil` — the URL parser strips C0 controls before resolving an origin, so
+ * the check and the browser disagree about the string. Must match
+ * `apps/web/src/app/api/disable-draft/route.ts`, or the CMS accepts links the
+ * storefront refuses.
+ */
+const hasControlChar = (url: string) => {
+  for (let i = 0; i < url.length; i++) {
+    const code = url.charCodeAt(i);
+    if (code <= 0x1f || code === 0x7f) {
+      return true;
+    }
+  }
+  return false;
+};
+
+export const isRelativeUrl = (url: string) => {
+  if (hasControlChar(url)) {
+    return false;
+  }
+  if (url.startsWith("//") || url.startsWith("/\\")) {
+    return false;
+  }
+  return url.startsWith("/") || url.startsWith("#") || url.startsWith("?");
+};
 
 export const isValidUrl = (url: string) => {
   try {
