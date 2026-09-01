@@ -9,6 +9,44 @@ import type { NextConfig } from "next";
 
 const logger = new Logger("NextConfig");
 
+/**
+ * Sanity's Presentation tool iframes this storefront from the Studio origin,
+ * so `X-Frame-Options` is deliberately not sent at all: its `SAMEORIGIN` has
+ * no allowlist and would break visual editing. `*.sanity.studio` covers a
+ * deployed Studio alongside the configured one.
+ */
+const FRAME_ANCESTORS = [
+  "'self'",
+  new URL(env.NEXT_PUBLIC_SANITY_STUDIO_URL).origin,
+  "https://*.sanity.studio",
+].join(" ");
+
+/**
+ * `script-src` is deliberately absent: without a per-request nonce it would
+ * need `'unsafe-inline'` for Next's own bootstrap, which buys nothing.
+ */
+const SECURITY_HEADERS = [
+  {
+    key: "Content-Security-Policy",
+    value: [
+      `frame-ancestors ${FRAME_ANCESTORS}`,
+      "base-uri 'self'",
+      "object-src 'none'",
+      "form-action 'self'",
+    ].join("; "),
+  },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload",
+  },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+  },
+];
+
 const nextConfig: NextConfig = {
   transpilePackages: ["@workspace/ui"],
   reactCompiler: true,
@@ -37,6 +75,9 @@ const nextConfig: NextConfig = {
         hostname: "cdn11.bigcommerce.com",
       },
     ],
+  },
+  async headers() {
+    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },
   // Not shared with `src/lib/build-guard.ts`: this file is evaluated by Next's
   // config loader, and the loss here is redirects (SEO-visible), not
