@@ -34,9 +34,15 @@ const FRAME_ANCESTORS = ["'self'", studioOrigin(), "https://*.sanity.studio"]
  * `script-src` is deliberately absent: without a per-request nonce it would
  * need `'unsafe-inline'` for Next's own bootstrap, which buys nothing.
  */
+/**
+ * No `preload`: it asks for the browser preload list, and getting off that list
+ * takes months. The gate below cannot tell a self-hosted staging host from
+ * production — `next build` sets `NODE_ENV=production` for both — so this stays
+ * opt-in. Add it once you submit your apex to hstspreload.org.
+ */
 const HSTS_HEADER = {
   key: "Strict-Transport-Security",
-  value: "max-age=63072000; includeSubDomains; preload",
+  value: "max-age=63072000; includeSubDomains",
 };
 
 const SECURITY_HEADERS = [
@@ -87,11 +93,9 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
-    // `preload` submits the host to the browser preload list, so a throwaway
-    // preview host must not assert two years of HSTS. The test has to match
-    // `src/app/robots.ts`: `NEXT_PUBLIC_VERCEL_ENV` is Vercel-only and defaults
-    // to "development", so keying on it alone drops HSTS from every
-    // self-hosted production deployment instead of only from previews.
+    // Mirrors `src/app/robots.ts`. `NEXT_PUBLIC_VERCEL_ENV` is Vercel-only and
+    // defaults to "development", so keying on it alone drops HSTS from every
+    // self-hosted production deployment rather than only from previews.
     const isProduction =
       env.NEXT_PUBLIC_VERCEL_ENV !== "preview" && env.NODE_ENV === "production";
     const headers = isProduction
