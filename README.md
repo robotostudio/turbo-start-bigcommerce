@@ -2,6 +2,8 @@
 
 A headless commerce starter: BigCommerce, Sanity, and Next.js 16 in a Turborepo monorepo. Visual editing, generated types, and a page builder your content team can actually use.
 
+**[Live demo →](https://bigcommerce.robotostudio.com)** — the storefront in this repo, running against a BigCommerce sandbox and the seeded Sanity dataset.
+
 Built by [Roboto Studio](https://robotostudio.com).
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D24-brightgreen)](https://nodejs.org/)
@@ -15,7 +17,7 @@ Built by [Roboto Studio](https://robotostudio.com).
 
 - **Turborepo monorepo** with shared packages and one `pnpm dev` to run everything
 - **Next.js 16 App Router** with React Server Components, the React Compiler, Turbopack, and dynamic OG images
-- **Sanity Studio v5** with visual editing, live preview, a page builder, and auto-redirects when a slug changes
+- **Sanity Studio v6** with visual editing, live preview, a page builder, and auto-redirects when a slug changes
 - **BigCommerce GraphQL Storefront API** for products, categories, cart, and search
 - **Types end to end** — generated Sanity types, Zod-validated env, strict TypeScript
 - **Tailwind CSS v4** with CSS-first config, OKLCH tokens, dark mode, and Shadcn components
@@ -40,7 +42,7 @@ Sanity CMS (pages, blog, navigation, SEO)
 ```
 apps/
   web/              → Next.js 16 frontend
-  studio/           → Sanity Studio v5
+  studio/           → Sanity Studio v6
 
 packages/
   env/              → T3 env validation (Zod)
@@ -164,6 +166,7 @@ The app runs on [localhost:3000](http://localhost:3000), the Studio on [localhos
 | `BIGCOMMERCE_API_URL` | No | Endpoint override. Derived from the hash and channel if unset |
 | `BIGCOMMERCE_PRERENDER_LIMIT` | No | How many catalog paths to prerender at build, defaults to `100`. The rest render on demand |
 | `NEXT_PUBLIC_STORE_CURRENCY` | No | ISO 4217 code, defaults to `GBP` |
+| `NEXT_PUBLIC_SITE_URL` | Off Vercel | Canonical origin, no trailing slash (e.g. `https://example.com`). On Vercel it is inferred; anywhere else, canonicals, OG urls and the sitemap fall back to `localhost:3000` without it. It also wins over the generated `*.vercel.app` domain |
 | `SANITY_REVALIDATE_SECRET` | Yes | Shared with the Sanity webhook that publishes content changes. Without it nothing invalidates the cache and published edits never reach the site, so a build without it fails validation. See [Wiring up content revalidation](#wiring-up-content-revalidation) |
 | `BIGCOMMERCE_ADMIN_TOKEN` | Yes | Admin API token, `Information & Settings` scope. Reads `/v3/hooks`; the storefront token cannot. Same value as `packages/sanity-sync/.env` |
 | `BIGCOMMERCE_WEBHOOK_DESTINATION` | Yes | The URL the catalog webhooks are registered against. Compared character for character. See [Watching the catalog webhooks](#watching-the-catalog-webhooks) |
@@ -327,6 +330,7 @@ There is no deploy workflow in this repo. The one inherited from upstream fired 
 5. Create the React component in `apps/web/src/components/sections/`
 6. Register it in `BLOCK_COMPONENTS` in `apps/web/src/components/pagebuilder.tsx`
 7. Add the type to `PageBuilderBlockTypes` in `apps/web/src/types.ts`
+8. If the block carries structured data, add a case to `apps/web/src/components/page-builder-json-ld.tsx` rather than emitting a `<script type="application/ld+json">` from the block itself — the page builder is a client component, and a hard-coded script `id` collides when an editor uses the block twice
 
 ### Extending Sanity schemas
 
