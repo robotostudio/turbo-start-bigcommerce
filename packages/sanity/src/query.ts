@@ -253,6 +253,7 @@ const blogCardFragment = /* groq */ `
   title,
   description,
   "slug":slug.current,
+  seoNoIndex,
   orderRank,
   ${imageFragment},
   publishedAt,

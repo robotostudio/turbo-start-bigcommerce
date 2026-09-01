@@ -126,8 +126,10 @@ export async function GET(): Promise<Response> {
   );
   // `queryAllBlogDataForSearch` carries real titles and honours
   // `seoHideFromLists`, which the bare path query did not.
+  // Filtered here, not in the query: the same query backs on-site blog search,
+  // where a noindex post must still be findable. An agent is a search engine.
   const blogPosts = (sanityValue(blogs, "blogs") ?? []).filter(
-    (post) => post?.slug
+    (post) => post?.slug && post.seoNoIndex !== true
   );
   const productPaths = catalogValue(products, "products");
   const categoryPaths = catalogValue(collections, "collections");
