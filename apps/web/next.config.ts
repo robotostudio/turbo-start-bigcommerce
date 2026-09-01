@@ -57,9 +57,9 @@ const nextConfig: NextConfig = {
     fetches: {},
   },
   images: {
-    // Skip optimization in dev to avoid optimizer fetch timeouts on large
-    // CDN masters; Vercel optimizes normally in production.
-    unoptimized: process.env.NODE_ENV === "development",
+    // Do not add `unoptimized` back: it bypasses the custom loader, so cards
+    // fall back to the raw `url(width: 320)` rendition and render soft. Every
+    // `next/image` goes through `StoreImage`, so none reaches the optimizer.
     minimumCacheTTL: 31_536_000,
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 828, 1080, 1440, 1920, 2560, 3840],
