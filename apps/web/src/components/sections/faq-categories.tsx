@@ -82,7 +82,7 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
 
   return (
     // FAQPage structured data lives in `PageBuilderJsonLd`.
-    <section className="py-12 md:py-20" id="faq">
+    <section className="py-12 md:py-20" id={`faq-${_key}`}>
       <div className="site-container">
         <h2 className="mb-8 font-medium text-2xl md:mb-12 md:text-3xl">
           {title}
