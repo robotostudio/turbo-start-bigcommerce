@@ -6,7 +6,11 @@ import {
   querySlugPagePaths,
 } from "@workspace/sanity/query";
 
-import { getCategoryPaths, getProductPaths } from "@/lib/bigcommerce/catalog";
+import {
+  ALL_PRODUCTS,
+  getCategoryPaths,
+  getProductPaths,
+} from "@/lib/bigcommerce/catalog";
 import type { StorefrontQueryResult } from "@/lib/bigcommerce/client";
 import { normalizeMarkdownPath } from "@/lib/markdown/path";
 import { toMarkdownHref } from "@/lib/markdown/shared";
@@ -89,7 +93,7 @@ export async function GET(): Promise<Response> {
       sanityFetch({ query: querySettingsData, ...PUBLISHED }),
       sanityFetch({ query: querySlugPagePaths, ...PUBLISHED }),
       sanityFetch({ query: queryAllBlogDataForSearch, ...PUBLISHED }),
-      getProductPaths(),
+      getProductPaths(ALL_PRODUCTS),
       getCategoryPaths(),
     ]);
 

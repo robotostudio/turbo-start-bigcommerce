@@ -4,7 +4,11 @@ import { querySitemapData } from "@workspace/sanity/query";
 import type { QuerySitemapDataResult } from "@workspace/sanity/types";
 import type { MetadataRoute } from "next";
 
-import { getCategoryPaths, getProductPaths } from "@/lib/bigcommerce/catalog";
+import {
+  ALL_PRODUCTS,
+  getCategoryPaths,
+  getProductPaths,
+} from "@/lib/bigcommerce/catalog";
 import type { StorefrontQueryResult } from "@/lib/bigcommerce/client";
 import { fetchOrFallback } from "@/lib/build-guard";
 import { getBaseUrl } from "@/utils";
@@ -54,7 +58,9 @@ const SANITY_SITEMAP_SOURCES = [
 const COMMERCE_SITEMAP_SOURCES = [
   {
     label: "products",
-    fetchPaths: getProductPaths,
+    // Not the prerender cap: that trades build time against first-visit
+    // latency, and using it here silently caps the sitemap at 100 URLs.
+    fetchPaths: () => getProductPaths(ALL_PRODUCTS),
     priority: 0.7,
     changeFrequency: "weekly",
   },

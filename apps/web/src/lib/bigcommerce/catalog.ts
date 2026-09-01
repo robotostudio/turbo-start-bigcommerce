@@ -1042,6 +1042,13 @@ export async function getProductSummaries(
  * Product paths for `generateStaticParams`, the sitemap and llms.txt, paged
  * until the cap is reached rather than fetched in one oversized request.
  */
+/**
+ * The whole catalog, not the prerender window. `getProductPaths` defaults to
+ * `prerenderLimit()`, a build-time trade — inherited by the sitemap and
+ * llms.txt it became a coverage cap, and product 101 reached neither.
+ */
+export const ALL_PRODUCTS = Number.POSITIVE_INFINITY;
+
 export async function getProductPaths(
   limit = prerenderLimit()
 ): Promise<StorefrontQueryResult<string[]>> {
