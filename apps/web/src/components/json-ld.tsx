@@ -66,18 +66,23 @@ function extractPlainTextFromRichText(
     .trim();
 }
 
-// Utility function to safely render JSON-LD.
+// Escape `<`, `>` and `&` to \uXXXX so a "</script>" in any CMS field cannot
+// break out of the tag. Still valid JSON, so crawlers decode it back.
+function serializeJsonLd<T>(data: T): string {
+  return JSON.stringify(data)
+    .replaceAll("<", String.raw`\u003c`)
+    .replaceAll(">", String.raw`\u003e`)
+    .replaceAll("&", String.raw`\u0026`);
+}
+
 // Uses dangerouslySetInnerHTML (not JSX text children) so the JSON is emitted
 // verbatim — rendering as text children makes React entity-escape `&`/`<`/`>`,
 // and those entities are NOT decoded inside <script>, producing invalid JSON-LD
-// that Google silently drops. The `.replace(/</g, "\\u003c")` guards against a
-// value containing `</script>` breaking out of the tag (XSS).
+// that Google silently drops.
 export function JsonLdScript<T>({ data, id }: { data: T; id: string }) {
   return (
     <script
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify(data).replace(/</g, "\\u003c"),
-      }}
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
       id={id}
       type="application/ld+json"
     />
@@ -87,9 +92,11 @@ export function JsonLdScript<T>({ data, id }: { data: T; id: string }) {
 // FAQ JSON-LD Component
 type FaqJsonLdProps = {
   faqs: FlexibleFaq[];
+  /** Per-block, so a page with two FAQ blocks emits two distinct scripts. */
+  id?: string;
 };
 
-export function FaqJsonLd({ faqs }: FaqJsonLdProps) {
+export function FaqJsonLd({ faqs, id = "faq-json-ld" }: FaqJsonLdProps) {
   if (!faqs?.length) {
     return null;
   }
@@ -117,7 +124,7 @@ export function FaqJsonLd({ faqs }: FaqJsonLdProps) {
     ),
   };
 
-  return <JsonLdScript data={faqJsonLd} id="faq-json-ld" />;
+  return <JsonLdScript data={faqJsonLd} id={id} />;
 }
 
 const IMAGE_SIZE_WIDTH = 1920;
@@ -165,7 +172,8 @@ export function ArticleJsonLd({
           {
             "@type": "Person",
             name: article.authors.name,
-            url: `${baseUrl}`,
+            // No `url`: there is no author route, and pointing every author at
+            // the homepage asserts they are all one entity.
             image: article.authors.image
               ? ({
                   "@type": "ImageObject",
@@ -177,7 +185,7 @@ export function ArticleJsonLd({
       : [],
     publisher: {
       "@type": "Organization",
-      name: settings?.siteTitle || "Website",
+      name: settings?.siteTitle || "Turbo Start BigCommerce",
       logo: settings?.logo
         ? ({
             "@type": "ImageObject",

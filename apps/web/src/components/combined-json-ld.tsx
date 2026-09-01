@@ -1,7 +1,6 @@
-import { sanityFetch } from "@workspace/sanity/live";
-import { querySettingsData } from "@workspace/sanity/query";
 import { stegaClean } from "next-sanity";
 
+import { getJsonLdSettings } from "@/lib/json-ld-data";
 import { OrganizationJsonLd, WebSiteJsonLd } from "./json-ld";
 
 type CombinedJsonLdProps = {
@@ -22,11 +21,9 @@ export async function CombinedJsonLd({
   includeWebsite = false,
   includeOrganization = false,
 }: CombinedJsonLdProps) {
-  // Through the wrapper so the read carries `SANITY_CACHE_TAG` like every
-  // other one: this renders inside prerendered pages, and without the tag a
-  // settings change never reaches their structured data. It also degrades to
-  // null on an unreachable Content Lake, which the guards below already cover.
-  const { data } = await sanityFetch({ query: querySettingsData });
+  // Shared with `ArticleJsonLd`'s caller and `lib/seo.ts`, so one render makes
+  // one round trip rather than three.
+  const data = await getJsonLdSettings();
 
   const cleanSettings = stegaClean(data);
   return (

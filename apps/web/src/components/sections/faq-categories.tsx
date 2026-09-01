@@ -4,7 +4,6 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 
 import type { PagebuilderType } from "@/types";
-import { FaqJsonLd } from "../json-ld";
 import { FaqEntry } from "./faq-entry";
 
 type FaqCategoriesProps = PagebuilderType<"faqCategories">;
@@ -54,7 +53,6 @@ function switcherStyles(scope: string, count: number) {
 
 export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
   const groups = categories ?? [];
-  const allFaqs = groups.flatMap((category) => category?.faqs ?? []);
   // Studio mints alphanumeric `_key`s, but a programmatic import can put any
   // string there — and this one is interpolated into selectors, ids and the
   // radio `name`, so it has to stay CSS-safe. Escaped rather than stripped,
@@ -83,8 +81,8 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
   }, [scope]);
 
   return (
+    // FAQPage structured data lives in `PageBuilderJsonLd`.
     <section className="py-12 md:py-20" id="faq">
-      <FaqJsonLd faqs={allFaqs} />
       <div className="site-container">
         <h2 className="mb-8 font-medium text-2xl md:mb-12 md:text-3xl">
           {title}
