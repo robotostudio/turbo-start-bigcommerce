@@ -25,6 +25,11 @@ const FRAME_ANCESTORS = [
  * `script-src` is deliberately absent: without a per-request nonce it would
  * need `'unsafe-inline'` for Next's own bootstrap, which buys nothing.
  */
+const HSTS_HEADER = {
+  key: "Strict-Transport-Security",
+  value: "max-age=63072000; includeSubDomains; preload",
+};
+
 const SECURITY_HEADERS = [
   {
     key: "Content-Security-Policy",
@@ -34,10 +39,6 @@ const SECURITY_HEADERS = [
       "object-src 'none'",
       "form-action 'self'",
     ].join("; "),
-  },
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
   },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -77,7 +78,13 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    // Production only: `preload` submits the host to the browser preload list,
+    // and a throwaway preview host should not assert two years of HSTS.
+    const headers =
+      env.NEXT_PUBLIC_VERCEL_ENV === "production"
+        ? [...SECURITY_HEADERS, HSTS_HEADER]
+        : SECURITY_HEADERS;
+    return [{ source: "/:path*", headers }];
   },
   // Not shared with `src/lib/build-guard.ts`: this file is evaluated by Next's
   // config loader, and the loss here is redirects (SEO-visible), not
