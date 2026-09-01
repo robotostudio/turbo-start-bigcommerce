@@ -15,11 +15,20 @@ const logger = new Logger("NextConfig");
  * no allowlist and would break visual editing. `*.sanity.studio` covers a
  * deployed Studio alongside the configured one.
  */
-const FRAME_ANCESTORS = [
-  "'self'",
-  new URL(env.NEXT_PUBLIC_SANITY_STUDIO_URL).origin,
-  "https://*.sanity.studio",
-].join(" ");
+function studioOrigin(): string | null {
+  try {
+    return new URL(env.NEXT_PUBLIC_SANITY_STUDIO_URL).origin;
+  } catch {
+    // `SKIP_ENV_VALIDATION` hands the value through unparsed, undefined
+    // included, and this runs at module scope — throwing here takes the whole
+    // config down before Next reads any of it.
+    return null;
+  }
+}
+
+const FRAME_ANCESTORS = ["'self'", studioOrigin(), "https://*.sanity.studio"]
+  .filter(Boolean)
+  .join(" ");
 
 /**
  * `script-src` is deliberately absent: without a per-request nonce it would
