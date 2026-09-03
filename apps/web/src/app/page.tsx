@@ -55,10 +55,13 @@ export default async function Page() {
 
   const { _id, _type, pageBuilder } = homePageData ?? {};
 
-  // The catalog reads start here without being awaited — each product-backed
-  // block suspends on its own entry inside PageBuilder, and the prerendered
-  // build waits for every boundary before shipping HTML.
-  const blockData = pageBuilderSeeds(pageBuilder ?? []);
+  // Awaited: `pagebuilder.tsx` is a client component, so a pending promise
+  // handed to it is rebuilt from the flight stream unsettled, `use()` suspends,
+  // and the product blocks' skeletons are what lands in the shell — with the
+  // real cards parked in a trailing `<div hidden>` that only JavaScript swaps
+  // in. A static prerender does this too. The reads inside still start together
+  // before any is awaited, so this costs the slowest read, not their sum.
+  const blockData = await pageBuilderSeeds(pageBuilder ?? []);
 
   // One PageBuilder over the whole array: two instances shared the document id,
   // so each reducer saw only its own slice and a drag across them moved nothing.

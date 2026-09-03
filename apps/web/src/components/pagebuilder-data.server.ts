@@ -79,27 +79,29 @@ async function resolveLayersShowcase(
 }
 
 /**
- * Starts, server-side, the catalog reads the product-backed page-builder
- * blocks need, and returns the still-pending promises keyed by block `_key` —
- * deliberately without awaiting any of them. Each block unwraps its own entry
- * behind a Suspense boundary in `pagebuilder.tsx`, so a slow read suspends
- * that block rather than the page, while a static build still waits for every
- * boundary and ships complete HTML — which is what keeps the first paint real
- * markup with JavaScript disabled.
+ * Resolves, server-side, the catalog reads the product-backed page-builder
+ * blocks need, keyed by block `_key`.
  *
- * Only the two block types that read from BigCommerce appear in the map; the
- * rest of the page builder is already server-rendered from Sanity. The reads
- * begin here, together, so a page with a showcase and two featured rows runs
- * them concurrently.
+ * Every read is started before any is awaited, so a page with a showcase and
+ * two featured rows runs them concurrently and pays for the slowest, not the
+ * sum. Only the two block types that read from BigCommerce appear in the map;
+ * the rest of the page builder is already server-rendered from Sanity.
  *
- * Every read is wrapped in `fetchOrFallback`, so no promise ever rejects — a
- * block whose products cannot be reached resolves to `null`, which puts it
- * back on exactly the client-fetch path it used before. A dead storefront
- * token degrades the first paint, it does not blank the page.
+ * Awaited here rather than handed to `pagebuilder.tsx` as promises: that
+ * component is `"use client"`, and a promise crossing the RSC boundary is not
+ * settled when the client side first renders, so `use()` on it suspends and
+ * ships the block's skeletons into the shell — see the note on
+ * `PageBuilderData`. Resolving first is what keeps the first paint real markup
+ * with JavaScript disabled.
+ *
+ * Every read is wrapped in `fetchOrFallback`, so none of them rejects — a block
+ * whose products cannot be reached resolves to `null`, which puts it back on
+ * exactly the client-fetch path it used before. A dead storefront token
+ * degrades the first paint, it does not blank the page.
  */
-export function pageBuilderSeeds(
+export async function pageBuilderSeeds(
   blocks: readonly ResolvablePageBuilderBlock[]
-): PageBuilderData {
+): Promise<PageBuilderData> {
   const entries: [string, Promise<PageBuilderBlockSeed | null>][] = [];
   for (const block of blocks) {
     if (block._type === "featuredProducts") {
@@ -108,5 +110,8 @@ export function pageBuilderSeeds(
       entries.push([block._key, resolveLayersShowcase(block)]);
     }
   }
-  return Object.fromEntries(entries);
+  const seeds = await Promise.all(entries.map(([, promise]) => promise));
+  return Object.fromEntries(
+    entries.map(([key], index) => [key, seeds[index] ?? null])
+  );
 }

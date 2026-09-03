@@ -100,13 +100,11 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
   // map goes to every PageBuilder below — including the two error paths — with
   // each block unwrapping its own entry behind Suspense.
   //
-  // They are also awaited before the render: this route reads `searchParams`,
-  // so it renders per request, and a boundary that actually suspends streams a
-  // fallback only JavaScript can swap out — skeletons forever for a no-JS
-  // visitor. A resolved promise never suspends, so waiting here keeps the
-  // first paint complete while the block-level boundaries stay in place.
-  const blockData = pageBuilderSeeds(indexPageData.pageBuilder ?? []);
-  await Promise.all(Object.values(blockData));
+  // They are resolved before the render, not handed down pending: the page
+  // builder is a client component, and an unsettled promise crossing that
+  // boundary makes the product blocks ship skeletons with their real markup
+  // hidden behind a JavaScript-only swap. See `pageBuilderSeeds`.
+  const blockData = await pageBuilderSeeds(indexPageData.pageBuilder ?? []);
 
   if (errTotalCount || totalCount === null || totalCount === undefined) {
     return (
