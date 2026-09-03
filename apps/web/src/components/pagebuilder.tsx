@@ -3,9 +3,9 @@
 import { useOptimistic } from "@sanity/visual-editing/react";
 import { env } from "@workspace/env/client";
 import { createDataAttribute } from "next-sanity";
-import { Suspense, use, useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
-import type { PageBuilderBlockSeed, PageBuilderData } from "./pagebuilder-data";
+import type { PageBuilderData } from "./pagebuilder-data";
 import {
   applyOptimisticPageBuilder,
   type OptimisticDocument,
@@ -30,15 +30,15 @@ export type PageBuilderProps = {
   readonly id: string;
   readonly type: string;
   /**
-   * Catalog reads the page started server-side, keyed by block `_key` — still
-   * pending, and unwrapped per block inside a Suspense boundary below, so the
-   * resolve happens at block level rather than in the page.
+   * Catalog data the page already resolved server-side, keyed by block `_key`.
    *
-   * The promises have to be created in the page: this component is
-   * `"use client"` because `useOptimistic` powers live editing, and only a
-   * server render can start a catalog read. Threading the pending reads down
-   * and suspending per block is what lets the product blocks paint real HTML
-   * without JavaScript while visual editing keeps working.
+   * Resolved values, not promises. This component is `"use client"` because
+   * `useOptimistic` powers live editing, and a promise handed across the RSC
+   * boundary is rebuilt from the flight stream unsettled — so `use()` on it
+   * suspends, the block's skeletons go into the shell, and the real markup is
+   * parked in a trailing `<div hidden>` that only JavaScript swaps in. The
+   * reads still have to start in the page, since only a server render can make
+   * them; they now finish there too.
    */
   readonly blockData?: PageBuilderData;
 };
@@ -107,28 +107,6 @@ function UnknownBlockError({
 }
 
 /**
- * Unwraps a block's pending catalog read inside its own Suspense boundary.
- * `use` suspends this subtree — and only it — until the read lands; the
- * boundary's fallback is the same block without a seed, which is exactly its
- * skeleton state. A `null` result is a read that failed: the `seed` prop stays
- * off the block, which falls back to fetching from the browser as before.
- */
-function SeededBlock({
-  block,
-  component: Component,
-  seedPromise,
-}: {
-  block: PageBuilderBlock;
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic block component mapping requires any
-  component: React.ComponentType<any>;
-  seedPromise: Promise<PageBuilderBlockSeed | null>;
-}) {
-  const seed = use(seedPromise);
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic block component mapping requires any
-  return <Component {...(block as any)} {...(seed ? { seed } : {})} />;
-}
-
-/**
  * Hook to handle optimistic updates for page builder blocks
  */
 function useOptimisticPageBuilder(
@@ -175,33 +153,20 @@ function useBlockRenderer(
         );
       }
 
-      // Absent for every block type that needs no catalog read. An optimistic
+      // Absent for every block type that needs no catalog read, and `null` for
+      // a read that failed — both leave the `seed` prop off, which is the
+      // block's own signal to fetch from the browser instead. An optimistic
       // edit in the Studio can also mint a block whose `_key` was never read,
-      // which lands here the same way: no pending read, plain client fetch.
-      const seedPromise = blockData?.[block._key];
+      // which lands here the same way.
+      const seed = blockData?.[block._key];
 
       return (
         <div
           data-sanity={createBlockDataAttribute(block._key)}
           key={`${block._type}-${block._key}`}
         >
-          {seedPromise ? (
-            <Suspense
-              fallback={
-                /** biome-ignore lint/suspicious/noExplicitAny: <any is used to allow for dynamic component rendering> */
-                <Component {...(block as any)} />
-              }
-            >
-              <SeededBlock
-                block={block}
-                component={Component}
-                seedPromise={seedPromise}
-              />
-            </Suspense>
-          ) : (
-            /** biome-ignore lint/suspicious/noExplicitAny: <any is used to allow for dynamic component rendering> */
-            <Component {...(block as any)} />
-          )}
+          {/** biome-ignore lint/suspicious/noExplicitAny: <any is used to allow for dynamic component rendering> */}
+          <Component {...(block as any)} {...(seed ? { seed } : {})} />
         </div>
       );
     },

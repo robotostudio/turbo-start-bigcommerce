@@ -81,13 +81,11 @@ export default async function SlugPage({
   const breadcrumb = <BreadcrumbJsonLd items={breadcrumbItems} />;
 
   const blocks = pageBuilder ?? [];
-  // Awaited because `dynamicParams` is true: a path missed by
-  // `generateStaticParams` renders per request, where a suspended boundary
-  // streams a fallback only JavaScript can swap out. Resolved promises never
-  // suspend, so waiting keeps the no-JS paint complete; for prerendered paths
-  // the build waits for every boundary anyway, and this changes nothing.
-  const blockData = pageBuilderSeeds(blocks);
-  await Promise.all(Object.values(blockData));
+  // Awaited for the reason `pageBuilderSeeds` documents: a promise handed to
+  // the client-side page builder is unsettled when it first renders, so the
+  // product blocks would ship skeletons and hide their real markup behind a
+  // JavaScript-only swap. Prerendered and per-request paths both.
+  const blockData = await pageBuilderSeeds(blocks);
 
   // The empty state sits alongside PageBuilder, not instead of it: deleting the
   // last block must still leave the `pageBuilder` container as a drop target.

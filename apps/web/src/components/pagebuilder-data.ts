@@ -44,18 +44,24 @@ export type LayersShowcaseSeed = {
 export type PageBuilderBlockSeed = FeaturedProductsSeed | LayersShowcaseSeed;
 
 /**
- * Pending seed reads keyed by block `_key` — promises, not resolved seeds. The
- * pages start the reads and each product-backed block awaits its own entry
- * behind a Suspense boundary in `pagebuilder.tsx`, so a slow read suspends one
- * block rather than the page. A block absent from the map needs no catalog
- * read; an entry that resolves `null` is a read that failed, and the block
- * falls back to fetching on the client. The promises never reject —
- * `fetchOrFallback` resolves every failure to `null` instead.
+ * Resolved seeds keyed by block `_key` — values, deliberately not promises.
+ *
+ * `PageBuilder` is `"use client"`, so anything handed to it crosses the RSC
+ * boundary. A promise sent across is re-created on the other side from the
+ * flight stream and is *not* settled at first render, so `use()` on it always
+ * suspends and React renders the boundary's fallback — which here is the block
+ * without its seed, i.e. its skeleton grid. That fallback goes into the shell
+ * and the real markup into a trailing `<div hidden>`, swapped in by an `$RC`
+ * call; with JavaScript off the swap never happens and the skeletons are what
+ * the visitor keeps. A static prerender behaves exactly the same way — it emits
+ * `<!--$?--><template id="B:0">` rather than waiting for the boundary.
+ *
+ * Resolving server-side and passing plain values is what removes the boundary
+ * altogether, so the cards are in the initial HTML. A block absent from the map
+ * needs no catalog read; a `null` entry is a read that failed, and that block
+ * falls back to fetching from the browser as before.
  */
-export type PageBuilderData = Record<
-  string,
-  Promise<PageBuilderBlockSeed | null>
->;
+export type PageBuilderData = Record<string, PageBuilderBlockSeed | null>;
 
 /**
  * The shape the resolver needs off a page-builder block, structural rather than
