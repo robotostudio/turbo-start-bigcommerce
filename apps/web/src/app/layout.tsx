@@ -4,8 +4,8 @@ import { SanityLive } from "@workspace/sanity/live";
 import { Toaster } from "@workspace/ui/components/sonner";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
-import { draftMode } from "next/headers";
-import { VisualEditing } from "next-sanity/visual-editing";
+import { cookies, draftMode } from "next/headers";
+import { resolvePerspectiveFromCookies } from "next-sanity/live";
 import { preconnect, prefetchDNS } from "react-dom";
 
 import { CartToasts } from "@/components/cart/cart-toasts";
@@ -15,6 +15,7 @@ import { Navbar } from "@/components/navbar";
 import { PreviewBar } from "@/components/preview-bar";
 import { PromoBanner } from "@/components/promo-banner";
 import { Providers } from "@/components/providers";
+import { VisualEditingLayer } from "@/components/visual-editing-layer";
 import { getNavigationData } from "@/lib/navigation";
 
 const fontSans = GeistSans;
@@ -76,7 +77,15 @@ export default async function RootLayout({
           {(await draftMode()).isEnabled && (
             <>
               <PreviewBar />
-              <VisualEditing />
+              {/* Cookies read inside the draft-mode branch only: reading them
+               * for every visitor would make the whole layout dynamic. */}
+              <VisualEditingLayer
+                inlineEditing={
+                  (await resolvePerspectiveFromCookies({
+                    cookies: await cookies(),
+                  })) === "drafts"
+                }
+              />
             </>
           )}
         </Providers>
