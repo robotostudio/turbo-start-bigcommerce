@@ -84,7 +84,10 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
     // FAQPage structured data lives in `PageBuilderJsonLd`.
     <section className="py-12 md:py-20" id={`faq-${_key}`}>
       <div className="site-container">
-        <h2 className="mb-8 font-medium text-2xl md:mb-12 md:text-3xl">
+        <h2
+          className="mb-8 font-medium text-2xl md:mb-12 md:text-3xl"
+          data-inline-edit
+        >
           {title}
         </h2>
 
@@ -150,6 +153,7 @@ export function FaqCategories({ _key, title, categories }: FaqCategoriesProps) {
                   >
                     <motion.p
                       className="mb-6 text-sm text-zinc-800 dark:text-zinc-200"
+                      data-inline-edit
                       variants={hydrated ? itemVariants : undefined}
                     >
                       {category?.title}
