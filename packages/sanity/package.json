@@ -16,7 +16,7 @@
     "@workspace/env": "workspace:*",
     "@workspace/logger": "workspace:*",
     "next-sanity": "^13.3.3",
-    "sanity-image": "^1.1.0"
+    "sanity-image": "^1.2.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",

@@ -29,11 +29,11 @@
     "@workspace/env": "workspace:*"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.10",
-    "@playwright/test": "^1.62.1",
+    "@biomejs/biome": "2.5.14",
+    "@playwright/test": "^1.63.0",
     "@workspace/typescript-config": "workspace:*",
-    "tsx": "^4.23.12",
-    "turbo": "^2.10.12",
+    "tsx": "^4.23.15",
+    "turbo": "^2.11.3",
     "typescript": "catalog:"
   },
   "packageManager": "pnpm@11.24.0",
