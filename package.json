@@ -33,7 +33,7 @@
     "@playwright/test": "^1.63.0",
     "@workspace/typescript-config": "workspace:*",
     "tsx": "^4.23.15",
-    "turbo": "^2.11.3",
+    "turbo": "^2.11.5",
     "typescript": "catalog:"
   },
   "packageManager": "pnpm@11.24.0",
