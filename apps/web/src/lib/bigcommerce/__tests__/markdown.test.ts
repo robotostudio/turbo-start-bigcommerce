@@ -11,6 +11,7 @@ vi.mock("@workspace/sanity/client", () => ({
 vi.mock("@/utils", () => ({ getBaseUrl: () => "https://base.test" }));
 
 const { categoryToMarkdown, productToMarkdown } = await import("../markdown");
+const { formatMoney, toMoney } = await import("../money");
 
 function fixture(name: string) {
   return JSON.parse(
@@ -153,5 +154,42 @@ describe("categoryToMarkdown", () => {
 
   it("omits the products section when the category is empty", () => {
     expect(categoryToMarkdown({ name: "Empty" })).toBe("# Empty");
+  });
+});
+
+describe("prices match the product page", () => {
+  const page = (value: number, currencyCode: string) =>
+    formatMoney(toMoney({ value, currencyCode }));
+
+  it("formats a sale price and its was-price as the page does", () => {
+    const markdown = productToMarkdown({
+      name: "Kit",
+      path: "/kit/",
+      prices: {
+        price: { value: 1234.5, currencyCode: "CAD" },
+        basePrice: { value: 1500, currencyCode: "CAD" },
+      },
+    });
+    expect(markdown).toContain(`- **Price**: ${page(1234.5, "CAD")}`);
+    expect(markdown).toContain(`- **Compare At**: ${page(1500, "CAD")}`);
+  });
+
+  it("shows the page's unavailable text for a currency Intl rejects", () => {
+    const markdown = productToMarkdown({
+      name: "Kit",
+      path: "/kit/",
+      variants: {
+        edges: [
+          {
+            node: {
+              sku: "K1",
+              isPurchasable: false,
+              prices: { price: { value: 0, currencyCode: "" } },
+            },
+          },
+        ],
+      },
+    });
+    expect(markdown).toContain(`| K1 | ${page(0, "")} | No |`);
   });
 });
