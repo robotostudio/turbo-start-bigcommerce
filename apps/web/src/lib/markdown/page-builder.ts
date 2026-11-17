@@ -189,11 +189,11 @@ function faqCategoriesToMarkdown(block: Block): string {
   ]);
 }
 
-// Products come from the seeds the page renders from, so a product the page
-// drops (hidden, deleted) drops here too. No seed: the read failed, no links.
+// Products come from the seeds the page renders from, and each block hides
+// under the same conditions as its component. No seed: the read failed, no links.
 function layersShowcaseToMarkdown(block: Block, seed?: Seed): string {
   const product = seed?._type === "layersShowcase" ? seed.product : undefined;
-  if (product === null) return "";
+  if (!block.productHandle || product === null) return "";
   const title = text(block.heading)?.replace(/\s+/g, " ");
   return joinSections([
     title && heading(2, title),
@@ -208,7 +208,14 @@ function layersShowcaseToMarkdown(block: Block, seed?: Seed): string {
 
 function featuredProductsToMarkdown(block: Block, seed?: Seed): string {
   const cards = seed?._type === "featuredProducts" ? seed.cards : undefined;
-  if (cards?.length === 0) return "";
+  // `picksAllDangled` in featured-products.tsx: the page shows nothing rather
+  // than the newest products the seed fell back to.
+  const picksAllDangled =
+    Array.isArray(block.productHandles) &&
+    block.productHandles.length === 0 &&
+    Array.isArray(block.products) &&
+    block.products.length > 0;
+  if (picksAllDangled || cards?.length === 0) return "";
   return joinSections([
     text(block.heading) && heading(2, text(block.heading) as string),
     linksToMarkdown(

@@ -22,7 +22,7 @@ describe("pageBuilderToMarkdown", () => {
     { _type: "featuredProducts", heading: "featuredProducts" },
     { _type: "hero", title: "hero" },
     { _type: "imageLinkCards", title: "imageLinkCards" },
-    { _type: "layersShowcase", heading: "layersShowcase" },
+    { _type: "layersShowcase", heading: "layersShowcase", productHandle: "a" },
     { _type: "subscribeNewsletter", title: "subscribeNewsletter" },
   ])("renders $_type", (block) => {
     expect(pageBuilderToMarkdown([block])).toContain(block._type);
@@ -69,6 +69,37 @@ describe("pageBuilderToMarkdown", () => {
       pageBuilderToMarkdown([block], {
         l: { _type: "layersShowcase", handle: "a", product: null },
       })
+    ).toBe("");
+  });
+
+  it("drops a featured row whose picks all dangle, not falling back to newest", () => {
+    expect(
+      pageBuilderToMarkdown(
+        [
+          {
+            _type: "featuredProducts",
+            _key: "f",
+            heading: "Featured",
+            productHandles: [],
+            products: [{ _ref: "bigcommerceProduct-1" }],
+          },
+        ],
+        {
+          f: {
+            _type: "featuredProducts",
+            queryKey: "",
+            cards: [{ slug: "newest", title: "Newest" } as ProductCardProps],
+          },
+        }
+      )
+    ).toBe("");
+  });
+
+  it("drops a showcase whose product reference dangles", () => {
+    expect(
+      pageBuilderToMarkdown([
+        { _type: "layersShowcase", heading: "Layers", productHandle: null },
+      ])
     ).toBe("");
   });
 
