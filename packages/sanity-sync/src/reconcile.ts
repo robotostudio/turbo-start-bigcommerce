@@ -83,7 +83,7 @@ type Pagination = { current_page: number; total_pages: number; total: number };
  * against the sandbox, where a future timestamp returns `total: 0` — and its
  * colon survives `URLSearchParams` percent-encoding.
  */
-async function* paginate<T>(
+export async function* paginate<T>(
   resource: string,
   credentials: BigCommerceCredentials,
   options: { since?: string; include?: string } = {}
