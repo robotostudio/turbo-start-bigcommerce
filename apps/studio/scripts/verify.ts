@@ -21,22 +21,18 @@
  *                         SANITY_API_READ_TOKEN
  */
 
+import { pathToFileURL } from "node:url";
 import { createClient } from "@sanity/client";
 import { initCliLogging } from "@workspace/logger/cli";
 import { Logger } from "@workspace/logger";
-import { catalogGet } from "@workspace/sanity-sync/client";
+import type { BigCommerceCredentials } from "@workspace/sanity-sync/client";
+import { paginate } from "@workspace/sanity-sync/reconcile";
 import { slugFromPath } from "@workspace/sanity-sync/upsert";
 
 const log = new Logger("verify");
-// Pretty one-liners on a terminal, JSON when this is redirected or piped.
-// Without it evlog decides from NODE_ENV, which is always "development" here,
-// so a redirected log fills with ANSI escapes and errors never reach stderr.
-initCliLogging();
 
-/** Storefront paging cap. The demo catalog is 12 products; a bigger fork pages. */
+/** Storefront page size. The storefront caps `first` at 50. */
 const STOREFRONT_PAGE = 50;
-/** Admin paging cap without `include`. */
-const ADMIN_PAGE = 250;
 
 const REQUIRED_ENV = [
   "SANITY_STUDIO_PROJECT_ID",
@@ -112,6 +108,68 @@ async function storefrontQuery<T>(query: string): Promise<T> {
     throw new Error("no data in the response");
   }
   return body.data;
+}
+
+export async function readCatalog(credentials: BigCommerceCredentials) {
+  const all = async <T>(resource: string) => {
+    const rows: T[] = [];
+    for await (const page of paginate<T>(resource, credentials)) {
+      rows.push(...page);
+    }
+    return rows;
+  };
+  const [products, categories] = await Promise.all([
+    all<RestProduct>("products"),
+    all<RestCategory>("categories"),
+  ]);
+  return { products, categories };
+}
+
+export async function storefrontProductIds(): Promise<{
+  storeName?: string;
+  ids: Set<number>;
+}> {
+  const ids = new Set<number>();
+  let storeName: string | undefined;
+  let after: string | null = null;
+  do {
+    const args: string = after
+      ? `first: ${STOREFRONT_PAGE}, after: ${JSON.stringify(after)}`
+      : `first: ${STOREFRONT_PAGE}`;
+    const data: {
+      site?: {
+        settings?: { storeName: string } | null;
+        products?: {
+          edges?: { node: { entityId: number } }[] | null;
+          pageInfo?: { hasNextPage: boolean; endCursor: string | null };
+        } | null;
+      } | null;
+    } = await storefrontQuery(
+      `{ site { settings { storeName }
+           products(${args}) {
+             edges { node { entityId } }
+             pageInfo { hasNextPage endCursor } } } }`
+    );
+    storeName ??= data.site?.settings?.storeName;
+    for (const edge of data.site?.products?.edges ?? []) {
+      ids.add(edge.node.entityId);
+    }
+    const pageInfo = data.site?.products?.pageInfo;
+    const next = pageInfo?.hasNextPage ? pageInfo.endCursor : null;
+    // A cursor that does not move would loop forever.
+    if (next !== null && next === after) {
+      throw new Error("storefront pagination returned the same cursor twice");
+    }
+    after = next;
+  } while (after);
+  return { storeName, ids };
+}
+
+export function unsynced<T extends { id: number }>(
+  entities: T[],
+  syncedIds: Set<number | null>
+): T[] {
+  return entities.filter((entity) => !syncedIds.has(entity.id));
 }
 
 // ---------------------------------------------------------------------------
@@ -228,29 +286,10 @@ async function main() {
    */
   let blocked: string | null = null;
   try {
-    const [products, categories] = await Promise.all([
-      catalogGet<{ data: RestProduct[] }>(
-        `products?limit=${ADMIN_PAGE}&include_fields=name,custom_url`,
-        credentials
-      ),
-      catalogGet<{ data: RestCategory[] }>(
-        `categories?limit=${ADMIN_PAGE}`,
-        credentials
-      ),
-    ]);
-    adminProducts = products?.data ?? [];
-    adminCategories = categories?.data ?? [];
+    ({ products: adminProducts, categories: adminCategories } =
+      await readCatalog(credentials));
 
-    // One page each. Neither read follows pagination, and a fork that fills a
-    // page is something this script cannot answer for: every product past the
-    // cap would read as unassigned and unsynced, which is a confident FAIL
-    // naming three wrong layers. Say the catalog is too big instead.
-    if (
-      adminProducts.length >= ADMIN_PAGE ||
-      adminCategories.length >= ADMIN_PAGE
-    ) {
-      blocked = `the catalog fills the ${ADMIN_PAGE}-row page this script reads; it does not paginate`;
-    } else if (adminProducts.length === 0) {
+    if (adminProducts.length === 0) {
       blocked = "the catalog is empty — run `pnpm seed:bigcommerce`";
     }
 
@@ -275,27 +314,13 @@ async function main() {
   // query answered at all before it reads anything into a short list.
   let storefrontBlocked: string | null = "the storefront query failed above";
   try {
-    const data = await storefrontQuery<{
-      site?: {
-        settings?: { storeName: string } | null;
-        products?: { edges?: { node: { entityId: number } }[] | null } | null;
-      } | null;
-    }>(
-      `{ site { settings { storeName }
-           products(first: ${STOREFRONT_PAGE}) { edges { node { entityId } } } } }`
-    );
-    storefrontIds = new Set(
-      (data.site?.products?.edges ?? []).map((edge) => edge.node.entityId)
-    );
-    storefrontBlocked =
-      storefrontIds.size >= STOREFRONT_PAGE
-        ? `the storefront returned the full ${STOREFRONT_PAGE}-row page; this script does not paginate`
-        : null;
+    const storefront = await storefrontProductIds();
+    storefrontIds = storefront.ids;
+    storefrontBlocked = null;
     record(
       "storefront token",
-      Boolean(data.site?.settings?.storeName),
-      data.site?.settings?.storeName ??
-        "the token answered without store settings"
+      Boolean(storefront.storeName),
+      storefront.storeName ?? "the token answered without store settings"
     );
   } catch (error) {
     record("storefront token", false, (error as Error).message);
@@ -364,18 +389,16 @@ async function main() {
     // homepage read them, and the omission outlived the reason: the navbar
     // dropdown, the explorer and the editorial two-up all reference category
     // documents now, and one the sync never wrote renders as nothing at all.
-    const unsynced = [
-      ...adminProducts.filter((product) => !syncedProductIds.has(product.id)),
-      ...adminCategories.filter(
-        (category) => !syncedCategoryIds.has(category.id)
-      ),
+    const missingDocs = [
+      ...unsynced(adminProducts, syncedProductIds),
+      ...unsynced(adminCategories, syncedCategoryIds),
     ];
     record(
       "catalog synced into sanity",
-      unsynced.length === 0,
-      unsynced.length === 0
+      missingDocs.length === 0,
+      missingDocs.length === 0
         ? `${syncedProductIds.size} product and ${syncedCategoryIds.size} category document(s) match the catalog`
-        : `no document for: ${unsynced.map((e) => e.name).join(", ")} — run \`pnpm sync:bigcommerce\``
+        : `no document for: ${missingDocs.map((e) => e.name).join(", ")} — run \`pnpm sync:bigcommerce\``
     );
 
     const bySlug = new Set(
@@ -451,7 +474,17 @@ function report(): void {
   log.info(`All ${checks.length} checks passed.`);
 }
 
-main().catch((error: unknown) => {
-  log.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-});
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  // Pretty one-liners on a terminal, JSON when this is redirected or piped.
+  // Without it evlog decides from NODE_ENV, which is always "development" here,
+  // so a redirected log fills with ANSI escapes and errors never reach stderr.
+  initCliLogging();
+
+  main().catch((error: unknown) => {
+    log.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}
