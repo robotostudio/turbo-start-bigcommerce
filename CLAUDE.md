@@ -93,6 +93,9 @@ packages/
    type="application/ld+json">` rendered inside a block is built in the browser
    bundle; and a component that hard-codes its own `id` collides with itself
    when an editor adds the block twice. Key the script on the block's `_key`.
+9. Add it to `BLOCK_MARKDOWN` in `apps/web/src/lib/markdown/page-builder.ts`,
+   which feeds the page's `.md` version. Typecheck fails until you do. A purely
+   visual block maps to `() => ""`.
 
 ### Sanity Studio Structure
 
