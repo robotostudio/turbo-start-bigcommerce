@@ -5,6 +5,10 @@
  * the agent-facing output. A purely visual block maps to `() => ""`.
  */
 
+import type {
+  PageBuilderBlockSeed,
+  PageBuilderData,
+} from "@/components/pagebuilder-data";
 import type { PageBuilderBlockTypes } from "@/types";
 import {
   absolutizeUrl,
@@ -16,6 +20,7 @@ import {
 import { portableTextToMarkdownString } from "./portable-text";
 
 type Block = Record<string, unknown>;
+type Seed = PageBuilderBlockSeed | null;
 
 function text(value: unknown): string | null {
   const trimmed = typeof value === "string" ? value.trim() : "";
@@ -184,64 +189,73 @@ function faqCategoriesToMarkdown(block: Block): string {
   ]);
 }
 
-function layersShowcaseToMarkdown(block: Block): string {
+// Products come from the seeds the page renders from, so a product the page
+// drops (hidden, deleted) drops here too. No seed: the read failed, no links.
+function layersShowcaseToMarkdown(block: Block, seed?: Seed): string {
+  const product = seed?._type === "layersShowcase" ? seed.product : undefined;
+  if (product === null) return "";
   const title = text(block.heading)?.replace(/\s+/g, " ");
   return joinSections([
     title && heading(2, title),
     text(block.description) &&
       formatMultiline(text(block.description) as string),
-    linksToMarkdown([
-      {
-        title: text(block.productTitle) ?? undefined,
-        href: block.productHandle
-          ? `/products/${block.productHandle}`
-          : undefined,
-      },
-    ]),
+    product &&
+      linksToMarkdown([
+        { title: product.name, href: `/products/${block.productHandle}` },
+      ]),
   ]);
 }
 
-// ponytail: the query projects handles only, so the link label is the handle.
-// Project `store.title` in featuredProductsBlock if agents need real names.
-function featuredProductsToMarkdown(block: Block): string {
-  const handles = Array.isArray(block.productHandles)
-    ? block.productHandles
-    : [];
+function featuredProductsToMarkdown(block: Block, seed?: Seed): string {
+  const cards = seed?._type === "featuredProducts" ? seed.cards : undefined;
+  if (cards?.length === 0) return "";
   return joinSections([
     text(block.heading) && heading(2, text(block.heading) as string),
     linksToMarkdown(
-      handles.map((handle) => ({ title: handle, href: `/products/${handle}` }))
+      cards?.map((card) => ({
+        title: card.title,
+        href: `/products/${card.slug}`,
+      }))
     ),
   ]);
 }
 
-const BLOCK_MARKDOWN: Record<PageBuilderBlockTypes, (block: Block) => string> =
-  {
-    collectionBanner: collectionBannerToMarkdown,
-    cta: ctaToMarkdown,
-    editorialTwoUp: editorialTwoUpToMarkdown,
-    exploreCategories: exploreCategoriesToMarkdown,
-    faqAccordion: faqAccordionToMarkdown,
-    faqCategories: faqCategoriesToMarkdown,
-    featureCardsIcon: featureCardsToMarkdown,
-    featuredProducts: featuredProductsToMarkdown,
-    hero: heroToMarkdown,
-    imageLinkCards: imageLinkCardsToMarkdown,
-    layersShowcase: layersShowcaseToMarkdown,
-    subscribeNewsletter: subscribeNewsletterToMarkdown,
-  };
+const BLOCK_MARKDOWN: Record<
+  PageBuilderBlockTypes,
+  (block: Block, seed?: Seed) => string
+> = {
+  collectionBanner: collectionBannerToMarkdown,
+  cta: ctaToMarkdown,
+  editorialTwoUp: editorialTwoUpToMarkdown,
+  exploreCategories: exploreCategoriesToMarkdown,
+  faqAccordion: faqAccordionToMarkdown,
+  faqCategories: faqCategoriesToMarkdown,
+  featureCardsIcon: featureCardsToMarkdown,
+  featuredProducts: featuredProductsToMarkdown,
+  hero: heroToMarkdown,
+  imageLinkCards: imageLinkCardsToMarkdown,
+  layersShowcase: layersShowcaseToMarkdown,
+  subscribeNewsletter: subscribeNewsletterToMarkdown,
+};
 
 // A block type the schema has since dropped can still sit in the data.
-function blockToMarkdown(block: Block): string {
+function blockToMarkdown(block: Block, seeds: PageBuilderData): string {
   const type = block._type as string;
   return Object.hasOwn(BLOCK_MARKDOWN, type)
-    ? BLOCK_MARKDOWN[type as PageBuilderBlockTypes](block)
+    ? BLOCK_MARKDOWN[type as PageBuilderBlockTypes](
+        block,
+        seeds[block._key as string]
+      )
     : "";
 }
 
+/** `seeds` is `pageBuilderSeeds()` output, the catalog reads the page uses. */
 export function pageBuilderToMarkdown(
-  blocks: readonly unknown[] | null | undefined
+  blocks: readonly unknown[] | null | undefined,
+  seeds: PageBuilderData = {}
 ): string {
   if (!Array.isArray(blocks)) return "";
-  return joinSections(blocks.map((block) => blockToMarkdown(block as Block)));
+  return joinSections(
+    blocks.map((block) => blockToMarkdown(block as Block, seeds))
+  );
 }

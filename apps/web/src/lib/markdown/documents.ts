@@ -8,6 +8,7 @@
  * `lib/bigcommerce/markdown.ts`; this module holds the Sanity-shaped ones.
  */
 
+import type { PageBuilderData } from "@/components/pagebuilder-data";
 import { pageBuilderToMarkdown } from "./page-builder";
 import { portableTextToMarkdownString } from "./portable-text";
 import {
@@ -51,10 +52,13 @@ function documentHeader(
   ]);
 }
 
-export function pageToMarkdown(doc: PageLikeDoc): string {
+export function pageToMarkdown(
+  doc: PageLikeDoc,
+  seeds?: PageBuilderData
+): string {
   return joinSections([
     documentHeader(doc.title, doc.description),
-    pageBuilderToMarkdown(doc.pageBuilder),
+    pageBuilderToMarkdown(doc.pageBuilder, seeds),
   ]);
 }
 

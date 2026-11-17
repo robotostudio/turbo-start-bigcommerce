@@ -10,6 +10,7 @@ import {
   querySlugPageData,
 } from "@workspace/sanity/query";
 
+import { pageBuilderSeeds } from "@/components/pagebuilder-data.server";
 import {
   categoryTreeToCollectionList,
   getCategoryByPath,
@@ -101,7 +102,9 @@ async function fetchHomeMarkdown(): Promise<string | null> {
     query: queryHomePageData,
     ...PUBLISHED,
   });
-  return data ? pageToMarkdown(data) : null;
+  return data
+    ? pageToMarkdown(data, await pageBuilderSeeds(data.pageBuilder ?? []))
+    : null;
 }
 
 async function fetchBlogMarkdown(
@@ -132,7 +135,9 @@ async function fetchPageMarkdown(path: string): Promise<string | null> {
     params: { slug: path },
     ...PUBLISHED,
   });
-  return data ? pageToMarkdown(data) : null;
+  return data
+    ? pageToMarkdown(data, await pageBuilderSeeds(data.pageBuilder ?? []))
+    : null;
 }
 
 /** Resolves a normalized path to a Markdown document, or null when not found. */

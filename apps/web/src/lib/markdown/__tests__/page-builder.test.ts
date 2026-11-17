@@ -6,6 +6,8 @@ vi.mock("@workspace/sanity/client", () => ({
 }));
 vi.mock("@/utils", () => ({ getBaseUrl: () => "https://base.test" }));
 
+import type { ProductCardProps } from "@/components/product/product-card";
+import type { CatalogProduct } from "@/lib/bigcommerce/catalog";
 import { pageBuilderToMarkdown } from "@/lib/markdown/page-builder";
 
 describe("pageBuilderToMarkdown", () => {
@@ -24,6 +26,50 @@ describe("pageBuilderToMarkdown", () => {
     { _type: "subscribeNewsletter", title: "subscribeNewsletter" },
   ])("renders $_type", (block) => {
     expect(pageBuilderToMarkdown([block])).toContain(block._type);
+  });
+
+  it("links featured products by name, only the ones the page resolved", () => {
+    const markdown = pageBuilderToMarkdown(
+      [{ _type: "featuredProducts", _key: "f", productHandles: ["a", "gone"] }],
+      {
+        f: {
+          _type: "featuredProducts",
+          queryKey: "a,gone",
+          cards: [{ slug: "a", title: "Wren Cap" } as ProductCardProps],
+        },
+      }
+    );
+    expect(markdown).toContain("- [Wren Cap](https://base.test/products/a)");
+    expect(markdown).not.toContain("gone");
+  });
+
+  it("drops a featured row whose products all failed to resolve", () => {
+    expect(
+      pageBuilderToMarkdown(
+        [{ _type: "featuredProducts", _key: "f", heading: "Featured" }],
+        { f: { _type: "featuredProducts", queryKey: "gone", cards: [] } }
+      )
+    ).toBe("");
+  });
+
+  it("links the showcase product by name, and drops it when unresolved", () => {
+    const block = {
+      _type: "layersShowcase",
+      _key: "l",
+      heading: "Layers",
+      productHandle: "a",
+    };
+    const product = { name: "Aster Jacket" } as CatalogProduct;
+    expect(
+      pageBuilderToMarkdown([block], {
+        l: { _type: "layersShowcase", handle: "a", product },
+      })
+    ).toContain("- [Aster Jacket](https://base.test/products/a)");
+    expect(
+      pageBuilderToMarkdown([block], {
+        l: { _type: "layersShowcase", handle: "a", product: null },
+      })
+    ).toBe("");
   });
 
   it("returns nothing for a block type the schema has dropped", () => {
