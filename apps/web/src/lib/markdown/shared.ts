@@ -14,9 +14,6 @@ export type SanityImageRef = {
   caption?: string | null;
 };
 
-/** A money value as `{ amount, currencyCode }` strings. */
-export type Money = { amount: string; currencyCode: string };
-
 /** Drops empty/nullish sections and joins the rest with blank lines. */
 export function joinSections(
   sections: Array<string | null | undefined>
@@ -85,21 +82,6 @@ export function sanityImageMarkdown(
   if (!url) return null;
   const alt = (image?.alt ?? image?.caption ?? "").trim();
   return `![${escapeMarkdown(alt)}](${url})`;
-}
-
-/** Formats a Money value, e.g. `£29.00`. Falls back to `CODE amount`. */
-export function formatMoney(money: Money | null | undefined): string {
-  if (!money) return "";
-  const amount = Number.parseFloat(money.amount);
-  if (!Number.isFinite(amount)) return `${money.currencyCode} ${money.amount}`;
-  try {
-    return new Intl.NumberFormat("en", {
-      style: "currency",
-      currency: money.currencyCode,
-    }).format(amount);
-  } catch {
-    return `${money.currencyCode} ${amount.toFixed(2)}`;
-  }
 }
 
 /**

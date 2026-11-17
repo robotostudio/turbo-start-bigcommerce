@@ -12,17 +12,21 @@
 
 import sanitizeHtml from "sanitize-html";
 
+import {
+  type BigCommerceMoney,
+  formatMoney,
+  PRICE_UNAVAILABLE,
+  toMoney,
+} from "@/lib/bigcommerce/money";
+import { compareAtPrice } from "@/lib/bigcommerce/product-card";
 import { normalizeMarkdownPath } from "@/lib/markdown/path";
 import {
   escapeMarkdown,
-  formatMoney,
   formatMultiline,
   heading,
   joinSections,
   toMarkdownHref,
 } from "@/lib/markdown/shared";
-
-type Money = { value: number; currencyCode: string };
 
 type Connection<T> = { edges?: readonly { node: T }[] | null } | null;
 
@@ -34,9 +38,11 @@ export type MarkdownProduct = {
   brand?: { name: string } | null;
   categories?: Connection<{ name: string }>;
   prices?: {
-    price: Money;
-    basePrice?: Money | null;
-    priceRange?: { min: Money; max: Money } | null;
+    price: BigCommerceMoney;
+    basePrice?: BigCommerceMoney | null;
+    salePrice?: BigCommerceMoney | null;
+    retailPrice?: BigCommerceMoney | null;
+    priceRange?: { min: BigCommerceMoney; max: BigCommerceMoney } | null;
   } | null;
   productOptions?: Connection<{
     displayName: string;
@@ -45,7 +51,7 @@ export type MarkdownProduct = {
   variants?: Connection<{
     sku?: string | null;
     isPurchasable?: boolean | null;
-    prices?: { price: Money } | null;
+    prices?: { price: BigCommerceMoney } | null;
     options?: Connection<{
       displayName: string;
       values?: Connection<{ label: string }>;
@@ -62,7 +68,7 @@ export type MarkdownCategory = {
   products?: Connection<{
     name: string;
     path: string;
-    prices?: { price: Money } | null;
+    prices?: { price: BigCommerceMoney } | null;
   }>;
 };
 
@@ -70,13 +76,9 @@ function nodes<T>(connection: Connection<T> | undefined): T[] {
   return (connection?.edges ?? []).map((edge) => edge.node);
 }
 
-/** `formatMoney` takes a string amount; BigCommerce sends a number. */
-function money(value: Money | null | undefined): string {
-  if (!value) return "";
-  return formatMoney({
-    amount: String(value.value),
-    currencyCode: value.currencyCode,
-  });
+/** The same string the product page's `PriceDisplay` renders. */
+function money(value: BigCommerceMoney | null | undefined): string {
+  return value ? formatMoney(toMoney(value)) : PRICE_UNAVAILABLE;
 }
 
 /** Block-level tags whose close is a paragraph break once the markup is gone. */
@@ -142,9 +144,11 @@ function pricingSection(product: MarkdownProduct): string | null {
       : money(prices.price);
 
   const bullets = [`- **Price**: ${price}`];
-  // `basePrice` is the was-price; it only differs when a sale price is live.
-  if (prices.basePrice && prices.basePrice.value > prices.price.value) {
-    bullets.push(`- **Compare At**: ${money(prices.basePrice)}`);
+  const was = compareAtPrice(prices);
+  if (was !== null) {
+    bullets.push(
+      `- **Compare At**: ${money({ value: was, currencyCode: prices.price.currencyCode })}`
+    );
   }
 
   return joinSections([heading(2, "Pricing"), bullets.join("\n")]);
@@ -298,8 +302,8 @@ export function categoryToMarkdown(category: MarkdownCategory): string {
   const description = htmlToText(category.description);
   const bullets = nodes(category.products).map((product) => {
     const href = toMarkdownHref(normalizeMarkdownPath(product.path));
-    const price = money(product.prices?.price);
-    return `- [${escapeMarkdown(product.name)}](${href})${price ? ` — from ${price}` : ""}`;
+    const price = product.prices?.price;
+    return `- [${escapeMarkdown(product.name)}](${href})${price ? ` — from ${money(price)}` : ""}`;
   });
   return joinSections([
     heading(1, category.name),
