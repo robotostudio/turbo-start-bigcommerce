@@ -1,14 +1,26 @@
 /**
- * Page-builder blocks → Markdown. The dispatcher mirrors `BLOCK_COMPONENTS` in
- * `apps/web/src/components/pagebuilder.tsx`: text-bearing blocks are serialized,
- * and every other block type falls through to an empty string so purely visual
- * sections never leak markup into the agent-facing output.
+ * Page-builder blocks → Markdown. `BLOCK_MARKDOWN` mirrors `BLOCK_COMPONENTS`
+ * in `apps/web/src/components/pagebuilder.tsx` and must list every block type:
+ * typecheck fails on a missing one, so a new block cannot silently drop out of
+ * the agent-facing output. A purely visual block maps to `() => ""`.
  */
 
-import { absolutizeUrl, escapeMarkdown, heading, joinSections } from "./shared";
+import type {
+  PageBuilderBlockSeed,
+  PageBuilderData,
+} from "@/components/pagebuilder-data";
+import type { PageBuilderBlockTypes } from "@/types";
+import {
+  absolutizeUrl,
+  escapeMarkdown,
+  formatMultiline,
+  heading,
+  joinSections,
+} from "./shared";
 import { portableTextToMarkdownString } from "./portable-text";
 
 type Block = Record<string, unknown>;
+type Seed = PageBuilderBlockSeed | null;
 
 function text(value: unknown): string | null {
   const trimmed = typeof value === "string" ? value.trim() : "";
@@ -84,15 +96,18 @@ function featureCardsToMarkdown(block: Block): string {
   ]);
 }
 
-function faqAccordionToMarkdown(block: Block): string {
-  const faqs = Array.isArray(block.faqs) ? block.faqs : [];
-  const faqSections = faqs.map((raw) => {
+function faqsToMarkdown(faqs: unknown, level: number): string[] {
+  return (Array.isArray(faqs) ? faqs : []).map((raw) => {
     const faq = raw as Block;
     return joinSections([
-      text(faq.title) && heading(3, text(faq.title) as string),
+      text(faq.title) && heading(level, text(faq.title) as string),
       portableTextToMarkdownString(faq.richText as unknown[]),
     ]);
   });
+}
+
+function faqAccordionToMarkdown(block: Block): string {
+  const faqSections = faqsToMarkdown(block.faqs, 3);
   const link = block.link as Linkish | undefined;
   const linkLine =
     link?.href && absolutizeUrl(link.href) && text(link.title ?? link.text)
@@ -131,32 +146,123 @@ function editorialTwoUpToMarkdown(block: Block): string {
   return bullets.join("\n");
 }
 
-function blockToMarkdown(block: Block): string {
-  switch (block._type) {
-    case "hero":
-      return heroToMarkdown(block);
-    case "cta":
-      return ctaToMarkdown(block);
-    case "imageLinkCards":
-      return imageLinkCardsToMarkdown(block);
-    case "featureCardsIcon":
-      return featureCardsToMarkdown(block);
-    case "faqAccordion":
-      return faqAccordionToMarkdown(block);
-    case "subscribeNewsletter":
-      return subscribeNewsletterToMarkdown(block);
-    case "editorialTwoUp":
-      return editorialTwoUpToMarkdown(block);
-    // collectionBanner, exploreCategories, faqCategories, layersShowcase —
-    // primarily visual; intentionally omitted from the Markdown surface.
-    default:
-      return "";
-  }
+function collectionBannerToMarkdown(block: Block): string {
+  return joinSections([
+    eyebrowLine(block.eyebrow),
+    text(block.title) && heading(2, text(block.title) as string),
+    text(block.description) &&
+      formatMultiline(text(block.description) as string),
+    linksToMarkdown(block.buttons),
+  ]);
 }
 
+function exploreCategoriesToMarkdown(block: Block): string {
+  const collections = Array.isArray(block.collections) ? block.collections : [];
+  return joinSections([
+    text(block.title) && heading(2, text(block.title) as string),
+    linksToMarkdown(
+      collections.map((raw) => {
+        const collection = raw as { title?: string; slug?: string };
+        return {
+          title: collection?.title,
+          href: collection?.slug
+            ? `/collections/${collection.slug}`
+            : undefined,
+        };
+      })
+    ),
+    linksToMarkdown(block.buttons),
+  ]);
+}
+
+function faqCategoriesToMarkdown(block: Block): string {
+  const categories = Array.isArray(block.categories) ? block.categories : [];
+  return joinSections([
+    text(block.title) && heading(2, text(block.title) as string),
+    ...categories.map((raw) => {
+      const category = raw as Block;
+      return joinSections([
+        text(category.title) && heading(3, text(category.title) as string),
+        ...faqsToMarkdown(category.faqs, 4),
+      ]);
+    }),
+  ]);
+}
+
+// Products come from the seeds the page renders from, and each block hides
+// under the same conditions as its component. No seed: the read failed, no links.
+function layersShowcaseToMarkdown(block: Block, seed?: Seed): string {
+  const product = seed?._type === "layersShowcase" ? seed.product : undefined;
+  if (!block.productHandle || product === null) return "";
+  const title = text(block.heading)?.replace(/\s+/g, " ");
+  return joinSections([
+    title && heading(2, title),
+    text(block.description) &&
+      formatMultiline(text(block.description) as string),
+    product &&
+      linksToMarkdown([
+        { title: product.name, href: `/products/${block.productHandle}` },
+      ]),
+  ]);
+}
+
+function featuredProductsToMarkdown(block: Block, seed?: Seed): string {
+  const cards = seed?._type === "featuredProducts" ? seed.cards : undefined;
+  // `picksAllDangled` in featured-products.tsx: the page shows nothing rather
+  // than the newest products the seed fell back to.
+  const picksAllDangled =
+    Array.isArray(block.productHandles) &&
+    block.productHandles.length === 0 &&
+    Array.isArray(block.products) &&
+    block.products.length > 0;
+  if (picksAllDangled || cards?.length === 0) return "";
+  return joinSections([
+    text(block.heading) && heading(2, text(block.heading) as string),
+    linksToMarkdown(
+      cards?.map((card) => ({
+        title: card.title,
+        href: `/products/${card.slug}`,
+      }))
+    ),
+  ]);
+}
+
+const BLOCK_MARKDOWN: Record<
+  PageBuilderBlockTypes,
+  (block: Block, seed?: Seed) => string
+> = {
+  collectionBanner: collectionBannerToMarkdown,
+  cta: ctaToMarkdown,
+  editorialTwoUp: editorialTwoUpToMarkdown,
+  exploreCategories: exploreCategoriesToMarkdown,
+  faqAccordion: faqAccordionToMarkdown,
+  faqCategories: faqCategoriesToMarkdown,
+  featureCardsIcon: featureCardsToMarkdown,
+  featuredProducts: featuredProductsToMarkdown,
+  hero: heroToMarkdown,
+  imageLinkCards: imageLinkCardsToMarkdown,
+  layersShowcase: layersShowcaseToMarkdown,
+  subscribeNewsletter: subscribeNewsletterToMarkdown,
+};
+
+// A block type the schema has since dropped can still sit in the data.
+function blockToMarkdown(block: Block, seeds: PageBuilderData): string {
+  const type = block._type as string;
+  return Object.hasOwn(BLOCK_MARKDOWN, type)
+    ? BLOCK_MARKDOWN[type as PageBuilderBlockTypes](
+        block,
+        seeds[block._key as string]
+      )
+    : "";
+}
+
+/** `seeds` is `pageBuilderSeeds()` output, the catalog reads the page uses. */
 export function pageBuilderToMarkdown(
-  blocks: readonly unknown[] | null | undefined
+  blocks: readonly unknown[] | null | undefined,
+  seeds: PageBuilderData = {}
 ): string {
   if (!Array.isArray(blocks)) return "";
-  return joinSections(blocks.map((block) => blockToMarkdown(block as Block)));
+  return joinSections(
+    blocks.map((block) => blockToMarkdown(block as Block, seeds))
+  );
 }
