@@ -168,10 +168,25 @@ describe("prices match the product page", () => {
       prices: {
         price: { value: 1234.5, currencyCode: "CAD" },
         basePrice: { value: 1500, currencyCode: "CAD" },
+        salePrice: { value: 1234.5, currencyCode: "CAD" },
       },
     });
     expect(markdown).toContain(`- **Price**: ${page(1234.5, "CAD")}`);
     expect(markdown).toContain(`- **Compare At**: ${page(1500, "CAD")}`);
+  });
+
+  it("shows an MSRP as the was-price when there is no sale, as the page does", () => {
+    const markdown = productToMarkdown({
+      name: "Kit",
+      path: "/kit/",
+      prices: {
+        price: { value: 80, currencyCode: "GBP" },
+        basePrice: { value: 80, currencyCode: "GBP" },
+        salePrice: null,
+        retailPrice: { value: 100, currencyCode: "GBP" },
+      },
+    });
+    expect(markdown).toContain(`- **Compare At**: ${page(100, "GBP")}`);
   });
 
   it("shows the page's unavailable text for a currency Intl rejects", () => {

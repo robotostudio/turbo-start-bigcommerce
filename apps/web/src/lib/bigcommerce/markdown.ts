@@ -18,6 +18,7 @@ import {
   PRICE_UNAVAILABLE,
   toMoney,
 } from "@/lib/bigcommerce/money";
+import { compareAtPrice } from "@/lib/bigcommerce/product-card";
 import { normalizeMarkdownPath } from "@/lib/markdown/path";
 import {
   escapeMarkdown,
@@ -39,6 +40,8 @@ export type MarkdownProduct = {
   prices?: {
     price: BigCommerceMoney;
     basePrice?: BigCommerceMoney | null;
+    salePrice?: BigCommerceMoney | null;
+    retailPrice?: BigCommerceMoney | null;
     priceRange?: { min: BigCommerceMoney; max: BigCommerceMoney } | null;
   } | null;
   productOptions?: Connection<{
@@ -141,9 +144,11 @@ function pricingSection(product: MarkdownProduct): string | null {
       : money(prices.price);
 
   const bullets = [`- **Price**: ${price}`];
-  // `basePrice` is the was-price; it only differs when a sale price is live.
-  if (prices.basePrice && prices.basePrice.value > prices.price.value) {
-    bullets.push(`- **Compare At**: ${money(prices.basePrice)}`);
+  const was = compareAtPrice(prices);
+  if (was !== null) {
+    bullets.push(
+      `- **Compare At**: ${money({ value: was, currencyCode: prices.price.currencyCode })}`
+    );
   }
 
   return joinSections([heading(2, "Pricing"), bullets.join("\n")]);
