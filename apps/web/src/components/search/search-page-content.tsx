@@ -18,6 +18,7 @@ import type { BigCommerceCardProduct } from "@/lib/bigcommerce/product-card";
 import { searchUrlWithQuery } from "./paths";
 import { SearchEmptyState } from "./search-empty-state";
 import { SearchProductGrid } from "./search-product-grid";
+import { SearchUnavailable } from "./search-unavailable";
 
 const SEARCH_DEBOUNCE_MS = 250;
 const CACHE_STALE_TIME_MS = 30_000;
@@ -64,25 +65,6 @@ async function fetchFullResults(
     throw new Error("Failed to search");
   }
   return response.json() as Promise<FullSearchResponse>;
-}
-
-/**
- * What a failed search looks like.
- *
- * Without it, `data ?? EMPTY` rendered `0 results for "jacket"` and "No
- * products found." — byte-identical to a search that genuinely matched
- * nothing, so a shopper looking for a product the store sells was told it does
- * not sell it. The search box stays above this, so retyping is the retry.
- */
-function SearchUnavailable() {
-  return (
-    <div className="site-container py-16 text-center">
-      <p className="font-medium text-base">Search isn&apos;t available</p>
-      <p className="mt-1 text-muted-foreground text-sm tracking-wide">
-        Our catalogue didn&apos;t answer just now. Try again in a moment.
-      </p>
-    </div>
-  );
 }
 
 export function SearchPageContent({
@@ -139,6 +121,8 @@ export function SearchPageContent({
   }, [trimmed, listingParams]);
 
   const { data, isLoading, isError } = useQuery({
+    // The default 3 retries hold the skeleton for about 7 seconds.
+    retry: 1,
     // Filters and sort are part of the key, or a pick would rewrite the URL and
     // serve the previous result set — in the previous order — out of the cache.
     queryKey: ["search-full", trimmed, listingQs],

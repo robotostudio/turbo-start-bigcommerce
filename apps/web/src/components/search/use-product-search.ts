@@ -43,7 +43,9 @@ export function useProductSearch(initialQuery = "") {
   const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
 
   const hasQuery = debouncedQuery.trim().length > 0;
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
+    // The default 3 retries hold the skeleton for about 7 seconds.
+    retry: 1,
     queryKey: ["product-search", debouncedQuery],
     queryFn: ({ signal }) => searchProducts(debouncedQuery, signal),
     enabled: hasQuery,
@@ -60,6 +62,7 @@ export function useProductSearch(initialQuery = "") {
     collections: results.collections,
     related: results.related,
     isSearching: isLoading,
+    isUnavailable: isError,
     hasQuery: query.trim().length > 0,
   };
 }

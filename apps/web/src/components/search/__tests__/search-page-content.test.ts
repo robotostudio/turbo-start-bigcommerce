@@ -73,6 +73,21 @@ describe("search page", () => {
     expect(markup).not.toContain("0 result");
   });
 
+  it("retries a failed search once, as the drawer does", () => {
+    useQuery.mockClear();
+    useQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    });
+
+    render();
+
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ retry: 1 })
+    );
+  });
+
   it("still reports a genuine zero-result search as zero results", () => {
     useQuery.mockReturnValue({
       data: {
