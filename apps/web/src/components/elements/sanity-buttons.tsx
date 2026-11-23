@@ -3,6 +3,7 @@ import { cn } from "@workspace/ui/lib/utils";
 import Link from "next/link";
 import type { ComponentProps } from "react";
 
+import { newTab } from "@/lib/new-tab";
 import type { SanityButtonProps } from "@/types";
 
 type SanityButtonsProps = {
@@ -34,7 +35,7 @@ function SanityButton({
       <Link
         aria-label={`Navigate to ${text}`}
         href={href || "#"}
-        target={openInNewTab ? "_blank" : "_self"}
+        {...newTab(openInNewTab)}
         title={`Click to visit ${text}`}
       >
         {text}

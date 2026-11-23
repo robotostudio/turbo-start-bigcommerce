@@ -9,6 +9,7 @@ import {
   getProductSummaries,
   toSegments,
 } from "@/lib/bigcommerce/catalog";
+import { newTab } from "@/lib/new-tab";
 
 export const metadata: Metadata = {
   title: "OG Image Preview",
@@ -182,8 +183,7 @@ export default async function OgPreviewPage() {
                     <a
                       className="block overflow-hidden rounded-lg border bg-muted transition-opacity hover:opacity-90"
                       href={card.url}
-                      rel="noopener noreferrer"
-                      target="_blank"
+                      {...newTab(true)}
                     >
                       <img
                         alt={`${card.title} Open Graph preview`}
@@ -199,8 +199,7 @@ export default async function OgPreviewPage() {
                       <a
                         className="truncate text-muted-foreground text-xs hover:text-foreground hover:underline"
                         href={card.url}
-                        rel="noopener noreferrer"
-                        target="_blank"
+                        {...newTab(true)}
                       >
                         {card.url}
                       </a>

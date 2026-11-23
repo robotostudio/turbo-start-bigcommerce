@@ -1,6 +1,7 @@
 import { cn } from "@workspace/ui/lib/utils";
 import Link from "next/link";
 
+import { newTab } from "@/lib/new-tab";
 import type { PagebuilderType } from "@/types";
 import { SanityImage } from "./elements/sanity-image";
 
@@ -14,7 +15,7 @@ export type CTACardProps = {
 };
 
 export function CTACard({ card, className }: CTACardProps) {
-  const { image, description, title, href } = card ?? {};
+  const { image, description, title, href, openInNewTab } = card ?? {};
   return (
     <Link
       className={cn(
@@ -22,6 +23,7 @@ export function CTACard({ card, className }: CTACardProps) {
         className
       )}
       href={href ?? "#"}
+      {...newTab(openInNewTab)}
     >
       {image?.id && (
         <div className="absolute inset-0 z-1 mix-blend-multiply">
