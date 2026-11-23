@@ -106,10 +106,11 @@ describe("a configured drain", () => {
 });
 
 /**
- * Before evlog this was `console.log`, which swallows anything. evlog 2.35+
- * writes a circular reference as `"[Circular]"`, but its JSON output still
- * raises on a BigInt, so the guard lives in `#emit` rather than in a
- * serialiser. Both stay here: neither may throw out of the call.
+ * evlog serialises its JSON output with a bare `JSON.stringify`. Since 2.37 it
+ * replaces a circular reference with `"[Circular]"` itself, but a BigInt still
+ * raises out of the call when `pretty` is off. Before evlog this was
+ * `console.log`, which swallows anything, so the guard lives in `#emit` rather
+ * than in a serialiser.
  *
  * `llms.txt/route.ts` logs a rejected promise's `reason` — an arbitrary value —
  * from inside a failure path, which is the worst place to add a new throw.
@@ -129,7 +130,8 @@ describe("a value that cannot be serialised", () => {
   });
 
   it("still says what happened when it falls back", () => {
-    // JSON output, because the pretty printer copes with a BigInt.
+    // JSON output, where evlog still throws on a BigInt. Pretty printing
+    // formats one without complaint, so it would never reach the fallback.
     initLogging({ env: { service: "logger-test" }, pretty: false });
     const stderr = vi
       .spyOn(console, "error")

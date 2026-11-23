@@ -191,11 +191,11 @@ export function makeLogger(log: EvlogLog) {
         }
         log[level](toEvent(this.#context, message, args));
       } catch {
-        // Logging must not be the thing that throws. evlog's JSON output still
-        // raises on a BigInt in a caller's object (circular references became
-        // `"[Circular]"` in 2.35), out of the `logger.error` call — usually
-        // from inside a catch block, replacing the error being reported.
-        // `console.log` never did this.
+        // Logging must not be the thing that throws. evlog serialises its JSON
+        // output with a bare `JSON.stringify`, so a BigInt in a caller's object
+        // raises out of the `logger.error` call — usually from inside a catch
+        // block, replacing the error being reported. (Circular references
+        // stopped throwing in evlog 2.37.) `console.log` never did this.
         //
         // `llms.txt/route.ts` logs a rejected promise's `reason`, which can be
         // any value at all. Fall back to the shape this logger replaced —
