@@ -14,6 +14,7 @@ import {
 import {
   type ProductVariant,
   productVariants,
+  resolveSelection,
   toProductOptions,
 } from "@/lib/bigcommerce/product-model";
 import byId from "../__fixtures__/product-by-id.json";
@@ -367,6 +368,71 @@ describe("findCardVariant", () => {
 
   it("ignores an unset selection", () => {
     expect(findCardVariant(VARIANTS, "Warm Stone", undefined)?.id).toBe("186");
+  });
+
+  it("returns the first variant with nothing selected", () => {
+    expect(findCardVariant(VARIANTS, undefined, undefined)?.id).toBe("170");
+  });
+
+  it("finds the colour option whatever the merchant named it", () => {
+    const colour = VARIANTS.map((variant) => ({
+      ...variant,
+      selectedOptions: variant.selectedOptions.map((option) =>
+        option.name === "Color" ? { ...option, name: "Colour" } : option
+      ),
+    }));
+    expect(findCardVariant(colour, "Warm Stone", "M")?.id).toBe("189");
+  });
+
+  it("returns undefined for a colour on a product without a colour option", () => {
+    const sizeOnly = VARIANTS.map((variant) => ({
+      ...variant,
+      selectedOptions: variant.selectedOptions.filter(
+        (option) => option.name === "Size"
+      ),
+    }));
+    expect(findCardVariant(sizeOnly, "Warm Stone", "M")).toBeUndefined();
+  });
+
+  it("takes an option the card can't pick from the default variant, as the product page does", () => {
+    const withFit = (variant: ProductVariant, fit: string) => ({
+      ...variant,
+      id: `${variant.id}-${fit}`,
+      selectedOptions: [
+        ...variant.selectedOptions,
+        { name: "Fit", value: fit },
+      ],
+    });
+    // Every Slim variant sorts before its Regular twin except the default.
+    const [first, ...rest] = VARIANTS;
+    const fitted = [
+      ...(first ? [withFit(first, "Regular")] : []),
+      ...VARIANTS.map((variant) => withFit(variant, "Slim")),
+      ...rest.map((variant) => withFit(variant, "Regular")),
+    ];
+    const options = [
+      ...toProductOptions(
+        variantsAndOptions.response.data.site.product.productOptions.edges.map(
+          (edge) => edge.node
+        )
+      ),
+      {
+        id: "fit",
+        name: "Fit",
+        values: [
+          { value: "Regular", hex: null },
+          { value: "Slim", hex: null },
+        ],
+      },
+    ];
+    // The card links to the product page with its colour and size in the URL.
+    const params = new URLSearchParams({ Color: "Warm Stone", Size: "M" });
+
+    const card = findCardVariant(fitted, "Warm Stone", "M");
+    expect(card?.id).toBe("189-Regular");
+    expect(card?.id).toBe(
+      resolveSelection(options, fitted, params).variant?.id
+    );
   });
 
   it("returns undefined for an unknown combination", () => {

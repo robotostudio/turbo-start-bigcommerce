@@ -7,9 +7,9 @@ import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductPurchase } from "@/components/product/product-purchase";
 import { VariantSelector } from "@/components/product/variant-selector";
 import {
-  findVariantByOptions,
   type ProductOption,
   type ProductVariant,
+  resolveSelection,
   variantGalleryImage,
 } from "@/lib/bigcommerce/product-model";
 import { buildLineMetadata } from "@/lib/cart/metadata";
@@ -24,40 +24,6 @@ import type { MoneyV2 } from "@/lib/cart/types";
  * also what keeps the selection live as `VariantSelector` rewrites the query
  * string.
  */
-
-/**
- * The variant to render: whatever the URL asks for, falling back per option
- * to the first variant's own value so a bare PDP URL still lands on
- * something buyable.
- *
- * `complete` is what gates the CTA — an option the shopper hasn't chosen yet
- * must read "Select Options", not silently add the default.
- */
-export function resolveSelection(
-  options: ProductOption[],
-  variants: ProductVariant[],
-  searchParams: { get(name: string): string | null }
-) {
-  const [defaultVariant] = variants;
-  const selections: Record<string, string> = {};
-
-  for (const option of options) {
-    selections[option.name] =
-      searchParams.get(option.name) ??
-      defaultVariant?.selectedOptions.find((s) => s.name === option.name)
-        ?.value ??
-      "";
-  }
-
-  return {
-    complete: options
-      .filter((option) => option.values.length > 1)
-      .every((option) =>
-        option.values.some((v) => v.value === selections[option.name])
-      ),
-    variant: findVariantByOptions(variants, selections) ?? defaultVariant,
-  };
-}
 
 function StockIndicator({ isInStock }: { isInStock: boolean }) {
   // `inventory.aggregated` is null across this store — it hides stock levels —

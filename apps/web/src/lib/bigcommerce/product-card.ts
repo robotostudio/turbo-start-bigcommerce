@@ -9,6 +9,7 @@ import {
   type BigCommerceProductOption,
   type BigCommerceVariant,
   colorGallery,
+  findVariantByOptions,
   type ProductVariant,
   productVariants,
   toProductOptions,
@@ -208,29 +209,34 @@ export function cardPricing(
   };
 }
 
-/** The variant's value for the colour- or size-typed option, if it has one. */
-function optionValue(variant: ProductVariant, type: "color" | "size") {
-  return variant.selectedOptions.find(
-    (option) => getOptionType(option.name) === type
-  )?.value;
-}
-
 /**
- * Finds the variant matching the card's colour and size selection. Matches per
- * option type rather than on bare values, so a colour and a size sharing a
- * value string can't cross-match.
+ * The card keys its selection by option type, not name, so this names the
+ * product's colour and size options and matches through `findVariantByOptions`.
+ * An option the card can't pick (a Fit) takes the default variant's value, as
+ * `resolveSelection` does on the product page the card links to.
  */
 export function findCardVariant(
   variants: ProductVariant[] | undefined,
   color: string | undefined,
   size: string | undefined
 ): ProductVariant | undefined {
-  if (!variants || variants.length === 0) return undefined;
-  return variants.find(
-    (variant) =>
-      (!color || optionValue(variant, "color") === color) &&
-      (!size || optionValue(variant, "size") === size)
+  const first = variants?.[0];
+  if (!(variants && first)) return undefined;
+  if (!(color || size)) return first;
+
+  const nameOf = (type: "color" | "size") =>
+    first.selectedOptions.find((option) => getOptionType(option.name) === type)
+      ?.name;
+  const colorName = nameOf("color");
+  const sizeName = nameOf("size");
+  if ((color && !colorName) || (size && !sizeName)) return undefined;
+
+  const selection: Record<string, string> = Object.fromEntries(
+    first.selectedOptions.map((option) => [option.name, option.value])
   );
+  if (colorName) selection[colorName] = color ?? "";
+  if (sizeName) selection[sizeName] = size ?? "";
+  return findVariantByOptions(variants, selection) ?? undefined;
 }
 
 /**
