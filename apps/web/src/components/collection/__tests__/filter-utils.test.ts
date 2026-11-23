@@ -362,8 +362,24 @@ describe("getActiveFilters", () => {
       "filter.minPrice=100&filter.maxPrice=500",
     ]) {
       const chips = getActiveFilters(params(query));
-      expect(chips.every((chip) => chip.invalid === undefined)).toBe(true);
+      expect(chips.map((chip) => chip.invalid)).toEqual([undefined, undefined]);
     }
+  });
+
+  it("flags a repeated price bound the search did not use", () => {
+    const chips = getActiveFilters(
+      params("filter.minPrice=10&filter.minPrice=20")
+    );
+
+    expect(chips.map((chip) => chip.invalid)).toEqual([undefined, true]);
+  });
+
+  it("keeps a valid bound valid next to an unparseable one", () => {
+    const chips = getActiveFilters(
+      params("filter.minPrice=abc&filter.maxPrice=100")
+    );
+
+    expect(chips.map((chip) => chip.invalid)).toEqual([true, undefined]);
   });
 
   it("ignores params outside the filter namespace", () => {
