@@ -105,9 +105,7 @@ export function FeaturedProducts({
     // props moved on and those cards describe some other set of products —
     // attached anyway they would paint the wrong grid until the refetch lands,
     // the trap collection-products.tsx documents at its own initialData.
-    // staleTime 0 overrides the 60s default in providers.tsx so React Query
-    // still revalidates on mount: the seed can come from a prerendered page.
-    staleTime: 0,
+    // staleTime stays at the default so React Query still revalidates on mount.
     initialData:
       seed !== undefined && seed.queryKey === handleKey
         ? seed.cards
