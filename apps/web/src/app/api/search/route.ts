@@ -32,8 +32,9 @@ export async function GET(request: Request) {
     getCategoryTree(),
   ]);
 
+  // A 500, as /api/search/full answers: an empty 200 reads as "no matches".
   if (!searchResult.ok) {
-    return NextResponse.json(EMPTY);
+    return NextResponse.json(EMPTY, { status: 500 });
   }
 
   const { products, suggestions } = searchResult.data;
