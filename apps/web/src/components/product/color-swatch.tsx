@@ -2,7 +2,7 @@
 
 import { cn } from "@workspace/ui/lib/utils";
 
-import type { ProductOptionValue } from "@/lib/cart/types";
+import type { ProductOptionValue } from "@/lib/bigcommerce/product-model";
 
 type ColorSwatchProps = {
   /**

@@ -40,7 +40,7 @@ export const PRICE_UNAVAILABLE = "—";
  *
  * `Intl.NumberFormat(locale, { style: "currency", currency: "" })` throws
  * `RangeError: Invalid currency code`, and the empty code is a value this app
- * mints itself: `toCardVariant` falls back to `{ amount: "0.00", currencyCode:
+ * mints itself: `toProductVariant` falls back to `{ amount: "0.00", currencyCode:
  * "" }` for a variant BigCommerce returns with no `prices` node. On the PDP
  * that is the default variant, so the throw took the product page down with it.
  *

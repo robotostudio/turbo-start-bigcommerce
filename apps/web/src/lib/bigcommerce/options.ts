@@ -1,5 +1,5 @@
 import type { CardColor } from "@/components/product/product-card";
-import { swatchHex } from "./color";
+import type { ProductOption } from "./product-model";
 
 /** Option names that render as colour swatches. */
 const COLOR_OPTION_NAMES = new Set(["color", "colour"]);
@@ -21,22 +21,6 @@ export function getOptionType(name: string): "color" | "size" | "default" {
 }
 
 /**
- * A `MultipleChoiceOption` as the card queries it. `edges` is nullable
- * because gql.tada types every connection off the real schema as
- * `edges: T[] | null`, so the generated payload types fit directly.
- */
-export type BigCommerceProductOption = {
-  displayName: string;
-  values?: {
-    edges?:
-      | readonly {
-          node: { label: string; hexColors?: readonly string[] | null };
-        }[]
-      | null;
-  } | null;
-};
-
-/**
  * Splits product options into the card's colour swatches and size list.
  *
  * BigCommerce hangs the swatch hex off the option value, so the colours come
@@ -47,7 +31,7 @@ export type BigCommerceProductOption = {
  * literal option name, so links need "Colour" when that is what the product
  * uses.
  */
-export function getCardOptions(options: readonly BigCommerceProductOption[]): {
+export function getCardOptions(options: readonly ProductOption[]): {
   colors: CardColor[];
   sizes: string[];
   colorOptionName?: string;
@@ -59,17 +43,13 @@ export function getCardOptions(options: readonly BigCommerceProductOption[]): {
   let sizeOptionName: string | undefined;
 
   for (const option of options) {
-    const values = (option.values?.edges ?? []).map((edge) => edge.node);
-    const type = getOptionType(option.displayName);
+    const type = getOptionType(option.name);
     if (type === "color") {
-      colors = values.map((value) => ({
-        name: value.label,
-        hex: swatchHex(value.hexColors),
-      }));
-      colorOptionName = option.displayName;
+      colors = option.values.map(({ value, hex }) => ({ name: value, hex }));
+      colorOptionName = option.name;
     } else if (type === "size") {
-      sizes = values.map((value) => value.label);
-      sizeOptionName = option.displayName;
+      sizes = option.values.map(({ value }) => value);
+      sizeOptionName = option.name;
     }
   }
 

@@ -1,22 +1,28 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import type { CardVariant } from "@/components/product/product-card";
+import { getCardOptions } from "@/lib/bigcommerce/options";
 import {
   badgeFromTags,
+  cardHref,
   cardPricing,
   findCardVariant,
-  productToCardProps,
+  initialCardPricing,
   productTags,
+  productToCardProps,
   resolveCardImages,
   secondaryImageUrl,
 } from "@/lib/bigcommerce/product-card";
-import { getCardOptions } from "@/lib/bigcommerce/options";
-import { toCardVariant } from "@/lib/bigcommerce/variant-utils";
+import {
+  type ProductVariant,
+  productVariants,
+  resolveSelection,
+  toProductOptions,
+} from "@/lib/bigcommerce/product-model";
 import byId from "../__fixtures__/product-by-id.json";
 import byPath from "../__fixtures__/product-by-path.json";
-import variantsAndOptions from "../__fixtures__/product-variants-and-options.json";
 import imageOverride from "../__fixtures__/product-variant-image-override.json";
+import variantsAndOptions from "../__fixtures__/product-variants-and-options.json";
 
 // Aster Denim Coach Jacket: Size x Color over two colourways, every variant
 // carrying its own image override. Read from the capture, never rewritten.
@@ -24,7 +30,7 @@ const ASTER = imageOverride.response.data.site.multiColour;
 const WREN = imageOverride.response.data.site.singleVariant;
 
 const GALLERY = ASTER.images.edges.map((edge) => edge.node);
-const VARIANTS = ASTER.variants.edges.map((edge) => toCardVariant(edge.node));
+const VARIANTS = productVariants(ASTER);
 const COLORS = ["Indigo Rinse", "Warm Stone"];
 
 const INDIGO = GALLERY.filter((image) =>
@@ -229,10 +235,13 @@ describe("resolveCardImages", () => {
 
   it("ignores a size whose value collides with the selected color", () => {
     // A size literally named "Warm Stone" must not be read as the colour.
-    const collider: CardVariant = {
+    const collider: ProductVariant = {
       id: "collide",
+      merchandiseId: "183:collide",
+      title: "collide",
       availableForSale: true,
       price: { amount: "133.00", currencyCode: "GBP" },
+      compareAt: null,
       selectedOptions: [
         { name: "Size", value: "Warm Stone" },
         { name: "Color", value: "Indigo Rinse" },
@@ -256,10 +265,12 @@ describe("resolveCardImages", () => {
       selectedColor: "Indigo",
       variants: [
         {
-          ...VARIANTS[0],
           id: "indigo",
+          merchandiseId: "183:indigo",
+          title: "Indigo",
           availableForSale: true,
           price: { amount: "133.00", currencyCode: "GBP" },
+          compareAt: null,
           selectedOptions: [{ name: "Color", value: "Indigo" }],
           image: null,
         },
@@ -291,6 +302,134 @@ describe("secondaryImageUrl", () => {
 
   it("fades to the first photo when there is no featured one", () => {
     expect(secondaryImageUrl([a, b], null)).toBe(a.url);
+  });
+});
+
+describe("card price against the product page it opens", () => {
+  const sized = (id: string, size: string, amount: string): ProductVariant => ({
+    id,
+    merchandiseId: `9:${id}`,
+    title: size,
+    availableForSale: true,
+    price: { amount, currencyCode: "GBP" },
+    compareAt: null,
+    image: null,
+    selectedOptions: [{ name: "Size", value: size }],
+  });
+  // L is the default variant, S the cheaper one and first on the card.
+  const variants = [sized("2", "L", "50.00"), sized("1", "S", "40.00")];
+  const options = [
+    {
+      id: "size",
+      name: "Size",
+      values: [
+        { value: "S", hex: null },
+        { value: "L", hex: null },
+      ],
+    },
+  ];
+  const range = { minVariantPrice: 40, maxVariantPrice: 50 };
+
+  it("prices the card from the variant its link opens", () => {
+    for (const [size, price] of [
+      ["S", "£40.00"],
+      ["L", "£50.00"],
+    ] as const) {
+      const variant = findCardVariant(variants, undefined, size);
+      const href = cardHref("tee", variant);
+      const opened = resolveSelection(
+        options,
+        variants,
+        new URL(href ?? "", "https://store.test").searchParams
+      ).variant;
+
+      expect(opened?.id).toBe(variant?.id);
+      expect(cardPricing(range, null, "GBP", variant)).toMatchObject({
+        price,
+        rangePrice: null,
+      });
+    }
+  });
+
+  it("falls back to the range when no variant matches", () => {
+    expect(cardHref("tee", undefined)).toBeNull();
+    expect(cardPricing(range, null, "GBP", undefined)).toMatchObject({
+      price: "£40.00",
+      rangePrice: "£50.00",
+    });
+  });
+
+  it("takes the was-price from the variant, not the product", () => {
+    const gbp = (amount: string) => ({ amount, currencyCode: "GBP" });
+    // S is marked down from £50; L is not marked down at all. The product-level
+    // figure (£100) belongs to neither.
+    const small = { price: gbp("40.00"), compareAt: gbp("50.00") };
+    const large = { price: gbp("50.00"), compareAt: null };
+
+    expect(cardPricing(range, 100, "GBP", small)).toEqual({
+      price: "£40.00",
+      salePercent: 20,
+      strikePrice: "£50.00",
+      rangePrice: null,
+    });
+    expect(cardPricing(range, 100, "GBP", large)).toEqual({
+      price: "£50.00",
+      salePercent: 0,
+      strikePrice: null,
+      rangePrice: null,
+    });
+  });
+
+  it("prices a single-price product exactly as before", () => {
+    const flat = { minVariantPrice: 396, maxVariantPrice: 396 };
+    const price = { amount: "396.00", currencyCode: "GBP" };
+    for (const compareAt of [null, 495]) {
+      const variant = {
+        price,
+        compareAt: compareAt
+          ? { amount: compareAt.toFixed(2), currencyCode: "GBP" }
+          : null,
+      };
+      expect(cardPricing(flat, compareAt, "GBP", variant)).toEqual(
+        cardPricing(flat, compareAt, "GBP")
+      );
+    }
+  });
+});
+
+describe("initialCardPricing", () => {
+  it("prices the variant the card first shows, with its own was-price", () => {
+    const card = productToCardProps(byId.response.data.site.product);
+    const shown = findCardVariant(
+      card.variants,
+      card.selectedColor,
+      card.selectedSize
+    );
+    const gbp = (amount: string) => ({ amount, currencyCode: "GBP" });
+    // Only the variant the card opens on is marked down; the range minimum
+    // and the product-level figure belong to other variants.
+    const variants = card.variants?.map((variant) =>
+      variant.id === shown?.id
+        ? { ...variant, price: gbp("120.00"), compareAt: gbp("150.00") }
+        : { ...variant, price: gbp("100.00"), compareAt: null }
+    );
+
+    expect(
+      initialCardPricing(
+        {
+          ...card,
+          variants,
+          priceRange: { minVariantPrice: 100, maxVariantPrice: 120 },
+          compareAtPrice: 200,
+        },
+        "GBP"
+      )
+    ).toEqual({
+      price: "£120.00",
+      salePercent: 20,
+      strikePrice: "£150.00",
+      rangePrice: null,
+    });
   });
 });
 
@@ -341,14 +480,18 @@ describe("findCardVariant", () => {
   });
 
   it("matches per option type, not on bare values", () => {
-    const collider: CardVariant = {
+    const collider: ProductVariant = {
       id: "collide",
+      merchandiseId: "183:collide",
+      title: "collide",
       availableForSale: true,
       price: { amount: "133.00", currencyCode: "GBP" },
+      compareAt: null,
       selectedOptions: [
         { name: "Size", value: "Warm Stone" },
         { name: "Color", value: "M" },
       ],
+      image: null,
     };
     // A value-only match would have returned `collide` here.
     expect(
@@ -358,6 +501,71 @@ describe("findCardVariant", () => {
 
   it("ignores an unset selection", () => {
     expect(findCardVariant(VARIANTS, "Warm Stone", undefined)?.id).toBe("186");
+  });
+
+  it("returns the first variant with nothing selected", () => {
+    expect(findCardVariant(VARIANTS, undefined, undefined)?.id).toBe("170");
+  });
+
+  it("finds the colour option whatever the merchant named it", () => {
+    const colour = VARIANTS.map((variant) => ({
+      ...variant,
+      selectedOptions: variant.selectedOptions.map((option) =>
+        option.name === "Color" ? { ...option, name: "Colour" } : option
+      ),
+    }));
+    expect(findCardVariant(colour, "Warm Stone", "M")?.id).toBe("189");
+  });
+
+  it("returns undefined for a colour on a product without a colour option", () => {
+    const sizeOnly = VARIANTS.map((variant) => ({
+      ...variant,
+      selectedOptions: variant.selectedOptions.filter(
+        (option) => option.name === "Size"
+      ),
+    }));
+    expect(findCardVariant(sizeOnly, "Warm Stone", "M")).toBeUndefined();
+  });
+
+  it("takes an option the card can't pick from the default variant, as the product page does", () => {
+    const withFit = (variant: ProductVariant, fit: string) => ({
+      ...variant,
+      id: `${variant.id}-${fit}`,
+      selectedOptions: [
+        ...variant.selectedOptions,
+        { name: "Fit", value: fit },
+      ],
+    });
+    // Every Slim variant sorts before its Regular twin except the default.
+    const [first, ...rest] = VARIANTS;
+    const fitted = [
+      ...(first ? [withFit(first, "Regular")] : []),
+      ...VARIANTS.map((variant) => withFit(variant, "Slim")),
+      ...rest.map((variant) => withFit(variant, "Regular")),
+    ];
+    const options = [
+      ...toProductOptions(
+        variantsAndOptions.response.data.site.product.productOptions.edges.map(
+          (edge) => edge.node
+        )
+      ),
+      {
+        id: "fit",
+        name: "Fit",
+        values: [
+          { value: "Regular", hex: null },
+          { value: "Slim", hex: null },
+        ],
+      },
+    ];
+    // The card links to the product page with its colour and size in the URL.
+    const params = new URLSearchParams({ Color: "Warm Stone", Size: "M" });
+
+    const card = findCardVariant(fitted, "Warm Stone", "M");
+    expect(card?.id).toBe("189-Regular");
+    expect(card?.id).toBe(
+      resolveSelection(options, fitted, params).variant?.id
+    );
   });
 
   it("returns undefined for an unknown combination", () => {
@@ -435,7 +643,7 @@ describe("getCardOptions", () => {
   it("takes the swatch hex straight off the option value", () => {
     const product = variantsAndOptions.response.data.site.product;
     const { colors, sizes } = getCardOptions(
-      product.productOptions.edges.map((edge) => edge.node)
+      toProductOptions(product.productOptions.edges.map((edge) => edge.node))
     );
     expect(colors).toEqual([
       { name: "Indigo Rinse", hex: "#2C3E5D" },

@@ -12,35 +12,21 @@ import { SavedItemButton } from "@/components/saved-items/saved-item-button";
 import {
   type BigCommerceCardImage,
   type CardRating,
+  cardHref,
   cardPricing,
   findCardVariant,
   resolveCardImages,
 } from "@/lib/bigcommerce/product-card";
+import type { ProductVariant } from "@/lib/bigcommerce/product-model";
 import { buildLineMetadata } from "@/lib/cart/metadata";
-import type { MoneyV2 } from "@/lib/cart/types";
-import { buildVariantUrl, merchandiseId } from "./variant-utils";
+import { buildVariantUrl } from "./variant-utils";
 
 export type MerchBadge = "new" | "exclusive";
 export type StockStatus = "low" | "out" | null;
 export type CardColor = { name: string; hex: string | null };
-export type CardVariant = {
-  id: string;
-  availableForSale: boolean;
-  price: MoneyV2;
-  selectedOptions: { name: string; value: string }[];
-  /** Per-variant photo; drives the card's image swap on color select. */
-  image?: { url: string } | null;
-};
 
 export type ProductCardProps = {
   slug: string;
-  /**
-   * BigCommerce product entityId. The cart's merchandise id is
-   * `productEntityId:variantEntityId` — a variant id alone doesn't identify a
-   * purchasable. Omit it and the hover add-to-cart falls back to the bare
-   * variant id, which the cart rejects rather than mis-adds.
-   */
-  productId?: string;
   title: string;
   priceRange: { minVariantPrice: number; maxVariantPrice: number };
   currencyCode?: string;
@@ -72,7 +58,7 @@ export type ProductCardProps = {
   /** BigCommerce's own name for the color option, used to link into the PDP. */
   colorOptionName?: string;
   /** Variants for resolving the color+size selection to a cart line. */
-  variants?: CardVariant[];
+  variants?: ProductVariant[];
   /**
    * Ordered gallery images. Alt text, not just URLs: BigCommerce names the
    * colourway in each photo's alt text, and that is what groups a colour's
@@ -92,7 +78,7 @@ const BADGE_LABEL: Record<MerchBadge, string> = {
 const MERCH_BADGE_CLASS = "px-1.5 py-0.5";
 
 function ProductCardMini({
-  slug,
+  href,
   title,
   imageUrl,
   price,
@@ -100,7 +86,7 @@ function ProductCardMini({
   rangePrice,
   replace,
 }: {
-  slug: string;
+  href: string;
   title: string;
   imageUrl: string | null;
   price: string;
@@ -114,7 +100,7 @@ function ProductCardMini({
       // that IS touch-reachable — and Tailwind gates hover: behind
       // (hover:hover), so press is the only feedback a touch user gets here.
       className="flex items-center gap-3 p-2 transition-colors duration-150 ease-hover hover:bg-accent active:bg-accent"
-      href={`/products/${slug}`}
+      href={href}
       replace={replace}
     >
       {imageUrl ? (
@@ -302,17 +288,15 @@ function AddToCartBar({
   selectedSize,
   sizes,
   onSelectSize,
-  productId,
   productTitle,
   productHandle,
   imageUrl,
 }: {
-  variants: CardVariant[] | undefined;
+  variants: ProductVariant[] | undefined;
   selectedColor: string | undefined;
   selectedSize: string | undefined;
   sizes: string[] | undefined;
   onSelectSize: (size: string) => void;
-  productId: string | undefined;
   productTitle: string;
   productHandle: string;
   imageUrl: string | null;
@@ -334,7 +318,7 @@ function AddToCartBar({
         : null,
     });
     openCart();
-    void addLine(merchandiseId(productId, variant.id), 1, metadata);
+    void addLine(variant.merchandiseId, 1, metadata);
   }
 
   return (
@@ -457,7 +441,6 @@ function CardImage({
 
 export function ProductCard({
   slug,
-  productId,
   title,
   priceRange,
   currencyCode,
@@ -483,20 +466,29 @@ export function ProductCard({
   const [selectedSize, setSelectedSize] = useState(initialSize);
 
   const code = currencyCode ?? "GBP";
+  const variant = findCardVariant(variants, selectedColor, selectedSize);
   const { price, salePercent, strikePrice, rangePrice } = cardPricing(
     priceRange,
     compareAtPrice,
-    code
+    code,
+    variant
   );
+
+  // Carry the selection into the PDP so it opens on the variant priced here.
+  const href =
+    cardHref(slug, variant) ??
+    (selectedColor && colorOptionName
+      ? buildVariantUrl(slug, { [colorOptionName]: selectedColor })
+      : `/products/${slug}`);
 
   if (mini) {
     return (
       <ProductCardMini
+        href={href}
         imageUrl={imageUrl}
         price={price}
         rangePrice={rangePrice}
         replace={replace}
-        slug={slug}
         strikePrice={strikePrice}
         title={title}
       />
@@ -507,11 +499,6 @@ export function ProductCard({
   // every product in a colour-carrying catalog satisfies one of the first two.
   // It gets its own line below.
   const subtitle = selectedColor ?? variantName;
-  // Carry the chosen color into the PDP so the selection survives navigation.
-  const href =
-    selectedColor && colorOptionName
-      ? buildVariantUrl(slug, { [colorOptionName]: selectedColor })
-      : `/products/${slug}`;
   const { primary, secondary } = resolveCardImages({
     selectedColor,
     colors: colors?.map((color) => color.name),
@@ -552,7 +539,6 @@ export function ProductCard({
             imageUrl={primary}
             onSelectSize={setSelectedSize}
             productHandle={slug}
-            productId={productId}
             productTitle={title}
             selectedColor={selectedColor}
             selectedSize={selectedSize}

@@ -1,16 +1,20 @@
 import type {
-  CardVariant,
   MerchBadge,
   ProductCardProps,
   StockStatus,
 } from "@/components/product/product-card";
+import { buildVariantUrl } from "@/components/product/variant-utils";
 import { type BigCommerceMoney, formatMoney, toMoney } from "./money";
+import { getCardOptions, getOptionType } from "./options";
 import {
   type BigCommerceProductOption,
-  getCardOptions,
-  getOptionType,
-} from "./options";
-import { type BigCommerceVariant, toCardVariant } from "./variant-utils";
+  type BigCommerceVariant,
+  colorGallery,
+  findVariantByOptions,
+  type ProductVariant,
+  productVariants,
+  toProductOptions,
+} from "./product-model";
 
 /** Units left at which the card starts warning. */
 const LOW_STOCK_THRESHOLD = 5;
@@ -170,22 +174,33 @@ function money(amount: number, currencyCode: string) {
  * Card price figures. `strikePrice` is a real discount and renders struck
  * through; `rangePrice` is only the top of a variant price range and must not,
  * or it reads as a discount that isn't there.
+ *
+ * `variant` is the selected one, the one `cardHref` opens: its own price and
+ * was-price, so the card shows what the product page does. Without one, the
+ * range and the product-level was-price.
  */
 export function cardPricing(
   priceRange: ProductCardProps["priceRange"],
-  compareAt: number | null | undefined,
-  code: string
+  productCompareAt: number | null | undefined,
+  code: string,
+  variant?: Pick<ProductVariant, "price" | "compareAt">
 ): {
   price: string;
   salePercent: number;
   strikePrice: string | null;
   rangePrice: string | null;
 } {
-  const price = money(priceRange.minVariantPrice, code);
-  const showRange = priceRange.minVariantPrice !== priceRange.maxVariantPrice;
+  const current = variant
+    ? Number(variant.price.amount)
+    : priceRange.minVariantPrice;
+  const compareAt = variant
+    ? variant.compareAt && Number(variant.compareAt.amount)
+    : productCompareAt;
+  const price = money(current, code);
+  const showRange =
+    !variant && priceRange.minVariantPrice !== priceRange.maxVariantPrice;
 
-  const onSale =
-    typeof compareAt === "number" && compareAt > priceRange.minVariantPrice;
+  const onSale = typeof compareAt === "number" && compareAt > current;
   if (!(onSale && compareAt)) {
     return {
       price,
@@ -198,55 +213,78 @@ export function cardPricing(
   // A discount takes precedence over the range: showing both reads as noise.
   return {
     price,
-    salePercent: Math.round(
-      ((compareAt - priceRange.minVariantPrice) / compareAt) * 100
-    ),
+    salePercent: Math.round(((compareAt - current) / compareAt) * 100),
     strikePrice: money(compareAt, code),
     rangePrice: null,
   };
 }
 
-/** The variant's value for the colour- or size-typed option, if it has one. */
-function optionValue(variant: CardVariant, type: "color" | "size") {
-  return variant.selectedOptions.find(
-    (option) => getOptionType(option.name) === type
-  )?.value;
+/**
+ * The price the card shows before anyone picks an option: its initial colour
+ * and size, as `ProductCard` seeds its state. For places that render the card's
+ * figures without the card, such as the OG image.
+ */
+export function initialCardPricing(
+  card: Pick<
+    ProductCardProps,
+    | "priceRange"
+    | "compareAtPrice"
+    | "variants"
+    | "selectedColor"
+    | "selectedSize"
+  >,
+  code: string
+): ReturnType<typeof cardPricing> {
+  return cardPricing(
+    card.priceRange,
+    card.compareAtPrice,
+    code,
+    findCardVariant(card.variants, card.selectedColor, card.selectedSize)
+  );
 }
 
-/**
- * Finds the variant matching the card's colour and size selection. Matches per
- * option type rather than on bare values, so a colour and a size sharing a
- * value string can't cross-match.
- */
-export function findCardVariant(
-  variants: CardVariant[] | undefined,
-  color: string | undefined,
-  size: string | undefined
-): CardVariant | undefined {
-  if (!variants || variants.length === 0) return undefined;
-  return variants.find(
-    (variant) =>
-      (!color || optionValue(variant, "color") === color) &&
-      (!size || optionValue(variant, "size") === size)
+/** The product page link for the card's variant, so it opens on the one priced. */
+export function cardHref(
+  slug: string,
+  variant: ProductVariant | undefined
+): string | null {
+  if (!variant) return null;
+  return buildVariantUrl(
+    slug,
+    Object.fromEntries(
+      variant.selectedOptions.map((option) => [option.name, option.value])
+    )
   );
 }
 
 /**
- * The product photos belonging to one colourway.
- *
- * The longest matching label wins, so a product carrying both "Indigo" and
- * "Indigo Rinse" does not hand "Indigo Rinse" photos to the "Indigo" swatch.
+ * The card keys its selection by option type, not name, so this names the
+ * product's colour and size options and matches through `findVariantByOptions`.
+ * An option the card can't pick (a Fit) takes the default variant's value, as
+ * `resolveSelection` does on the product page the card links to.
  */
-function colorGallery(
-  gallery: readonly BigCommerceCardImage[],
-  color: string,
-  colors: readonly string[]
-): BigCommerceCardImage[] {
-  const ranked = [...colors].sort((a, b) => b.length - a.length);
-  return gallery.filter((image) => {
-    const alt = image.altText?.toLowerCase() ?? "";
-    return ranked.find((label) => alt.includes(label.toLowerCase())) === color;
-  });
+export function findCardVariant(
+  variants: ProductVariant[] | undefined,
+  color: string | undefined,
+  size: string | undefined
+): ProductVariant | undefined {
+  const first = variants?.[0];
+  if (!(variants && first)) return undefined;
+  if (!(color || size)) return first;
+
+  const nameOf = (type: "color" | "size") =>
+    first.selectedOptions.find((option) => getOptionType(option.name) === type)
+      ?.name;
+  const colorName = nameOf("color");
+  const sizeName = nameOf("size");
+  if ((color && !colorName) || (size && !sizeName)) return undefined;
+
+  const selection: Record<string, string> = Object.fromEntries(
+    first.selectedOptions.map((option) => [option.name, option.value])
+  );
+  if (colorName) selection[colorName] = color ?? "";
+  if (sizeName) selection[sizeName] = size ?? "";
+  return findVariantByOptions(variants, selection) ?? undefined;
 }
 
 /**
@@ -283,7 +321,7 @@ export function resolveCardImages({
   selectedColor: string | undefined;
   /** Every colour label on the product, for the longest-match grouping. */
   colors?: readonly string[];
-  variants: CardVariant[] | undefined;
+  variants: ProductVariant[] | undefined;
   gallery: readonly BigCommerceCardImage[] | undefined;
   imageUrl: string | null;
   secondaryImageUrl?: string | null;
@@ -324,7 +362,7 @@ export function resolveCardImages({
  */
 function cardStockStatus(
   product: BigCommerceCardProduct,
-  variants: CardVariant[]
+  variants: ProductVariant[]
 ): StockStatus {
   const inStock =
     product.inventory?.hasVariantInventory && variants.length > 0
@@ -358,20 +396,17 @@ export function productToCardProps(
     null;
 
   const { colors, sizes, colorOptionName } = getCardOptions(
-    (product.productOptions?.edges ?? []).map((edge) => edge.node)
+    toProductOptions(
+      (product.productOptions?.edges ?? []).map((edge) => edge.node)
+    )
   );
-  const variants = (product.variants?.edges ?? []).map((edge) =>
-    toCardVariant(edge.node)
-  );
+  const variants = productVariants(product);
 
   const prices = product.prices;
   const price = prices?.price.value ?? 0;
 
   return {
     slug: slugFromPath(product.path),
-    // The cart merchandise id needs the product half; call sites spread this
-    // straight into ProductCard.
-    productId: String(product.entityId),
     title: product.name,
     vendor: product.brand?.name ?? null,
     imageUrl,

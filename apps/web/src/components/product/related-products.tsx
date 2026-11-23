@@ -82,7 +82,6 @@ export async function RelatedProducts({
           <ProductCard
             key={related.entityId}
             {...productToCardProps(related)}
-            productId={String(related.entityId)}
           />
         ))}
       </div>

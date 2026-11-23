@@ -7,7 +7,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { getCategoryByPath, getProductById } from "@/lib/bigcommerce/catalog";
 import { bigcommerceImageLoader } from "@/lib/bigcommerce/image-loader";
 import {
-  cardPricing,
+  initialCardPricing,
   productToCardProps,
 } from "@/lib/bigcommerce/product-card";
 import type { Maybe } from "@/types";
@@ -519,9 +519,9 @@ const getProductContent = async ({ id }: ContentProps) => {
   }
 
   const card = productToCardProps(result.data);
-  const { price, strikePrice, salePercent } = cardPricing(
-    card.priceRange,
-    card.compareAtPrice,
+  // The variant the card first shows, so the image carries the card's figures.
+  const { price, strikePrice, salePercent } = initialCardPricing(
+    card,
     card.currencyCode ?? OG_CURRENCY
   );
 

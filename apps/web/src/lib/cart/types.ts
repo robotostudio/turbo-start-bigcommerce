@@ -78,28 +78,6 @@ export type CartLineInput = {
   quantity: number;
 };
 
-/** One option value with its swatch hex, when the merchant styled one. */
-export type ProductOptionValue = {
-  value: string;
-  hex: string | null;
-};
-
-export type ProductOption = {
-  id: string;
-  name: string;
-  values: ProductOptionValue[];
-};
-
-/** A purchasable variant as the in-cart variant selectors need it. */
-export type ProductVariant = {
-  id: string;
-  title: string;
-  availableForSale: boolean;
-  price: MoneyV2;
-  image: CartImage | null;
-  selectedOptions: SelectedOption[];
-};
-
 export type LineMetadata = {
   productTitle: string;
   productHandle: string;
