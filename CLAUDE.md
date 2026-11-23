@@ -171,7 +171,7 @@ mode, the layout reads the perspective cookie only inside that branch, and the
 - **Import order** (Biome): URL/Node → packages → blank line → aliases/paths
 - **TypeScript**: strict, `noUncheckedIndexedAccess`, module NodeNext, target ES2022
 - **Tailwind CSS v4**: CSS-first config via `@import "tailwindcss"`, OKLCH color tokens, dark mode via `@custom-variant`
-- **React Compiler**: enabled via `babel-plugin-react-compiler` in Next.js config
+- **React Compiler**: the Rust compiler built into Turbopack — `reactCompiler: true` plus `experimental.turbopackRustReactCompiler` in `next.config.ts`. Turbopack only; there is no Babel plugin
 - **Tests**: Vitest in `apps/web`
 
 ## Environment Variables
