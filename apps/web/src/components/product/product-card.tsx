@@ -78,7 +78,7 @@ const BADGE_LABEL: Record<MerchBadge, string> = {
 const MERCH_BADGE_CLASS = "px-1.5 py-0.5";
 
 function ProductCardMini({
-  slug,
+  href,
   title,
   imageUrl,
   price,
@@ -86,7 +86,7 @@ function ProductCardMini({
   rangePrice,
   replace,
 }: {
-  slug: string;
+  href: string;
   title: string;
   imageUrl: string | null;
   price: string;
@@ -100,7 +100,7 @@ function ProductCardMini({
       // that IS touch-reachable — and Tailwind gates hover: behind
       // (hover:hover), so press is the only feedback a touch user gets here.
       className="flex items-center gap-3 p-2 transition-colors duration-150 ease-hover hover:bg-accent active:bg-accent"
-      href={`/products/${slug}`}
+      href={href}
       replace={replace}
     >
       {imageUrl ? (
@@ -474,14 +474,21 @@ export function ProductCard({
     variant
   );
 
+  // Carry the selection into the PDP so it opens on the variant priced here.
+  const href =
+    cardHref(slug, variant) ??
+    (selectedColor && colorOptionName
+      ? buildVariantUrl(slug, { [colorOptionName]: selectedColor })
+      : `/products/${slug}`);
+
   if (mini) {
     return (
       <ProductCardMini
+        href={href}
         imageUrl={imageUrl}
         price={price}
         rangePrice={rangePrice}
         replace={replace}
-        slug={slug}
         strikePrice={strikePrice}
         title={title}
       />
@@ -492,12 +499,6 @@ export function ProductCard({
   // every product in a colour-carrying catalog satisfies one of the first two.
   // It gets its own line below.
   const subtitle = selectedColor ?? variantName;
-  // Carry the selection into the PDP so it opens on the variant priced here.
-  const href =
-    cardHref(slug, variant) ??
-    (selectedColor && colorOptionName
-      ? buildVariantUrl(slug, { [colorOptionName]: selectedColor })
-      : `/products/${slug}`);
   const { primary, secondary } = resolveCardImages({
     selectedColor,
     colors: colors?.map((color) => color.name),
