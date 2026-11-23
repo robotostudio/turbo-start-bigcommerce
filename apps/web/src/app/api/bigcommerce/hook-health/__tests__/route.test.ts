@@ -57,16 +57,20 @@ describe("GET /api/bigcommerce/hook-health", () => {
   // Wrong length is its own case: `timingSafeEqual` throws on a length
   // mismatch, so without the guard it is a 500, not a 401.
   it.each([
-    ["a wrong secret of the right length", "Bearer best-cron-secret"],
-    ["a wrong-length secret", "Bearer short"],
-    ["no secret", undefined],
-  ])("answers 401 to %s without calling BigCommerce", async (_, header) => {
-    const fetch = vi.fn();
-    vi.stubGlobal("fetch", fetch);
+    ["a wrong secret of the right length", "Bearer best-cron-secret", 1],
+    ["a wrong-length secret", "Bearer short", 0],
+    ["no secret", undefined, 0],
+  ])(
+    "answers 401 to %s without calling BigCommerce",
+    async (_, header, compares) => {
+      const fetch = vi.fn();
+      vi.stubGlobal("fetch", fetch);
 
-    const response = await call(header);
+      const response = await call(header);
 
-    expect(response.status).toBe(401);
-    expect(fetch).not.toHaveBeenCalled();
-  });
+      expect(response.status).toBe(401);
+      expect(fetch).not.toHaveBeenCalled();
+      expect(timingSafeEqual).toHaveBeenCalledTimes(compares);
+    }
+  );
 });
