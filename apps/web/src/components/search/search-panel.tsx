@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { readSearchQuery, SEARCH_PATH, searchUrlWithQuery } from "./paths";
 import { SearchEmptyState } from "./search-empty-state";
 import { SearchResults } from "./search-results";
+import { SearchUnavailable } from "./search-unavailable";
 import { useProductSearch } from "./use-product-search";
 
 type SearchPanelProps = {
@@ -53,6 +54,7 @@ export function SearchPanel({
     collections,
     related,
     isSearching,
+    isUnavailable,
     hasQuery,
   } = useProductSearch(seedQuery);
 
@@ -111,7 +113,8 @@ export function SearchPanel({
       <div
         className={cn("bg-muted/30", scrollable && "flex-1 overflow-y-auto")}
       >
-        {hasQuery ? (
+        {hasQuery && isUnavailable && <SearchUnavailable />}
+        {hasQuery && !isUnavailable && (
           <SearchResults
             collections={collections}
             isSearching={isSearching}
@@ -120,7 +123,8 @@ export function SearchPanel({
             related={related}
             replace={replace}
           />
-        ) : (
+        )}
+        {!hasQuery && (
           <SearchEmptyState onSelectTerm={setQuery} replace={replace} />
         )}
       </div>
