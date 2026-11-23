@@ -32,7 +32,6 @@ export const sharedPortableTextMarks: NonNullable<
     if (!value?.href || value.href === "#") return children;
     return (
       <Link
-        aria-label={`Link to ${value?.href}`}
         className={linkClassName}
         href={value.href}
         prefetch={false}

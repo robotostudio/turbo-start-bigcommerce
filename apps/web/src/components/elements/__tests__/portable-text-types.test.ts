@@ -135,6 +135,11 @@ describe("customLink mark", () => {
     expect(html).toContain(">Read more</a>");
   });
 
+  // WCAG 2.5.3: the accessible name must be the visible words, not the URL.
+  it("names a resolved link by its text, not its href", () => {
+    expect(renderLink({ href: "/blog/returns" })).not.toContain("aria-label");
+  });
+
   it("keeps an external link", () => {
     const html = renderLink({
       href: "https://example.com",
