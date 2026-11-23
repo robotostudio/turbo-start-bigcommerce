@@ -74,4 +74,25 @@ describe("featured products block", () => {
 
     expect(markup).toContain("newest-hoodie");
   });
+
+  it("revalidates a server seed on mount, despite the app-wide 60s staleTime", () => {
+    // The seed can come from a prerendered page; refetching on mount is what
+    // stops it outliving the catalog (33728ea).
+    useQuery.mockReturnValue({ data: CARDS, isPending: false });
+
+    renderToStaticMarkup(
+      createElement(FeaturedProducts, {
+        heading: "Featured",
+        productHandles: ["wren-washed-cap"],
+        products: [{ _key: "a" }],
+        seed: {
+          _type: "featuredProducts",
+          queryKey: "wren-washed-cap",
+          cards: [],
+        },
+      })
+    );
+
+    expect(useQuery.mock.calls.at(-1)?.[0]).toMatchObject({ staleTime: 0 });
+  });
 });
