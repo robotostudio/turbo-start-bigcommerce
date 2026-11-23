@@ -299,13 +299,17 @@ export function resolveCardImages({
   ]);
   if (!(override || group.length > 0)) return fallback;
 
+  const primary = override ?? group[0]?.url ?? imageUrl;
   return {
-    primary: override ?? group[0]?.url ?? imageUrl,
+    primary,
     // No group at all means the colour's photos fell outside the fetched
     // window — keep the product hover. A group of one means the colour really
     // has a single photo, and no cross-fade beats fading into another colour.
+    // Skipping the primary's URL stops a repeated photo fading into itself.
     secondary:
-      group[1]?.url ?? (group.length === 0 ? fallback.secondary : null),
+      group.length === 0
+        ? fallback.secondary
+        : (group.slice(1).find((image) => image.url !== primary)?.url ?? null),
   };
 }
 

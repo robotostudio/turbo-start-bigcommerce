@@ -117,6 +117,32 @@ describe("resolveCardImages", () => {
     });
   });
 
+  describe("without a variant image override", () => {
+    const noOverride = VARIANTS.map((variant) => ({ ...variant, image: null }));
+    const [a, b] = INDIGO;
+    if (!(a && b)) throw new Error("fixture needs two Indigo photos");
+
+    it("has no hover partner when the colour repeats its first photo", () => {
+      const result = resolveCardImages({
+        ...base,
+        variants: noOverride,
+        selectedColor: "Indigo Rinse",
+        gallery: [a, a],
+      });
+      expect(result).toEqual({ primary: a.url, secondary: null });
+    });
+
+    it("fades to the colour's next distinct photo", () => {
+      const result = resolveCardImages({
+        ...base,
+        variants: noOverride,
+        selectedColor: "Indigo Rinse",
+        gallery: [a, b],
+      });
+      expect(result).toEqual({ primary: a.url, secondary: b.url });
+    });
+  });
+
   it("keeps the product-level hover when the photo is outside the gallery window", () => {
     // `images(first:)` truncated before Warm Stone's group.
     const result = resolveCardImages({
