@@ -9,6 +9,7 @@ import type {
 } from "@workspace/sanity/types";
 import Link from "next/link";
 
+import { newTab } from "@/lib/new-tab";
 import { NewsletterForm } from "./footer/newsletter-form";
 // import { ModeToggle } from "./mode-toggle";
 import {
@@ -74,8 +75,7 @@ function SocialLinks({ data }: SocialLinksProps) {
             aria-label={label}
             href={url ?? "#"}
             prefetch={false}
-            rel="noopener noreferrer"
-            target="_blank"
+            {...newTab(true)}
           >
             <Icon className="size-[18px] fill-muted-foreground transition-colors hover:fill-foreground" />
             <span className="sr-only">{label}</span>
@@ -117,10 +117,7 @@ export function FooterColumns({
                     <Link
                       className="text-foreground text-sm hover:underline"
                       href={link.href ?? "#"}
-                      rel={
-                        link.openInNewTab ? "noopener noreferrer" : undefined
-                      }
-                      target={link.openInNewTab ? "_blank" : undefined}
+                      {...newTab(link.openInNewTab)}
                     >
                       {link.name}
                     </Link>
@@ -140,8 +137,7 @@ function HostingCredits() {
       <a
         aria-label="Roboto Studio"
         href="https://robotostudio.com/"
-        rel="noopener noreferrer"
-        target="_blank"
+        {...newTab(true)}
         className="flex items-center gap-1 hover:opacity-80"
       >
         Built by
@@ -151,8 +147,7 @@ function HostingCredits() {
       <a
         className="flex items-center gap-1 hover:opacity-80"
         href="https://vercel.com"
-        rel="noopener noreferrer"
-        target="_blank"
+        {...newTab(true)}
       >
         Hosted on
         <VercelIcon className="h-3.5 w-auto" />
@@ -161,8 +156,7 @@ function HostingCredits() {
       <a
         className="flex items-center gap-1 hover:opacity-80"
         href="https://www.bigcommerce.com"
-        rel="noopener noreferrer"
-        target="_blank"
+        {...newTab(true)}
       >
         {/* Text, not a logo: the icon set has no BigCommerce wordmark and
          * inventing artwork is worse than plain text. */}

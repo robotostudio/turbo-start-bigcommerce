@@ -1,6 +1,6 @@
+import { PortableText, type PortableTextBlock } from "next-sanity";
 import { createElement, isValidElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { PortableText } from "next-sanity";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -89,6 +89,53 @@ describe("accordion portable text type", () => {
     expect(html).toContain('href="/blog/returns"');
     expect(html).not.toContain("unknown__pt__mark__customLink");
   });
+});
+
+// Biome's noBlankTarget misses a conditional `target={x ? "_blank" : …}`, which
+// is how these links shipped without rel (ROB-6791), so the markup is asserted.
+describe("rich-text link marks", () => {
+  const render = (_type: string, openInNewTab: boolean) =>
+    renderToStaticMarkup(
+      createElement(PortableText, {
+        value: [
+          <PortableTextBlock>{
+            _type: "block",
+            _key: "b",
+            style: "normal",
+            markDefs: [
+              {
+                _key: "l",
+                _type,
+                href: "https://www.sanity.io/docs",
+                openInNewTab,
+              },
+            ],
+            children: [
+              { _type: "span", _key: "s", text: "Docs", marks: ["l"] },
+            ],
+          },
+        ],
+        components: { marks: sharedPortableTextMarks },
+      })
+    );
+
+  it.each(["customLink", "linkExternal"])(
+    "%s opens a new tab with rel when asked",
+    (type) => {
+      const html = render(type, true);
+      expect(html).toContain('target="_blank"');
+      expect(html).toContain('rel="noopener noreferrer"');
+    }
+  );
+
+  it.each(["customLink", "linkExternal"])(
+    "%s stays in the same tab otherwise",
+    (type) => {
+      const html = render(type, false);
+      expect(html).not.toContain("target=");
+      expect(html).not.toContain("rel=");
+    }
+  );
 });
 
 type LinkMarkDef = { href?: string | null; openInNewTab?: boolean };

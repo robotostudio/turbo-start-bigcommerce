@@ -7,6 +7,7 @@ import {
   type HookHealth,
   REQUIRED_HOOK_SCOPES,
 } from "@/lib/bigcommerce/hook-health";
+import { secretMatches } from "@/lib/bigcommerce/webhook";
 
 /**
  * Notices when a catalog webhook has gone dark.
@@ -122,10 +123,14 @@ function describe(health: HookHealth): string {
 }
 
 export async function GET(request: Request) {
-  // Vercel attaches this header to cron invocations by itself. Plain
-  // comparison rather than a constant-time one: the secret is not derived from
-  // anything the caller sent, so there is no digest to walk a byte at a time.
-  if (request.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`) {
+  // Vercel attaches this header to cron invocations by itself. Constant-time:
+  // a plain `!==` stops at the first wrong byte, leaking the secret's prefix.
+  if (
+    !secretMatches(
+      request.headers.get("authorization"),
+      `Bearer ${env.CRON_SECRET}`
+    )
+  ) {
     logger.warn("Rejected a hook-health request with no valid cron secret.");
     return Response.json({ status: "unauthorized" }, { status: 401 });
   }

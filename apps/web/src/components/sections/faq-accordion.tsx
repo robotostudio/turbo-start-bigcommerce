@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
+import { newTab } from "@/lib/new-tab";
 import type { PagebuilderType } from "@/types";
 import { FaqEntry } from "./faq-entry";
 
@@ -40,7 +41,7 @@ export function FaqAccordion({ _key, title, faqs, link }: FaqAccordionProps) {
               <Link
                 className="flex items-center gap-2"
                 href={link.href ?? "#"}
-                target={link.openInNewTab ? "_blank" : "_self"}
+                {...newTab(link.openInNewTab)}
               >
                 <p className="font-medium text-[15px] leading-6">
                   {link?.description}
