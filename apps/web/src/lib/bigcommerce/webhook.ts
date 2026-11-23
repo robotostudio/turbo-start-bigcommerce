@@ -26,12 +26,14 @@ export type WebhookRoute =
   | { action: "ignore"; reason: string };
 
 /**
- * Constant-time comparison of the `x-bigcommerce-webhook-secret` header.
+ * Constant-time comparison of a shared secret: the webhook's
+ * `x-bigcommerce-webhook-secret` header and hook-health's cron bearer.
  *
  * The length check is not an optimisation: `timingSafeEqual` throws on buffers
  * of different lengths, so without it a wrong-length guess produces a 500
- * instead of a 401. Length does leak, which is not worth defending — the secret
- * is a fixed-width `openssl rand -hex 32` string and its length is public.
+ * instead of a 401. Length does leak, which is not worth defending: it says
+ * nothing about the bytes, and both secrets are `openssl rand -hex` values
+ * whose generation commands (and so lengths) are documented in `.env.example`.
  *
  * Never authenticate on the payload's `hash` field. It is an unkeyed SHA-1 of
  * the body, so anyone who can reach this route can compute a valid one, and
