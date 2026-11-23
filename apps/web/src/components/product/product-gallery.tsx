@@ -25,17 +25,22 @@ export type GalleryImage = {
 export function galleryScrollIndex(
   images: readonly GalleryImage[],
   url: string | undefined,
-  previousUrl: string | undefined | null
+  previousUrl: string | undefined | null,
+  scrollOnLoad = true
 ): number | null {
   if (!url || url === previousUrl) return null;
+  const firstRender = previousUrl === null;
+  if (firstRender && !scrollOnLoad) return null;
   const index = images.findIndex((image) => image.url === url);
-  if (index < 0 || (previousUrl === null && index === 0)) return null;
+  if (index < 0 || (firstRender && index === 0)) return null;
   return index;
 }
 
 type ProductGalleryProps = {
   images: GalleryImage[];
   selectedVariantImageUrl?: string;
+  /** The URL names the colour, as the product card's link does. */
+  colorInUrl?: boolean;
 };
 
 /**
@@ -51,6 +56,7 @@ type GalleryViewProps = ProductGalleryProps & {
 function GalleryDesktop({
   images,
   selectedVariantImageUrl,
+  colorInUrl = false,
   onOpenLightbox,
   registerSource,
 }: GalleryViewProps) {
@@ -91,14 +97,16 @@ function GalleryDesktop({
     });
   };
 
-  // Scroll to the variant's photo when it changes, and on load: the product
-  // card links here with the colour already chosen.
+  // Scroll to the variant's photo when it changes. On load this moves the
+  // window, so only for a colour the URL names, and only from the top: a bare
+  // URL, back/forward restoration and an early scroll all keep their place.
   useEffect(() => {
     const firstRender = prevVariantUrl.current === null;
     const index = galleryScrollIndex(
       images,
       selectedVariantImageUrl,
-      prevVariantUrl.current
+      prevVariantUrl.current,
+      colorInUrl && window.scrollY === 0
     );
     prevVariantUrl.current = selectedVariantImageUrl;
     if (index === null) return;
@@ -106,7 +114,7 @@ function GalleryDesktop({
       behavior: firstRender ? "auto" : behavior,
       block: "start",
     });
-  }, [selectedVariantImageUrl, images, behavior]);
+  }, [selectedVariantImageUrl, images, behavior, colorInUrl]);
 
   return (
     <div className="hidden lg:flex lg:gap-1">
@@ -317,6 +325,7 @@ function GalleryMobile({
 export function ProductGallery({
   images,
   selectedVariantImageUrl,
+  colorInUrl,
 }: ProductGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -375,6 +384,7 @@ export function ProductGallery({
   return (
     <>
       <GalleryDesktop
+        colorInUrl={colorInUrl}
         images={images}
         onOpenLightbox={openLightbox}
         registerSource={setSource("d")}

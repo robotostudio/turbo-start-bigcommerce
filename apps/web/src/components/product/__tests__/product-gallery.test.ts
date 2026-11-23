@@ -6,11 +6,15 @@ const IMAGES = [{ url: "indigo-1" }, { url: "indigo-2" }, { url: "stone-1" }];
 
 describe("galleryScrollIndex", () => {
   it("scrolls on the first render when the page opens on another colour", () => {
-    expect(galleryScrollIndex(IMAGES, "stone-1", null)).toBe(2);
+    expect(galleryScrollIndex(IMAGES, "stone-1", null, true)).toBe(2);
+  });
+
+  it("leaves the first render alone when told not to scroll on load", () => {
+    expect(galleryScrollIndex(IMAGES, "stone-1", null, false)).toBeNull();
   });
 
   it("stays put on the first render when the colour's photo is already first", () => {
-    expect(galleryScrollIndex(IMAGES, "indigo-1", null)).toBeNull();
+    expect(galleryScrollIndex(IMAGES, "indigo-1", null, true)).toBeNull();
   });
 
   it("scrolls when the chosen colour changes, back to the first photo too", () => {

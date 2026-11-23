@@ -6,6 +6,7 @@ import { PriceDisplay } from "@/components/product/price-display";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductPurchase } from "@/components/product/product-purchase";
 import { VariantSelector } from "@/components/product/variant-selector";
+import { getOptionType } from "@/lib/bigcommerce/options";
 import {
   type ProductOption,
   type ProductVariant,
@@ -129,9 +130,13 @@ export function SelectedVariantGallery({
 }: SelectedVariantGalleryProps) {
   const searchParams = useSearchParams();
   const { variant } = resolveSelection(options, variants, searchParams);
+  const colorOption = options.find(
+    (option) => getOptionType(option.name) === "color"
+  );
 
   return (
     <ProductGallery
+      colorInUrl={colorOption ? searchParams.has(colorOption.name) : false}
       images={images}
       selectedVariantImageUrl={
         variant && variantGalleryImage(variant, options, images)
