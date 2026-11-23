@@ -68,6 +68,7 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   experimental: {
     inlineCss: true,
+    turbopackRustReactCompiler: true,
   },
   logging: {
     fetches: {},
