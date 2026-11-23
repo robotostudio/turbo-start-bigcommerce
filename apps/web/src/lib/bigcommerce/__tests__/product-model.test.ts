@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { fromMerchandiseId } from "@/lib/bigcommerce/cart";
 import {
+  colorGallery,
   findVariantByOptions,
   getOptionAvailability,
   productVariants,
@@ -187,5 +188,24 @@ describe("variantGalleryImage", () => {
           GALLERY
         )
     ).toBeUndefined();
+  });
+});
+
+describe("colorGallery", () => {
+  const gallery = [
+    { url: "tan", altText: "Tailored Blazer in Tan" },
+    { url: "fit", altText: "Standard fit" },
+    { url: "red", altText: "Blazer in RED" },
+  ];
+
+  it("matches a colour as a whole word, ignoring case", () => {
+    // "Red" sits inside "Tailored", "Tan" inside "Standard".
+    expect(colorGallery(gallery, "Red", ["Red", "Tan"])).toEqual([gallery[2]]);
+    expect(colorGallery(gallery, "Tan", ["Red", "Tan"])).toEqual([gallery[0]]);
+  });
+
+  it("reads a colour name with regex characters literally", () => {
+    const plus = [{ url: "x", altText: "Shirt in Blue+ (Navy)" }];
+    expect(colorGallery(plus, "Blue+ (Navy)", ["Blue+ (Navy)"])).toEqual(plus);
   });
 });

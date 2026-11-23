@@ -237,10 +237,20 @@ export function colorGallery<T extends GalleryImage>(
   color: string,
   colors: readonly string[]
 ): T[] {
-  const ranked = [...colors].sort((a, b) => b.length - a.length);
+  // Whole words only: "Red" must not match inside "Tailored", nor "Tan"
+  // inside "Standard".
+  const ranked = [...colors]
+    .sort((a, b) => b.length - a.length)
+    .map((label) => ({
+      label,
+      pattern: new RegExp(
+        `(?<![\\p{L}\\p{N}])${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}])`,
+        "iu"
+      ),
+    }));
   return gallery.filter((image) => {
-    const alt = image.altText?.toLowerCase() ?? "";
-    return ranked.find((label) => alt.includes(label.toLowerCase())) === color;
+    const alt = image.altText ?? "";
+    return ranked.find(({ pattern }) => pattern.test(alt))?.label === color;
   });
 }
 
