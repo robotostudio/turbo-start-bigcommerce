@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { getCardOptions } from "@/lib/bigcommerce/options";
 import {
   badgeFromTags,
+  cardHref,
   cardPricing,
   findCardVariant,
   productTags,
@@ -298,6 +299,81 @@ describe("secondaryImageUrl", () => {
 
   it("fades to the first photo when there is no featured one", () => {
     expect(secondaryImageUrl([a, b], null)).toBe(a.url);
+  });
+});
+
+describe("card price against the product page it opens", () => {
+  const sized = (id: string, size: string, amount: string): ProductVariant => ({
+    id,
+    merchandiseId: `9:${id}`,
+    title: size,
+    availableForSale: true,
+    price: { amount, currencyCode: "GBP" },
+    image: null,
+    selectedOptions: [{ name: "Size", value: size }],
+  });
+  // L is the default variant, S the cheaper one and first on the card.
+  const variants = [sized("2", "L", "50.00"), sized("1", "S", "40.00")];
+  const options = [
+    {
+      id: "size",
+      name: "Size",
+      values: [
+        { value: "S", hex: null },
+        { value: "L", hex: null },
+      ],
+    },
+  ];
+  const range = { minVariantPrice: 40, maxVariantPrice: 50 };
+
+  it("prices the card from the variant its link opens", () => {
+    for (const [size, price] of [
+      ["S", "£40.00"],
+      ["L", "£50.00"],
+    ] as const) {
+      const variant = findCardVariant(variants, undefined, size);
+      const href = cardHref("tee", variant);
+      const opened = resolveSelection(
+        options,
+        variants,
+        new URL(href ?? "", "https://store.test").searchParams
+      ).variant;
+
+      expect(opened?.id).toBe(variant?.id);
+      expect(cardPricing(range, null, "GBP", variant?.price)).toMatchObject({
+        price,
+        rangePrice: null,
+      });
+    }
+  });
+
+  it("falls back to the range when no variant matches", () => {
+    expect(cardHref("tee", undefined)).toBeNull();
+    expect(cardPricing(range, null, "GBP", undefined)).toMatchObject({
+      price: "£40.00",
+      rangePrice: "£50.00",
+    });
+  });
+
+  it("keeps the sale display, measured against the variant's price", () => {
+    expect(
+      cardPricing(range, 100, "GBP", { amount: "50.00", currencyCode: "GBP" })
+    ).toEqual({
+      price: "£50.00",
+      salePercent: 50,
+      strikePrice: "£100.00",
+      rangePrice: null,
+    });
+  });
+
+  it("prices a single-price product exactly as before", () => {
+    const flat = { minVariantPrice: 396, maxVariantPrice: 396 };
+    const variantPrice = { amount: "396.00", currencyCode: "GBP" };
+    for (const compareAt of [null, 495]) {
+      expect(cardPricing(flat, compareAt, "GBP", variantPrice)).toEqual(
+        cardPricing(flat, compareAt, "GBP")
+      );
+    }
   });
 });
 

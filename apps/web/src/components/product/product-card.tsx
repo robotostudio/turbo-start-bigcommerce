@@ -12,6 +12,7 @@ import { SavedItemButton } from "@/components/saved-items/saved-item-button";
 import {
   type BigCommerceCardImage,
   type CardRating,
+  cardHref,
   cardPricing,
   findCardVariant,
   resolveCardImages,
@@ -465,10 +466,12 @@ export function ProductCard({
   const [selectedSize, setSelectedSize] = useState(initialSize);
 
   const code = currencyCode ?? "GBP";
+  const variant = findCardVariant(variants, selectedColor, selectedSize);
   const { price, salePercent, strikePrice, rangePrice } = cardPricing(
     priceRange,
     compareAtPrice,
-    code
+    code,
+    variant?.price
   );
 
   if (mini) {
@@ -489,11 +492,12 @@ export function ProductCard({
   // every product in a colour-carrying catalog satisfies one of the first two.
   // It gets its own line below.
   const subtitle = selectedColor ?? variantName;
-  // Carry the chosen color into the PDP so the selection survives navigation.
+  // Carry the selection into the PDP so it opens on the variant priced here.
   const href =
-    selectedColor && colorOptionName
+    cardHref(slug, variant) ??
+    (selectedColor && colorOptionName
       ? buildVariantUrl(slug, { [colorOptionName]: selectedColor })
-      : `/products/${slug}`;
+      : `/products/${slug}`);
   const { primary, secondary } = resolveCardImages({
     selectedColor,
     colors: colors?.map((color) => color.name),

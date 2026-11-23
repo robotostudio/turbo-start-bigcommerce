@@ -3,6 +3,8 @@ import type {
   ProductCardProps,
   StockStatus,
 } from "@/components/product/product-card";
+import { buildVariantUrl } from "@/components/product/variant-utils";
+import type { MoneyV2 } from "@/lib/cart/types";
 import { type BigCommerceMoney, formatMoney, toMoney } from "./money";
 import { getCardOptions, getOptionType } from "./options";
 import {
@@ -173,22 +175,29 @@ function money(amount: number, currencyCode: string) {
  * Card price figures. `strikePrice` is a real discount and renders struck
  * through; `rangePrice` is only the top of a variant price range and must not,
  * or it reads as a discount that isn't there.
+ *
+ * `variantPrice` is the selected variant's, the one `cardHref` opens, so the
+ * card and the product page show the same figure. Without one, the range.
  */
 export function cardPricing(
   priceRange: ProductCardProps["priceRange"],
   compareAt: number | null | undefined,
-  code: string
+  code: string,
+  variantPrice?: MoneyV2
 ): {
   price: string;
   salePercent: number;
   strikePrice: string | null;
   rangePrice: string | null;
 } {
-  const price = money(priceRange.minVariantPrice, code);
-  const showRange = priceRange.minVariantPrice !== priceRange.maxVariantPrice;
+  const current = variantPrice
+    ? Number(variantPrice.amount)
+    : priceRange.minVariantPrice;
+  const price = money(current, code);
+  const showRange =
+    !variantPrice && priceRange.minVariantPrice !== priceRange.maxVariantPrice;
 
-  const onSale =
-    typeof compareAt === "number" && compareAt > priceRange.minVariantPrice;
+  const onSale = typeof compareAt === "number" && compareAt > current;
   if (!(onSale && compareAt)) {
     return {
       price,
@@ -201,12 +210,24 @@ export function cardPricing(
   // A discount takes precedence over the range: showing both reads as noise.
   return {
     price,
-    salePercent: Math.round(
-      ((compareAt - priceRange.minVariantPrice) / compareAt) * 100
-    ),
+    salePercent: Math.round(((compareAt - current) / compareAt) * 100),
     strikePrice: money(compareAt, code),
     rangePrice: null,
   };
+}
+
+/** The product page link for the card's variant, so it opens on the one priced. */
+export function cardHref(
+  slug: string,
+  variant: ProductVariant | undefined
+): string | null {
+  if (!variant) return null;
+  return buildVariantUrl(
+    slug,
+    Object.fromEntries(
+      variant.selectedOptions.map((option) => [option.name, option.value])
+    )
+  );
 }
 
 /**
