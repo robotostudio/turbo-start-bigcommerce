@@ -137,3 +137,62 @@ describe("rich-text link marks", () => {
     }
   );
 });
+
+type LinkMarkDef = { href?: string | null; openInNewTab?: boolean };
+
+const paragraphWithLink = (link: LinkMarkDef) => [
+  {
+    _type: "block",
+    _key: "block",
+    style: "normal",
+    markDefs: [{ _key: "link", _type: "customLink", ...link }],
+    children: [
+      { _type: "span", _key: "span", text: "Read more", marks: ["link"] },
+    ],
+  },
+];
+
+const renderLink = (link: LinkMarkDef) =>
+  renderToStaticMarkup(
+    createElement(PortableText, {
+      components: { marks: sharedPortableTextMarks },
+      value: paragraphWithLink(link),
+    })
+  );
+
+describe("customLink mark", () => {
+  // `hrefFragment` projects a null href when the weak reference dangles.
+  it("renders an unresolved internal link as its plain text", () => {
+    expect(renderLink({ href: null })).toBe("<p>Read more</p>");
+  });
+
+  // `...customLink{}` spreads nothing when the annotation's field is unset.
+  it("renders a link with no href key as its plain text", () => {
+    expect(renderLink({})).toBe("<p>Read more</p>");
+  });
+
+  // The fallback arm of `hrefFragment`, for a link with no type picked.
+  it("renders the placeholder href as its plain text", () => {
+    expect(renderLink({ href: "#" })).toBe("<p>Read more</p>");
+  });
+
+  it("keeps a resolved internal link", () => {
+    const html = renderLink({ href: "/blog/returns" });
+    expect(html).toContain('href="/blog/returns"');
+    expect(html).toContain(">Read more</a>");
+  });
+
+  // WCAG 2.5.3: the accessible name must be the visible words, not the URL.
+  it("names a resolved link by its text, not its href", () => {
+    expect(renderLink({ href: "/blog/returns" })).not.toContain("aria-label");
+  });
+
+  it("keeps an external link", () => {
+    const html = renderLink({
+      href: "https://example.com",
+      openInNewTab: true,
+    });
+    expect(html).toContain('href="https://example.com"');
+    expect(html).toContain('target="_blank"');
+  });
+});

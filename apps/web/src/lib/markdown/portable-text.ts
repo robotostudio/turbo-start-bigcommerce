@@ -23,7 +23,8 @@ const linkMark: PortableTextMarkRenderer = ({ value, children }) => {
     typeof (value as { href?: unknown })?.href === "string"
       ? (value as { href: string }).href
       : null;
-  const url = href ? absolutizeUrl(href) : null;
+  // "#" is `hrefFragment`'s fallback for a link with no target: text only.
+  const url = href && href !== "#" ? absolutizeUrl(href) : null;
   return url ? `[${children}](${url})` : children;
 };
 

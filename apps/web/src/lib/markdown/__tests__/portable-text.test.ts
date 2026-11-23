@@ -39,3 +39,40 @@ describe("portableTextToMarkdownString — safety", () => {
     expect(portableTextToMarkdownString([])).toBe("");
   });
 });
+
+describe("portableTextToMarkdownString — links", () => {
+  const withLink = (href: string | null) =>
+    portableTextToMarkdownString([
+      {
+        _type: "block",
+        _key: "b",
+        style: "normal",
+        markDefs: [{ _key: "l", _type: "customLink", href }],
+        children: [
+          { _type: "span", _key: "s", text: "Read more", marks: ["l"] },
+        ],
+      },
+    ]);
+
+  // Same rule as the HTML `customLink` mark: an unresolved link keeps its words.
+  it("renders an unresolved link as its plain text", () => {
+    expect(withLink(null)).toBe("Read more");
+  });
+
+  // The fallback arm of `hrefFragment`, for a link with no type picked.
+  it("renders the placeholder href as its plain text", () => {
+    expect(withLink("#")).toBe("Read more");
+  });
+
+  it("keeps a resolved internal link, made absolute", () => {
+    expect(withLink("/blog/returns")).toBe(
+      "[Read more](https://base.test/blog/returns)"
+    );
+  });
+
+  it("keeps an external link", () => {
+    expect(withLink("https://example.com")).toBe(
+      "[Read more](https://example.com)"
+    );
+  });
+});
