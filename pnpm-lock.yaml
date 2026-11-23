@@ -52,6 +52,12 @@ catalogs:
       specifier: ^4.6.7
       version: 4.6.7
 
+overrides:
+  '@vercel/frameworks>js-yaml': ^3.15.2
+  '@vercel/frameworks>smol-toml': ^1.9.1
+  '@module-federation/dts-plugin>undici': ^7.30.1
+  '@module-federation/dts-plugin>adm-zip': ^0.6.1
+
 importers:
 
   .:
@@ -4355,10 +4361,6 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  adm-zip@0.6.0:
-    resolution: {integrity: sha512-XleryMhbuksdKtofnWZ9Sk+4CUTbms4Mb/EU32SZwToAyZ5RgVos/ki8n+yr0LWHOGKuakbXTuuYNHLQjhddgg==}
-    engines: {node: '>=14.0'}
-
   adm-zip@0.6.1:
     resolution: {integrity: sha512-Xwrja8nx9e5o2N1my4DsKCeKpdrnACyr1wtbPxBDgGzKzKyE9kRtBFA8mWldI+RVlD7CBZNWY/wQ2+ydwOR6kQ==}
     engines: {node: '>=14.0'}
@@ -5601,8 +5603,8 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
-  js-yaml@3.13.1:
-    resolution: {integrity: sha512-YfbcO7jXDdyj0DGxYVSlSeQNHbD7XPWvrVWeVUujrQEoZzWJIRrCPoyk6kL6IAjAG2IolMK4T0hNUe0HOUs5Jw==}
+  js-yaml@3.15.2:
+    resolution: {integrity: sha512-6EuL879VkRA+1Cz578mKMiKvjPNEuk6+r1JaFzoSWejZmtf7xWbIyw1e3KkxlkzTIt9Taw6JBhEppG7utc1P+w==}
     hasBin: true
 
   jsdom@28.1.0:
@@ -6761,10 +6763,6 @@ packages:
     resolution: {integrity: sha512-vZ7rfeehZui7wQs438JXBckYLkIIdfHOXsaVEUMyS5fHo1483l1bMdo0EDSWYclY0yZKFOipDy4KHuKs6ssvdg==}
     engines: {node: '>=8.0.0'}
 
-  smol-toml@1.5.2:
-    resolution: {integrity: sha512-QlaZEqcAH3/RtNyet1IPIYPsEWAaYyXXv1Krsi+1L/QHppjX4Ifm8MQsBISz9vE8cHicIq3clogsheili5vhaQ==}
-    engines: {node: '>= 18'}
-
   smol-toml@1.9.1:
     resolution: {integrity: sha512-j7WyPdf0CJoutMzMoPLF/bVXHtKZIT9Rb4eGeEbWw8X2t5oirjPgpL+OpaENZrILYaXqYwnVH+qgUwVbl+pUJQ==}
     engines: {node: '>= 18'}
@@ -7045,10 +7043,6 @@ packages:
 
   undici-types@8.9.0:
     resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
-
-  undici@7.28.0:
-    resolution: {integrity: sha512-cRZYrTDwWznlnRiPjggAGxZXanty6M8RV1ff8Wm4LWXBp7/IG8v5DnOm74DtUBp9OONpK75YlPnIjQqX0dBDtA==}
-    engines: {node: '>=20.18.1'}
 
   undici@7.30.1:
     resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
@@ -9266,10 +9260,10 @@ snapshots:
       '@module-federation/managers': 2.8.1
       '@module-federation/sdk': 2.8.1
       '@module-federation/third-party-dts-extractor': 2.8.1
-      adm-zip: 0.6.0
+      adm-zip: 0.6.1
       isomorphic-ws: 5.0.0(ws@8.21.0)
       typescript: 5.9.3
-      undici: 7.28.0
+      undici: 7.30.2
       ws: 8.21.0
     transitivePeerDependencies:
       - bufferutil
@@ -11993,8 +11987,8 @@ snapshots:
   '@vercel/frameworks@3.29.0':
     dependencies:
       '@vercel/error-utils': 2.2.0
-      js-yaml: 3.13.1
-      smol-toml: 1.5.2
+      js-yaml: 3.15.2
+      smol-toml: 1.9.1
 
   '@vercel/stega@1.1.0': {}
 
@@ -12070,8 +12064,6 @@ snapshots:
       acorn: 8.19.0
 
   acorn@8.19.0: {}
-
-  adm-zip@0.6.0: {}
 
   adm-zip@0.6.1: {}
 
@@ -13176,7 +13168,7 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
-  js-yaml@3.13.1:
+  js-yaml@3.15.2:
     dependencies:
       argparse: 1.0.10
       esprima: 4.0.1
@@ -14566,8 +14558,6 @@ snapshots:
 
   slugify@1.6.9: {}
 
-  smol-toml@1.5.2: {}
-
   smol-toml@1.9.1: {}
 
   sonner@2.0.8(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
@@ -14836,8 +14826,6 @@ snapshots:
   uc.micro@3.0.0: {}
 
   undici-types@8.9.0: {}
-
-  undici@7.28.0: {}
 
   undici@7.30.1: {}
 
