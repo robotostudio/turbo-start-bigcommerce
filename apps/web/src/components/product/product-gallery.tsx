@@ -18,6 +18,21 @@ export type GalleryImage = {
   altText?: string | null;
 };
 
+/**
+ * The photo to scroll to for the selected variant, or null to stay put.
+ * `previousUrl` is null on the first render, when the page already shows photo 0.
+ */
+export function galleryScrollIndex(
+  images: readonly GalleryImage[],
+  url: string | undefined,
+  previousUrl: string | undefined | null
+): number | null {
+  if (!url || url === previousUrl) return null;
+  const index = images.findIndex((image) => image.url === url);
+  if (index < 0 || (previousUrl === null && index === 0)) return null;
+  return index;
+}
+
 type ProductGalleryProps = {
   images: GalleryImage[];
   selectedVariantImageUrl?: string;
@@ -41,7 +56,7 @@ function GalleryDesktop({
 }: GalleryViewProps) {
   const [active, setActive] = useState(0);
   const imageRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const prevVariantUrl = useRef(selectedVariantImageUrl);
+  const prevVariantUrl = useRef<string | undefined | null>(null);
   // Programmatic smooth scroll is the biggest vestibular trigger here — this
   // rail can travel several viewport heights on one thumbnail click, and there
   // is no "gentler" version of that. Jump instead.
@@ -76,21 +91,21 @@ function GalleryDesktop({
     });
   };
 
-  // Scroll to the variant's image when the selected variant changes.
+  // Scroll to the variant's photo when it changes, and on load: the product
+  // card links here with the colour already chosen.
   useEffect(() => {
-    if (!selectedVariantImageUrl) return;
-    if (selectedVariantImageUrl === prevVariantUrl.current) return;
-    prevVariantUrl.current = selectedVariantImageUrl;
-
-    const index = images.findIndex(
-      (img) => img.url === selectedVariantImageUrl
+    const firstRender = prevVariantUrl.current === null;
+    const index = galleryScrollIndex(
+      images,
+      selectedVariantImageUrl,
+      prevVariantUrl.current
     );
-    if (index >= 0) {
-      imageRefs.current[index]?.scrollIntoView({
-        behavior,
-        block: "start",
-      });
-    }
+    prevVariantUrl.current = selectedVariantImageUrl;
+    if (index === null) return;
+    imageRefs.current[index]?.scrollIntoView({
+      behavior: firstRender ? "auto" : behavior,
+      block: "start",
+    });
   }, [selectedVariantImageUrl, images, behavior]);
 
   return (
@@ -172,7 +187,7 @@ function GalleryMobile({
   const [active, setActive] = useState(0);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const prevVariantUrl = useRef(selectedVariantImageUrl);
+  const prevVariantUrl = useRef<string | undefined | null>(null);
   const reduced = usePrefersReducedMotion();
   const behavior: ScrollBehavior = reduced ? "auto" : "smooth";
 
@@ -209,20 +224,25 @@ function GalleryMobile({
   };
 
   useEffect(() => {
-    if (!selectedVariantImageUrl) return;
-    if (selectedVariantImageUrl === prevVariantUrl.current) return;
-    prevVariantUrl.current = selectedVariantImageUrl;
-
-    const index = images.findIndex(
-      (img) => img.url === selectedVariantImageUrl
+    const firstRender = prevVariantUrl.current === null;
+    const index = galleryScrollIndex(
+      images,
+      selectedVariantImageUrl,
+      prevVariantUrl.current
     );
-    if (index >= 0) {
-      slideRefs.current[index]?.scrollIntoView({
-        behavior,
-        block: "nearest",
-        inline: "center",
-      });
+    prevVariantUrl.current = selectedVariantImageUrl;
+    if (index === null) return;
+    const slide = slideRefs.current[index];
+    const scroller = scrollerRef.current;
+    // On load, move the carousel only: scrollIntoView would also drag the page
+    // down to a gallery that sits below the fold on a phone.
+    if (firstRender && slide && scroller) {
+      scroller.scrollLeft +=
+        slide.getBoundingClientRect().left -
+        scroller.getBoundingClientRect().left;
+      return;
     }
+    slide?.scrollIntoView({ behavior, block: "nearest", inline: "center" });
   }, [selectedVariantImageUrl, images, behavior]);
 
   return (
