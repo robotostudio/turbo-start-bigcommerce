@@ -15,13 +15,13 @@ vi.mock("../saved-items/saved-items-context", () => ({
   SavedItemsProvider: passThrough,
 }));
 
-// A block seeding React Query from server props, as collection-products.tsx
-// does with a category's facets.
-function Seeded({ facets }: { facets: string }) {
+// A block seeding React Query on the server, as featured-products.tsx does with
+// its prerendered cards. (The collection grid renders only in the browser.)
+function Seeded({ cards }: { cards: string }) {
   const { data } = useQuery({
-    queryKey: ["collection-products", "blower-silencers"],
+    queryKey: ["featured-products-cards", "wren-washed-cap"],
     queryFn: () => Promise.resolve("fetched"),
-    initialData: facets,
+    initialData: cards,
   });
   return createElement("p", null, data);
 }
@@ -35,18 +35,18 @@ function SeededStaleness() {
   return createElement("p", null, `stale:${isStale}`);
 }
 
-const renderRequest = (facets: string) =>
+const renderRequest = (cards: string) =>
   renderToString(
-    createElement(Providers, null, createElement(Seeded, { facets }))
+    createElement(Providers, null, createElement(Seeded, { cards }))
   );
 
 describe("Providers on the server", () => {
   it("gives each request its own query cache, so fresh initialData wins", () => {
-    expect(renderRequest("Brand, Price, Other")).toContain(
-      "Brand, Price, Other"
+    expect(renderRequest("Wren Washed Cap, £42")).toContain(
+      "Wren Washed Cap, £42"
     );
-    expect(renderRequest("Brand, Price, Max Flow")).toContain(
-      "Brand, Price, Max Flow"
+    expect(renderRequest("Wren Washed Cap, £38")).toContain(
+      "Wren Washed Cap, £38"
     );
   });
 
