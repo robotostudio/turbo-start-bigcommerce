@@ -9,6 +9,7 @@ import {
   productToCardProps,
   productTags,
   resolveCardImages,
+  secondaryImageUrl,
 } from "@/lib/bigcommerce/product-card";
 import { getCardOptions } from "@/lib/bigcommerce/options";
 import { toCardVariant } from "@/lib/bigcommerce/variant-utils";
@@ -200,6 +201,23 @@ describe("resolveCardImages", () => {
       ],
     });
     expect(result).toEqual({ primary: HERO, secondary: HERO_SECOND });
+  });
+});
+
+describe("secondaryImageUrl", () => {
+  const [a, b] = GALLERY;
+  if (!(a && b)) throw new Error("fixture needs two images");
+
+  it("has no hover image when the gallery repeats the featured photo", () => {
+    expect(secondaryImageUrl([a, a], a.url)).toBeNull();
+  });
+
+  it("has no hover image for a single photo", () => {
+    expect(secondaryImageUrl([a], a.url)).toBeNull();
+  });
+
+  it("fades to the first photo that is not the featured one", () => {
+    expect(secondaryImageUrl([a, b], a.url)).toBe(b.url);
   });
 });
 

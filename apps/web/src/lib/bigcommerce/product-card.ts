@@ -152,14 +152,14 @@ export function compareAtPrice(
 
 /**
  * Second product image for the card hover cross-fade: the first image that
- * differs from the featured image (else the 2nd image), or null.
+ * differs from the featured image, or null.
  */
 export function secondaryImageUrl(
   gallery: readonly BigCommerceCardImage[],
   featuredUrl: string | null
 ): string | null {
   const urls = gallery.map((image) => image.url);
-  return urls.find((url) => url !== featuredUrl) ?? urls[1] ?? null;
+  return urls.find((url) => url !== featuredUrl) ?? null;
 }
 
 function money(amount: number, currencyCode: string) {
