@@ -10,6 +10,7 @@ import {
   findVariantByOptions,
   type ProductOption,
   type ProductVariant,
+  variantGalleryImage,
 } from "@/lib/bigcommerce/product-model";
 import { buildLineMetadata } from "@/lib/cart/metadata";
 import type { MoneyV2 } from "@/lib/cart/types";
@@ -166,7 +167,9 @@ export function SelectedVariantGallery({
   return (
     <ProductGallery
       images={images}
-      selectedVariantImageUrl={variant?.image?.url}
+      selectedVariantImageUrl={
+        variant && variantGalleryImage(variant, options, images)
+      }
     />
   );
 }
