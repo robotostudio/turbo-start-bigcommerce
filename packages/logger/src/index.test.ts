@@ -106,10 +106,11 @@ describe("a configured drain", () => {
 });
 
 /**
- * evlog serialises with a bare `JSON.stringify`, and nothing between here and
- * there has a try/catch. Before evlog this was `console.log`, which swallows
- * anything. The values below both raise out of the call, so the guard lives in
- * `#emit` rather than in a serialiser.
+ * evlog serialises its JSON output with a bare `JSON.stringify`. Since 2.37 it
+ * replaces a circular reference with `"[Circular]"` itself, but a BigInt still
+ * raises out of the call when `pretty` is off. Before evlog this was
+ * `console.log`, which swallows anything, so the guard lives in `#emit` rather
+ * than in a serialiser.
  *
  * `llms.txt/route.ts` logs a rejected promise's `reason` — an arbitrary value —
  * from inside a failure path, which is the worst place to add a new throw.
@@ -129,12 +130,14 @@ describe("a value that cannot be serialised", () => {
   });
 
   it("still says what happened when it falls back", () => {
-    initLogging({ env: { service: "logger-test" } });
+    // JSON output, where evlog still throws on a BigInt. Pretty printing
+    // formats one without complaint, so it would never reach the fallback.
+    initLogging({ env: { service: "logger-test" }, pretty: false });
     const stderr = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
 
-    new Logger("LlmsTxt").error("Failed to load blogs", cyclic);
+    new Logger("LlmsTxt").error("Failed to load blogs", { count: 1n });
 
     expect(String(stderr.mock.calls.at(-1)?.[0])).toBe(
       "[LlmsTxt] ERROR: Failed to load blogs"
