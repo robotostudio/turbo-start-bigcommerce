@@ -217,14 +217,14 @@ describe("toFacets, branching on the typed union", () => {
 });
 
 describe("truncation", () => {
-  it("warns when a value list has more values than the page size asked for", () => {
+  it("warns when a value list has more values than one page holds", () => {
     // The whole point of an explicit page size is that truncation stops being
     // invisible, which only holds if somebody is told. Catalyst omits the
     // argument entirely and a long brand list is silently cut off.
     toFacets(edges(FACET_PAYLOAD), true);
 
     const truncation = warn.mock.calls.filter((call) =>
-      String(call[0]).includes("more values than the page size")
+      String(call[0]).includes("more values than BigCommerce returns")
     );
 
     expect(truncation).toHaveLength(1);
