@@ -348,6 +348,24 @@ describe("getActiveFilters", () => {
     expect(chips.every((chip) => chip.invalid)).toBe(true);
   });
 
+  it("flags both bounds of a swapped price pair", () => {
+    const chips = getActiveFilters(
+      params("filter.minPrice=500&filter.maxPrice=100")
+    );
+
+    expect(chips.map((chip) => chip.invalid)).toEqual([true, true]);
+  });
+
+  it("keeps an equal or ordered price pair valid", () => {
+    for (const query of [
+      "filter.minPrice=50&filter.maxPrice=50",
+      "filter.minPrice=100&filter.maxPrice=500",
+    ]) {
+      const chips = getActiveFilters(params(query));
+      expect(chips.every((chip) => chip.invalid === undefined)).toBe(true);
+    }
+  });
+
   it("ignores params outside the filter namespace", () => {
     expect(getActiveFilters(params("sort=NEWEST&q=jacket&after=abc"))).toEqual(
       []

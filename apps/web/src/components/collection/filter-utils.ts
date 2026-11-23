@@ -428,15 +428,29 @@ export type ActiveFilter = {
  * parse rules rather than restating them: the shared helpers below are the same
  * ones the parser uses, so the two cannot drift apart.
  */
-function isUsableParam(paramKey: string, paramValue: string): boolean {
+function isUsableParam(
+  paramKey: string,
+  paramValue: string,
+  selection: FilterSelection
+): boolean {
   if (paramKey === BRAND_PARAM || paramKey === CATEGORY_PARAM) {
     return toEntityIds([paramValue]).length === 1;
   }
-  if (
-    paramKey === MIN_PRICE_PARAM ||
-    paramKey === MAX_PRICE_PARAM ||
-    paramKey === MIN_RATING_PARAM
-  ) {
+  // A price chip is honest only if the search used that bound: a swapped pair
+  // is dropped by the parser, so neither bound matches the selection.
+  if (paramKey === MIN_PRICE_PARAM) {
+    return (
+      selection.minPrice !== undefined &&
+      toBound(paramValue) === selection.minPrice
+    );
+  }
+  if (paramKey === MAX_PRICE_PARAM) {
+    return (
+      selection.maxPrice !== undefined &&
+      toBound(paramValue) === selection.maxPrice
+    );
+  }
+  if (paramKey === MIN_RATING_PARAM) {
     return toBound(paramValue) !== undefined;
   }
   if (paramKey === STOCK_PARAM) return paramValue === IN_STOCK_VALUE;
@@ -487,11 +501,12 @@ export function getActiveFilters(
   facets: readonly Facet[] = []
 ): ActiveFilter[] {
   const labels = labelIndex(facets);
+  const selection = parseFilterParams(sp);
   const active: ActiveFilter[] = [];
 
   for (const [paramKey, paramValue] of sp.entries()) {
     if (!paramKey.startsWith(PREFIX)) continue;
-    const usable = isUsableParam(paramKey, paramValue);
+    const usable = isUsableParam(paramKey, paramValue, selection);
     active.push({
       key: `${paramKey}=${paramValue}`,
       label:
