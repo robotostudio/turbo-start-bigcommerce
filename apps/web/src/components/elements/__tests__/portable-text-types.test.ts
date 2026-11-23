@@ -91,10 +91,9 @@ describe("accordion portable text type", () => {
   });
 });
 
-const paragraphWithLink = (link: {
-  href: string | null;
-  openInNewTab?: boolean;
-}) => [
+type LinkMarkDef = { href?: string | null; openInNewTab?: boolean };
+
+const paragraphWithLink = (link: LinkMarkDef) => [
   {
     _type: "block",
     _key: "block",
@@ -106,7 +105,7 @@ const paragraphWithLink = (link: {
   },
 ];
 
-const renderLink = (link: { href: string | null; openInNewTab?: boolean }) =>
+const renderLink = (link: LinkMarkDef) =>
   renderToStaticMarkup(
     createElement(PortableText, {
       components: { marks: sharedPortableTextMarks },
@@ -118,6 +117,11 @@ describe("customLink mark", () => {
   // `hrefFragment` projects a null href when the weak reference dangles.
   it("renders an unresolved internal link as its plain text", () => {
     expect(renderLink({ href: null })).toBe("<p>Read more</p>");
+  });
+
+  // `...customLink{}` spreads nothing when the annotation's field is unset.
+  it("renders a link with no href key as its plain text", () => {
+    expect(renderLink({})).toBe("<p>Read more</p>");
   });
 
   // The fallback arm of `hrefFragment`, for a link with no type picked.
