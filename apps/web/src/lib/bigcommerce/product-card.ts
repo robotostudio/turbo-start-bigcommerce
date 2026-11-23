@@ -219,6 +219,30 @@ export function cardPricing(
   };
 }
 
+/**
+ * The price the card shows before anyone picks an option: its initial colour
+ * and size, as `ProductCard` seeds its state. For places that render the card's
+ * figures without the card, such as the OG image.
+ */
+export function initialCardPricing(
+  card: Pick<
+    ProductCardProps,
+    | "priceRange"
+    | "compareAtPrice"
+    | "variants"
+    | "selectedColor"
+    | "selectedSize"
+  >,
+  code: string
+): ReturnType<typeof cardPricing> {
+  return cardPricing(
+    card.priceRange,
+    card.compareAtPrice,
+    code,
+    findCardVariant(card.variants, card.selectedColor, card.selectedSize)
+  );
+}
+
 /** The product page link for the card's variant, so it opens on the one priced. */
 export function cardHref(
   slug: string,

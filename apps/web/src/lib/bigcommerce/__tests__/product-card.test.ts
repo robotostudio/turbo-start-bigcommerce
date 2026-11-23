@@ -7,6 +7,7 @@ import {
   cardHref,
   cardPricing,
   findCardVariant,
+  initialCardPricing,
   productTags,
   productToCardProps,
   resolveCardImages,
@@ -393,6 +394,42 @@ describe("card price against the product page it opens", () => {
         cardPricing(flat, compareAt, "GBP")
       );
     }
+  });
+});
+
+describe("initialCardPricing", () => {
+  it("prices the variant the card first shows, with its own was-price", () => {
+    const card = productToCardProps(byId.response.data.site.product);
+    const shown = findCardVariant(
+      card.variants,
+      card.selectedColor,
+      card.selectedSize
+    );
+    const gbp = (amount: string) => ({ amount, currencyCode: "GBP" });
+    // Only the variant the card opens on is marked down; the range minimum
+    // and the product-level figure belong to other variants.
+    const variants = card.variants?.map((variant) =>
+      variant.id === shown?.id
+        ? { ...variant, price: gbp("120.00"), compareAt: gbp("150.00") }
+        : { ...variant, price: gbp("100.00"), compareAt: null }
+    );
+
+    expect(
+      initialCardPricing(
+        {
+          ...card,
+          variants,
+          priceRange: { minVariantPrice: 100, maxVariantPrice: 120 },
+          compareAtPrice: 200,
+        },
+        "GBP"
+      )
+    ).toEqual({
+      price: "£120.00",
+      salePercent: 20,
+      strikePrice: "£150.00",
+      rangePrice: null,
+    });
   });
 });
 
