@@ -8,6 +8,7 @@ import Link from "next/link";
 import { PortableText, type PortableTextReactComponents } from "next-sanity";
 
 import { ProductHotspotsImage } from "@/components/product/product-hotspots";
+import { newTab } from "@/lib/new-tab";
 
 const linkClassName =
   "font-medium text-foreground underline decoration-solid underline-offset-2";
@@ -36,7 +37,7 @@ export const sharedPortableTextMarks: NonNullable<
         className={linkClassName}
         href={value.href}
         prefetch={false}
-        target={value.openInNewTab ? "_blank" : "_self"}
+        {...newTab(value.openInNewTab)}
       >
         {children}
       </Link>
@@ -57,8 +58,7 @@ export const sharedPortableTextMarks: NonNullable<
         className={linkClassName}
         href={value.href}
         prefetch={false}
-        rel={value.openInNewTab ? "noopener noreferrer" : undefined}
-        target={value.openInNewTab ? "_blank" : "_self"}
+        {...newTab(value.openInNewTab)}
       >
         {children}
       </Link>

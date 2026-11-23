@@ -3,6 +3,7 @@ import { cn } from "@workspace/ui/lib/utils";
 import Link from "next/link";
 import { stegaClean } from "next-sanity";
 
+import { newTab } from "@/lib/new-tab";
 import type {
   SanityButtonProps,
   SanityImageProps,
@@ -218,7 +219,7 @@ function FullBleedHero({
                       )}
                       href={button.href}
                       key={button._key}
-                      target={button.openInNewTab ? "_blank" : "_self"}
+                      {...newTab(button.openInNewTab)}
                     >
                       {button.text}
                     </Link>

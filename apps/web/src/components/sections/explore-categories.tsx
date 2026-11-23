@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { CollectionCard } from "@/components/collection/collection-card";
 import { sanityCollectionToCardProps } from "@/lib/collection-card";
+import { newTab } from "@/lib/new-tab";
 import type { SanityButtonProps } from "@/types";
 
 type Collection = {
@@ -42,7 +43,7 @@ export function ExploreCategories({
               key={button._key}
               className="flex items-center gap-2 border border-current px-6 py-2.5 text-sm uppercase tracking-wider transition-colors hover:bg-foreground hover:text-background"
               href={button.href}
-              target={button.openInNewTab ? "_blank" : "_self"}
+              {...newTab(button.openInNewTab)}
             >
               {button.text ?? "See all"}
               <ArrowRight className="size-4" />

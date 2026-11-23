@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
+import { newTab } from "@/lib/new-tab";
 import type { SanityButtonProps, SanityImageProps } from "@/types";
 import { SanityImage } from "../elements/sanity-image";
 
@@ -64,7 +65,7 @@ export function CollectionBanner({
                 key={button._key}
                 className="flex items-center gap-2 border border-white px-8 py-3 text-sm uppercase tracking-wider transition-colors hover:bg-white hover:text-neutral-900"
                 href={button.href}
-                target={button.openInNewTab ? "_blank" : "_self"}
+                {...newTab(button.openInNewTab)}
               >
                 {button.text ?? "Shop Collection"}
                 <ArrowRight className="size-4" />
