@@ -159,7 +159,7 @@ export type SearchFacet = ResultOf<typeof SearchFacetFields>;
 function warnIfTruncated(name: string, hasNextPage: boolean | undefined) {
   if (hasNextPage) {
     logger.warn(
-      `Facet "${name}" has more values than BigCommerce returns in one page (50 at most), so the panel hides the rest.`
+      `Facet "${name}" has more values than BigCommerce returns in one page, so the panel hides the rest.`
     );
   }
 }

@@ -230,4 +230,14 @@ describe("truncation", () => {
     expect(truncation).toHaveLength(1);
     expect(String(truncation[0]?.[0])).toContain("Colour");
   });
+
+  it("does not name a page size, which differs by facet (ratings asks for 10)", () => {
+    toFacets(edges(FACET_PAYLOAD), true);
+
+    const truncation = warn.mock.calls.filter((call) =>
+      String(call[0]).includes("more values than BigCommerce returns")
+    );
+
+    expect(String(truncation[0]?.[0])).not.toMatch(/\d+ at most/);
+  });
 });
