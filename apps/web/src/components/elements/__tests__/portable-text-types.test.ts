@@ -1,9 +1,12 @@
-import { isValidElement, type ReactElement } from "react";
+import { createElement, isValidElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PortableText } from "next-sanity";
 import { describe, expect, it, vi } from "vitest";
 
-import { sharedPortableTextTypes } from "../portable-text-types";
+import {
+  sharedPortableTextMarks,
+  sharedPortableTextTypes,
+} from "../portable-text-types";
 
 // Unrelated to the accordion, and it drags the Sanity image builder — and with it
 // validated env — into a test that needs neither.
@@ -85,5 +88,55 @@ describe("accordion portable text type", () => {
 
     expect(html).toContain('href="/blog/returns"');
     expect(html).not.toContain("unknown__pt__mark__customLink");
+  });
+});
+
+const paragraphWithLink = (link: {
+  href: string | null;
+  openInNewTab?: boolean;
+}) => [
+  {
+    _type: "block",
+    _key: "block",
+    style: "normal",
+    markDefs: [{ _key: "link", _type: "customLink", ...link }],
+    children: [
+      { _type: "span", _key: "span", text: "Read more", marks: ["link"] },
+    ],
+  },
+];
+
+const renderLink = (link: { href: string | null; openInNewTab?: boolean }) =>
+  renderToStaticMarkup(
+    createElement(PortableText, {
+      components: { marks: sharedPortableTextMarks },
+      value: paragraphWithLink(link),
+    })
+  );
+
+describe("customLink mark", () => {
+  // `hrefFragment` projects a null href when the weak reference dangles.
+  it("renders an unresolved internal link as its plain text", () => {
+    expect(renderLink({ href: null })).toBe("<p>Read more</p>");
+  });
+
+  // The fallback arm of `hrefFragment`, for a link with no type picked.
+  it("renders the placeholder href as its plain text", () => {
+    expect(renderLink({ href: "#" })).toBe("<p>Read more</p>");
+  });
+
+  it("keeps a resolved internal link", () => {
+    const html = renderLink({ href: "/blog/returns" });
+    expect(html).toContain('href="/blog/returns"');
+    expect(html).toContain(">Read more</a>");
+  });
+
+  it("keeps an external link", () => {
+    const html = renderLink({
+      href: "https://example.com",
+      openInNewTab: true,
+    });
+    expect(html).toContain('href="https://example.com"');
+    expect(html).toContain('target="_blank"');
   });
 });

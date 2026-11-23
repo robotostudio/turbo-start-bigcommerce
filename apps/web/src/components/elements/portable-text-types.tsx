@@ -27,9 +27,9 @@ export const sharedPortableTextMarks: NonNullable<
     </code>
   ),
   customLink: ({ children, value }) => {
-    if (!value.href || value.href === "#") {
-      return <span className={linkClassName}>Link Broken</span>;
-    }
+    // A deleted or unpublished target projects a null href (`hrefFragment` in
+    // packages/sanity/src/query.ts); keep the words, drop the link.
+    if (!value?.href || value.href === "#") return children;
     return (
       <Link
         aria-label={`Link to ${value?.href}`}
