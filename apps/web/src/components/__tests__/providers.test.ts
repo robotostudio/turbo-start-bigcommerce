@@ -26,6 +26,15 @@ function Seeded({ facets }: { facets: string }) {
   return createElement("p", null, data);
 }
 
+function SeededStaleness() {
+  const { isStale } = useQuery({
+    queryKey: ["collection-products", "all-products"],
+    queryFn: () => Promise.resolve("fetched"),
+    initialData: "prerendered",
+  });
+  return createElement("p", null, `stale:${isStale}`);
+}
+
 const renderRequest = (facets: string) =>
   renderToString(
     createElement(Providers, null, createElement(Seeded, { facets }))
@@ -39,5 +48,15 @@ describe("Providers on the server", () => {
     expect(renderRequest("Brand, Price, Max Flow")).toContain(
       "Brand, Price, Max Flow"
     );
+  });
+
+  it("leaves a server seed stale, so the browser revalidates it on mount", () => {
+    // Collection and featured-product seeds come from ISR pages (up to 300s
+    // old); refetching on mount is what keeps them from outliving the catalog.
+    expect(
+      renderToString(
+        createElement(Providers, null, createElement(SeededStaleness))
+      )
+    ).toContain("stale:true");
   });
 });

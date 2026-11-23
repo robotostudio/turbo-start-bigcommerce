@@ -14,18 +14,14 @@ import { SavedItemsProvider } from "./saved-items/saved-items-context";
 
 // Server queries never expire, so a shared client served the first request's
 // data to every later one: one client per server request, one per browser.
-// 60s `staleTime` keeps a server-seeded query from refetching on hydration.
-const QUERY_CLIENT_OPTIONS = {
-  defaultOptions: { queries: { staleTime: 60 * 1000 } },
-};
-
+// No default `staleTime`: seeds from ISR pages must revalidate on mount.
 let browserQueryClient: QueryClient | undefined;
 
 function getQueryClient() {
   if (isServer) {
-    return new QueryClient(QUERY_CLIENT_OPTIONS);
+    return new QueryClient();
   }
-  browserQueryClient ??= new QueryClient(QUERY_CLIENT_OPTIONS);
+  browserQueryClient ??= new QueryClient();
   return browserQueryClient;
 }
 
