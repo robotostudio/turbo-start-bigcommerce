@@ -1,25 +1,29 @@
 import { describe, expect, it } from "vitest";
 
-import * as pdpCopy from "@/components/product/variant-utils";
-import { toCardVariant } from "@/lib/bigcommerce/variant-utils";
-import * as cartCopy from "@/lib/cart/variant-match";
+import { fromMerchandiseId } from "@/lib/bigcommerce/cart";
+import {
+  findVariantByOptions,
+  getOptionAvailability,
+  productVariants,
+  toProductOptions,
+  toProductVariant,
+  variantGalleryImage,
+} from "@/lib/bigcommerce/product-model";
+import imageOverride from "../__fixtures__/product-variant-image-override.json";
 import fixture from "../__fixtures__/product-variants-and-options.json";
-
-// Both matcher copies run through the same cases before they are merged.
-// biome-ignore lint/suspicious/noExplicitAny: pinning two copies typed differently
-const COPIES: [string, any][] = [
-  ["pdp", pdpCopy],
-  ["cart", cartCopy],
-];
 
 // Aster Denim Coach Jacket: Size x Color, 10 variants, all £133.
 const PRODUCT = fixture.response.data.site.product;
-const VARIANTS = PRODUCT.variants.edges.map((edge) => toCardVariant(edge.node));
+const VARIANTS = productVariants(PRODUCT);
+const OPTIONS = toProductOptions(
+  (PRODUCT.productOptions.edges ?? []).map((edge) => edge.node)
+);
 
-describe("variant mapper", () => {
+describe("toProductVariant", () => {
   it("flattens a variant's options, price and stock", () => {
     expect(VARIANTS[0]).toMatchObject({
       id: "170",
+      title: "XS / Indigo Rinse",
       availableForSale: true,
       price: { amount: "133.00", currencyCode: "GBP" },
       selectedOptions: [
@@ -29,63 +33,95 @@ describe("variant mapper", () => {
     });
   });
 
+  it("builds the cart id from the product and the variant", () => {
+    expect(VARIANTS[0]?.merchandiseId).toBe("183:170");
+    expect(fromMerchandiseId(VARIANTS[0]?.merchandiseId ?? "")).toEqual({
+      productEntityId: 183,
+      variantEntityId: 170,
+    });
+  });
+
+  it("carries the variant's own photo", () => {
+    expect(
+      toProductVariant(1, { entityId: 2, defaultImage: { url: "x.png" } }).image
+    ).toEqual({ url: "x.png" });
+    expect(toProductVariant(1, { entityId: 2 }).image).toBeNull();
+  });
+
   it("is not for sale when unpurchasable or out of stock", () => {
     expect(
-      toCardVariant({ entityId: 1, isPurchasable: false }).availableForSale
+      toProductVariant(1, { entityId: 2, isPurchasable: false })
+        .availableForSale
     ).toBe(false);
     expect(
-      toCardVariant({ entityId: 1, inventory: { isInStock: false } })
+      toProductVariant(1, { entityId: 2, inventory: { isInStock: false } })
         .availableForSale
     ).toBe(false);
   });
 
   it("treats unknown stock as for sale", () => {
     expect(
-      toCardVariant({ entityId: 1, inventory: null }).availableForSale
+      toProductVariant(1, { entityId: 2, inventory: null }).availableForSale
     ).toBe(true);
   });
 
   it("falls back to a zero price when BigCommerce sends none", () => {
-    expect(toCardVariant({ entityId: 1, prices: null }).price).toEqual({
+    expect(toProductVariant(1, { entityId: 2, prices: null }).price).toEqual({
       amount: "0.00",
       currencyCode: "",
     });
   });
 });
 
-describe.each(COPIES)("findVariantByOptions (%s copy)", (_, copy) => {
+describe("toProductOptions", () => {
+  it("maps values with their swatch hex", () => {
+    expect(OPTIONS.map((option) => option.name)).toEqual(["Size", "Color"]);
+    expect(OPTIONS[0]?.values[0]).toEqual({ value: "XS", hex: null });
+    expect(OPTIONS[1]?.values[0]).toEqual({
+      value: "Indigo Rinse",
+      hex: "#2C3E5D",
+    });
+  });
+
+  it("drops an option with nothing to choose from", () => {
+    // A text or date option has no `values`: no selector can render it and no
+    // variant is keyed on it.
+    expect(
+      toProductOptions([{ entityId: 9, displayName: "Engraving" }])
+    ).toEqual([]);
+  });
+});
+
+describe("findVariantByOptions", () => {
   it("matches on option name and value", () => {
     expect(
-      copy.findVariantByOptions(VARIANTS, { Size: "M", Color: "Warm Stone" })
-        ?.id
+      findVariantByOptions(VARIANTS, { Size: "M", Color: "Warm Stone" })?.id
     ).toBe("189");
   });
 
   it("ignores an option the shopper has not chosen", () => {
     expect(
-      copy.findVariantByOptions(VARIANTS, { Size: "", Color: "Warm Stone" })?.id
+      findVariantByOptions(VARIANTS, { Size: "", Color: "Warm Stone" })?.id
     ).toBe("186");
   });
 
   it("returns null for an empty selection", () => {
-    expect(copy.findVariantByOptions(VARIANTS, {})).toBeNull();
-    expect(copy.findVariantByOptions(VARIANTS, { Size: "" })).toBeNull();
+    expect(findVariantByOptions(VARIANTS, {})).toBeNull();
+    expect(findVariantByOptions(VARIANTS, { Size: "" })).toBeNull();
   });
 
   it("returns null for an unknown combination", () => {
     expect(
-      copy.findVariantByOptions(VARIANTS, { Size: "XXL", Color: "Warm Stone" })
+      findVariantByOptions(VARIANTS, { Size: "XXL", Color: "Warm Stone" })
     ).toBeNull();
   });
 
   it("matches option names exactly", () => {
-    expect(
-      copy.findVariantByOptions(VARIANTS, { color: "Warm Stone" })
-    ).toBeNull();
+    expect(findVariantByOptions(VARIANTS, { color: "Warm Stone" })).toBeNull();
   });
 });
 
-describe.each(COPIES)("getOptionAvailability (%s copy)", (_, copy) => {
+describe("getOptionAvailability", () => {
   // S / Warm Stone sold out.
   const soldOut = VARIANTS.map((variant) =>
     variant.id === "188" ? { ...variant, availableForSale: false } : variant
@@ -93,16 +129,16 @@ describe.each(COPIES)("getOptionAvailability (%s copy)", (_, copy) => {
 
   it("greys out a value only under the selection it is sold out in", () => {
     expect(
-      copy.getOptionAvailability(soldOut, "Size", { Color: "Warm Stone" })
+      getOptionAvailability(soldOut, "Size", { Color: "Warm Stone" })
     ).toEqual({ XS: true, S: false, M: true, L: true, XL: true });
     expect(
-      copy.getOptionAvailability(soldOut, "Size", { Color: "Indigo Rinse" })
+      getOptionAvailability(soldOut, "Size", { Color: "Indigo Rinse" })
     ).toEqual({ XS: true, S: true, M: true, L: true, XL: true });
   });
 
   it("ignores the option's own current value", () => {
     expect(
-      copy.getOptionAvailability(soldOut, "Color", {
+      getOptionAvailability(soldOut, "Color", {
         Size: "S",
         Color: "Warm Stone",
       })
@@ -110,9 +146,46 @@ describe.each(COPIES)("getOptionAvailability (%s copy)", (_, copy) => {
   });
 
   it("is available if any matching variant is, whatever the order", () => {
-    expect(copy.getOptionAvailability(soldOut, "Color", {})).toEqual({
+    expect(getOptionAvailability(soldOut, "Color", {})).toEqual({
       "Indigo Rinse": true,
       "Warm Stone": true,
     });
+  });
+});
+
+describe("variantGalleryImage", () => {
+  // The capture carries the gallery's alt text and each variant's override,
+  // which lives under `attribute_rule_images/` and is never in the gallery.
+  const ASTER = imageOverride.response.data.site.multiColour;
+  const GALLERY = ASTER.images.edges.map((edge) => edge.node);
+  const variants = productVariants(ASTER);
+  const warm = findVariantByOptions(variants, { Color: "Warm Stone" });
+
+  it("points at the chosen colour's first photo in the gallery", () => {
+    const firstWarm = GALLERY.find((image) =>
+      image.altText.endsWith("Warm Stone")
+    );
+    expect(warm && variantGalleryImage(warm, OPTIONS, GALLERY)).toBe(
+      firstWarm?.url
+    );
+  });
+
+  it("never points at a URL the gallery does not hold", () => {
+    const urls = GALLERY.map((image) => image.url);
+    for (const variant of variants) {
+      const url = variantGalleryImage(variant, OPTIONS, GALLERY);
+      expect(url === undefined || urls.includes(url)).toBe(true);
+    }
+  });
+
+  it("returns undefined for a product without a colour option", () => {
+    expect(
+      warm &&
+        variantGalleryImage(
+          warm,
+          OPTIONS.filter((option) => option.name !== "Color"),
+          GALLERY
+        )
+    ).toBeUndefined();
   });
 });
