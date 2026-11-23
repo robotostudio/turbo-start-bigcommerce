@@ -10,8 +10,8 @@ import { useCartActions } from "@/components/cart/cart-context";
 import type { LayersShowcaseSeed } from "@/components/pagebuilder-data";
 import { StoreImage as Image } from "@/components/product/store-image";
 import type { CatalogProduct } from "@/lib/bigcommerce/catalog";
-import { formatMoney, toMoney } from "@/lib/bigcommerce/money";
 import {
+  cardPricing,
   findCardVariant,
   productToCardProps,
 } from "@/lib/bigcommerce/product-card";
@@ -72,11 +72,12 @@ function PurchaseBar({ product }: { product: CatalogProduct }) {
     selectedSize
   );
   const canAdd = Boolean(variant?.availableForSale);
-  const price = formatMoney(
-    toMoney({
-      value: card.priceRange.minVariantPrice,
-      currencyCode: card.currencyCode ?? "GBP",
-    })
+  // The same figure the product card shows for this variant.
+  const { price } = cardPricing(
+    card.priceRange,
+    card.compareAtPrice,
+    card.currencyCode ?? "GBP",
+    variant
   );
 
   function handleAdd() {
