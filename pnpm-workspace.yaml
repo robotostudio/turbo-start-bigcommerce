@@ -13,8 +13,8 @@ catalog:
   "@types/react-dom": ^19.3.0
   lucide-react: ^1.73.0
   next-themes: ^0.4.6
-  react: ^19.2.8
-  react-dom: ^19.2.8
+  react: ^19.3.0
+  react-dom: ^19.3.0
   # Held at 6.9.1 (6.11.0 is out) together with the studio's @sanity/ui ^3 and
   # @sanity/icons ^3 pins: sanity >=6.9.2 requires @sanity/ui v4, and
   # sanity-plugin-lucide-icon-picker@1.0.3 (latest, unmaintained) imports
