@@ -9,6 +9,7 @@ import {
   productToCardProps,
   productTags,
   resolveCardImages,
+  secondaryImageUrl,
 } from "@/lib/bigcommerce/product-card";
 import { getCardOptions } from "@/lib/bigcommerce/options";
 import { toCardVariant } from "@/lib/bigcommerce/variant-utils";
@@ -116,6 +117,71 @@ describe("resolveCardImages", () => {
     });
   });
 
+  describe("without a variant image override", () => {
+    const noOverride = VARIANTS.map((variant) => ({ ...variant, image: null }));
+    const [a, b] = INDIGO;
+    if (!(a && b)) throw new Error("fixture needs two Indigo photos");
+
+    it("has no hover partner when the colour repeats its first photo", () => {
+      const result = resolveCardImages({
+        ...base,
+        variants: noOverride,
+        selectedColor: "Indigo Rinse",
+        gallery: [a, a],
+      });
+      expect(result).toEqual({ primary: a.url, secondary: null });
+    });
+
+    it("fades to the colour's next distinct photo", () => {
+      const result = resolveCardImages({
+        ...base,
+        variants: noOverride,
+        selectedColor: "Indigo Rinse",
+        gallery: [a, b],
+      });
+      expect(result).toEqual({ primary: a.url, secondary: b.url });
+    });
+
+    it("skips repeats of the first photo to reach a distinct one", () => {
+      const result = resolveCardImages({
+        ...base,
+        variants: noOverride,
+        selectedColor: "Indigo Rinse",
+        gallery: [a, a, b],
+      });
+      expect(result).toEqual({ primary: a.url, secondary: b.url });
+    });
+  });
+
+  describe("with a variant image override", () => {
+    const [a, b] = INDIGO;
+    if (!(a && b)) throw new Error("fixture needs two Indigo photos");
+
+    it("has no hover partner when the colour repeats the photo the override stands in for", () => {
+      const result = resolveCardImages({
+        ...base,
+        selectedColor: "Indigo Rinse",
+        gallery: [a, a],
+      });
+      expect(result).toEqual({
+        primary: overrideFor("Indigo Rinse"),
+        secondary: null,
+      });
+    });
+
+    it("skips repeats of the first photo to reach a distinct one", () => {
+      const result = resolveCardImages({
+        ...base,
+        selectedColor: "Indigo Rinse",
+        gallery: [a, a, b],
+      });
+      expect(result).toEqual({
+        primary: overrideFor("Indigo Rinse"),
+        secondary: b.url,
+      });
+    });
+  });
+
   it("keeps the product-level hover when the photo is outside the gallery window", () => {
     // `images(first:)` truncated before Warm Stone's group.
     const result = resolveCardImages({
@@ -200,6 +266,31 @@ describe("resolveCardImages", () => {
       ],
     });
     expect(result).toEqual({ primary: HERO, secondary: HERO_SECOND });
+  });
+});
+
+describe("secondaryImageUrl", () => {
+  const [a, b] = GALLERY;
+  if (!(a && b)) throw new Error("fixture needs two images");
+
+  it("has no hover image when the gallery repeats the featured photo", () => {
+    expect(secondaryImageUrl([a, a], a.url)).toBeNull();
+  });
+
+  it("has no hover image for a single photo", () => {
+    expect(secondaryImageUrl([a], a.url)).toBeNull();
+  });
+
+  it("fades to the first photo that is not the featured one", () => {
+    expect(secondaryImageUrl([a, b], a.url)).toBe(b.url);
+  });
+
+  it("skips repeats of the featured photo to reach a distinct one", () => {
+    expect(secondaryImageUrl([a, a, b], a.url)).toBe(b.url);
+  });
+
+  it("fades to the first photo when there is no featured one", () => {
+    expect(secondaryImageUrl([a, b], null)).toBe(a.url);
   });
 });
 

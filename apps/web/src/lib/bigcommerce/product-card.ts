@@ -152,14 +152,14 @@ export function compareAtPrice(
 
 /**
  * Second product image for the card hover cross-fade: the first image that
- * differs from the featured image (else the 2nd image), or null.
+ * differs from the featured image, or null.
  */
 export function secondaryImageUrl(
   gallery: readonly BigCommerceCardImage[],
   featuredUrl: string | null
 ): string | null {
   const urls = gallery.map((image) => image.url);
-  return urls.find((url) => url !== featuredUrl) ?? urls[1] ?? null;
+  return urls.find((url) => url !== featuredUrl) ?? null;
 }
 
 function money(amount: number, currencyCode: string) {
@@ -299,13 +299,17 @@ export function resolveCardImages({
   ]);
   if (!(override || group.length > 0)) return fallback;
 
+  const [first, ...rest] = group;
   return {
-    primary: override ?? group[0]?.url ?? imageUrl,
+    primary: override ?? first?.url ?? imageUrl,
     // No group at all means the colour's photos fell outside the fetched
     // window — keep the product hover. A group of one means the colour really
     // has a single photo, and no cross-fade beats fading into another colour.
-    secondary:
-      group[1]?.url ?? (group.length === 0 ? fallback.secondary : null),
+    // The primary is (or stands in for) the first photo, so skipping repeats
+    // of it stops a photo fading into itself.
+    secondary: first
+      ? (rest.find((image) => image.url !== first.url)?.url ?? null)
+      : fallback.secondary,
   };
 }
 
