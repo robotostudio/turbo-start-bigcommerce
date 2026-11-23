@@ -4,7 +4,8 @@
  * Without it, `data ?? EMPTY` rendered `0 results for "jacket"` and "No
  * products found." — byte-identical to a search that genuinely matched
  * nothing, so a shopper looking for a product the store sells was told it does
- * not sell it. The search box stays above this, so retyping is the retry.
+ * not sell it. A different term, or refocusing the window, fetches again; the
+ * same term retyped inside the debounce does not.
  */
 export function SearchUnavailable() {
   return (
