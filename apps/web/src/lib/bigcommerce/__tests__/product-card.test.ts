@@ -240,6 +240,7 @@ describe("resolveCardImages", () => {
       title: "collide",
       availableForSale: true,
       price: { amount: "133.00", currencyCode: "GBP" },
+      compareAt: null,
       selectedOptions: [
         { name: "Size", value: "Warm Stone" },
         { name: "Color", value: "Indigo Rinse" },
@@ -268,6 +269,7 @@ describe("resolveCardImages", () => {
           title: "Indigo",
           availableForSale: true,
           price: { amount: "133.00", currencyCode: "GBP" },
+          compareAt: null,
           selectedOptions: [{ name: "Color", value: "Indigo" }],
           image: null,
         },
@@ -309,6 +311,7 @@ describe("card price against the product page it opens", () => {
     title: size,
     availableForSale: true,
     price: { amount, currencyCode: "GBP" },
+    compareAt: null,
     image: null,
     selectedOptions: [{ name: "Size", value: size }],
   });
@@ -340,7 +343,7 @@ describe("card price against the product page it opens", () => {
       ).variant;
 
       expect(opened?.id).toBe(variant?.id);
-      expect(cardPricing(range, null, "GBP", variant?.price)).toMatchObject({
+      expect(cardPricing(range, null, "GBP", variant)).toMatchObject({
         price,
         rangePrice: null,
       });
@@ -355,22 +358,38 @@ describe("card price against the product page it opens", () => {
     });
   });
 
-  it("keeps the sale display, measured against the variant's price", () => {
-    expect(
-      cardPricing(range, 100, "GBP", { amount: "50.00", currencyCode: "GBP" })
-    ).toEqual({
+  it("takes the was-price from the variant, not the product", () => {
+    const gbp = (amount: string) => ({ amount, currencyCode: "GBP" });
+    // S is marked down from £50; L is not marked down at all. The product-level
+    // figure (£100) belongs to neither.
+    const small = { price: gbp("40.00"), compareAt: gbp("50.00") };
+    const large = { price: gbp("50.00"), compareAt: null };
+
+    expect(cardPricing(range, 100, "GBP", small)).toEqual({
+      price: "£40.00",
+      salePercent: 20,
+      strikePrice: "£50.00",
+      rangePrice: null,
+    });
+    expect(cardPricing(range, 100, "GBP", large)).toEqual({
       price: "£50.00",
-      salePercent: 50,
-      strikePrice: "£100.00",
+      salePercent: 0,
+      strikePrice: null,
       rangePrice: null,
     });
   });
 
   it("prices a single-price product exactly as before", () => {
     const flat = { minVariantPrice: 396, maxVariantPrice: 396 };
-    const variantPrice = { amount: "396.00", currencyCode: "GBP" };
+    const price = { amount: "396.00", currencyCode: "GBP" };
     for (const compareAt of [null, 495]) {
-      expect(cardPricing(flat, compareAt, "GBP", variantPrice)).toEqual(
+      const variant = {
+        price,
+        compareAt: compareAt
+          ? { amount: compareAt.toFixed(2), currencyCode: "GBP" }
+          : null,
+      };
+      expect(cardPricing(flat, compareAt, "GBP", variant)).toEqual(
         cardPricing(flat, compareAt, "GBP")
       );
     }
@@ -430,6 +449,7 @@ describe("findCardVariant", () => {
       title: "collide",
       availableForSale: true,
       price: { amount: "133.00", currencyCode: "GBP" },
+      compareAt: null,
       selectedOptions: [
         { name: "Size", value: "Warm Stone" },
         { name: "Color", value: "M" },

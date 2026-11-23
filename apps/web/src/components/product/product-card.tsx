@@ -471,7 +471,7 @@ export function ProductCard({
     priceRange,
     compareAtPrice,
     code,
-    variant?.price
+    variant
   );
 
   if (mini) {

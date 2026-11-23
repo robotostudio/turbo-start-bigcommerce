@@ -27,6 +27,11 @@ export type ProductVariant = {
   title: string;
   availableForSale: boolean;
   price: MoneyV2;
+  /**
+   * The variant's own was-price: `basePrice` under a markdown, else the
+   * `retailPrice` MSRP. Raw; only counts where it is above `price`.
+   */
+  compareAt: MoneyV2 | null;
   /** Per-variant photo, under `attribute_rule_images/`: never in the gallery. */
   image: { url: string } | null;
   selectedOptions: SelectedOption[];
@@ -39,7 +44,12 @@ export type ProductVariant = {
 export type BigCommerceVariant = {
   entityId: number;
   isPurchasable?: boolean;
-  prices?: { price: BigCommerceMoney } | null;
+  prices?: {
+    price: BigCommerceMoney;
+    basePrice?: BigCommerceMoney | null;
+    salePrice?: BigCommerceMoney | null;
+    retailPrice?: BigCommerceMoney | null;
+  } | null;
   /**
    * `aggregated` reads null on stores that hide stock levels, so `isInStock`
    * is the authoritative field here — a null aggregate is unknown stock, never
@@ -87,6 +97,8 @@ export function toProductVariant(
     name: node.displayName,
     value: node.values?.edges?.[0]?.node.label ?? "",
   }));
+  const prices = variant.prices;
+  const was = prices?.salePrice ? prices.basePrice : prices?.retailPrice;
   return {
     id: String(variant.entityId),
     merchandiseId: toMerchandiseId({
@@ -99,6 +111,7 @@ export function toProductVariant(
     price: variant.prices
       ? toMoney(variant.prices.price)
       : { amount: "0.00", currencyCode: "" },
+    compareAt: was ? toMoney(was) : null,
     image: variant.defaultImage ? { url: variant.defaultImage.url } : null,
     selectedOptions,
   };

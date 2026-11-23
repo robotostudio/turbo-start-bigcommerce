@@ -4,7 +4,6 @@ import type {
   StockStatus,
 } from "@/components/product/product-card";
 import { buildVariantUrl } from "@/components/product/variant-utils";
-import type { MoneyV2 } from "@/lib/cart/types";
 import { type BigCommerceMoney, formatMoney, toMoney } from "./money";
 import { getCardOptions, getOptionType } from "./options";
 import {
@@ -176,26 +175,30 @@ function money(amount: number, currencyCode: string) {
  * through; `rangePrice` is only the top of a variant price range and must not,
  * or it reads as a discount that isn't there.
  *
- * `variantPrice` is the selected variant's, the one `cardHref` opens, so the
- * card and the product page show the same figure. Without one, the range.
+ * `variant` is the selected one, the one `cardHref` opens: its own price and
+ * was-price, so the card shows what the product page does. Without one, the
+ * range and the product-level was-price.
  */
 export function cardPricing(
   priceRange: ProductCardProps["priceRange"],
-  compareAt: number | null | undefined,
+  productCompareAt: number | null | undefined,
   code: string,
-  variantPrice?: MoneyV2
+  variant?: Pick<ProductVariant, "price" | "compareAt">
 ): {
   price: string;
   salePercent: number;
   strikePrice: string | null;
   rangePrice: string | null;
 } {
-  const current = variantPrice
-    ? Number(variantPrice.amount)
+  const current = variant
+    ? Number(variant.price.amount)
     : priceRange.minVariantPrice;
+  const compareAt = variant
+    ? variant.compareAt && Number(variant.compareAt.amount)
+    : productCompareAt;
   const price = money(current, code);
   const showRange =
-    !variantPrice && priceRange.minVariantPrice !== priceRange.maxVariantPrice;
+    !variant && priceRange.minVariantPrice !== priceRange.maxVariantPrice;
 
   const onSale = typeof compareAt === "number" && compareAt > current;
   if (!(onSale && compareAt)) {

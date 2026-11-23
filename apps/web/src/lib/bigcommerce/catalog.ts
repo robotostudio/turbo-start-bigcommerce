@@ -129,6 +129,18 @@ export const ProductCard = graphql(`
               value
               currencyCode
             }
+            basePrice {
+              value
+              currencyCode
+            }
+            salePrice {
+              value
+              currencyCode
+            }
+            retailPrice {
+              value
+              currencyCode
+            }
           }
           inventory {
             isInStock

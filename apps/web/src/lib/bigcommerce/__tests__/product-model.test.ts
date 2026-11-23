@@ -67,6 +67,28 @@ describe("toProductVariant", () => {
     ).toBe(true);
   });
 
+  it("carries each variant's own was-price, by the product page's rule", () => {
+    const money = (value: number) => ({ value, currencyCode: "GBP" });
+    const wasOf = (prices: Parameters<typeof toProductVariant>[1]["prices"]) =>
+      toProductVariant(1, { entityId: 2, prices }).compareAt;
+
+    // A markdown: the pre-markdown basePrice, not the MSRP.
+    expect(
+      wasOf({
+        price: money(40),
+        basePrice: money(50),
+        salePrice: money(40),
+        retailPrice: money(70),
+      })
+    ).toEqual({ amount: "50.00", currencyCode: "GBP" });
+    // No markdown: the standing MSRP.
+    expect(
+      wasOf({ price: money(60), basePrice: money(60), retailPrice: money(80) })
+    ).toEqual({ amount: "80.00", currencyCode: "GBP" });
+    expect(wasOf({ price: money(60), basePrice: money(60) })).toBeNull();
+    expect(wasOf(null)).toBeNull();
+  });
+
   it("falls back to a zero price when BigCommerce sends none", () => {
     expect(toProductVariant(1, { entityId: 2, prices: null }).price).toEqual({
       amount: "0.00",
