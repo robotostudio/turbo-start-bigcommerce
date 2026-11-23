@@ -32,11 +32,7 @@ export function ProductGrid({
       )}
     >
       {products.map((product) => (
-        <ProductCard
-          key={product.entityId}
-          {...productToCardProps(product)}
-          productId={String(product.entityId)}
-        />
+        <ProductCard key={product.entityId} {...productToCardProps(product)} />
       ))}
     </div>
   );

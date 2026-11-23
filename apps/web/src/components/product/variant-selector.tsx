@@ -5,15 +5,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useOptimistic, useTransition } from "react";
 
 import { getOptionType } from "@/lib/bigcommerce/options";
-import type { ProductOption } from "@/lib/cart/types";
+import {
+  getOptionAvailability,
+  type ProductOption,
+  type ProductVariant,
+} from "@/lib/bigcommerce/product-model";
 import { ColorSwatch } from "./color-swatch";
-import type { CardVariant } from "./product-card";
 import { SizeSelector } from "./size-selector";
-import { getOptionAvailability } from "./variant-utils";
 
 type VariantSelectorProps = {
   options: ProductOption[];
-  variants: CardVariant[];
+  variants: ProductVariant[];
   handle: string;
 };
 

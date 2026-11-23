@@ -8,12 +8,13 @@ import { useState } from "react";
 
 import { useCartActions } from "@/components/cart/cart-context";
 import type { LayersShowcaseSeed } from "@/components/pagebuilder-data";
-import type { CardVariant } from "@/components/product/product-card";
 import { StoreImage as Image } from "@/components/product/store-image";
-import { merchandiseId } from "@/components/product/variant-utils";
 import type { CatalogProduct } from "@/lib/bigcommerce/catalog";
 import { formatMoney, toMoney } from "@/lib/bigcommerce/money";
-import { productToCardProps } from "@/lib/bigcommerce/product-card";
+import {
+  findCardVariant,
+  productToCardProps,
+} from "@/lib/bigcommerce/product-card";
 import { buildLineMetadata } from "@/lib/cart/metadata";
 
 type LayersShowcaseProps = {
@@ -27,21 +28,6 @@ type LayersShowcaseProps = {
 };
 
 const COLLAGE_CELLS = 4;
-
-/** Finds the variant matching the selected color and size values. */
-function resolveVariant(
-  variants: CardVariant[] | undefined,
-  color: string | undefined,
-  size: string | undefined
-): CardVariant | undefined {
-  if (!variants || variants.length === 0) return undefined;
-  return variants.find((variant) => {
-    const values = variant.selectedOptions.map((option) => option.value);
-    return (
-      (!color || values.includes(color)) && (!size || values.includes(size))
-    );
-  });
-}
 
 async function fetchProduct(handle: string): Promise<CatalogProduct | null> {
   const res = await fetch(`/api/products/${handle}`);
@@ -80,7 +66,7 @@ function PurchaseBar({ product }: { product: CatalogProduct }) {
   const [selectedSize, setSelectedSize] = useState(card.selectedSize);
 
   const sizes = card.sizes ?? [];
-  const variant = resolveVariant(
+  const variant = findCardVariant(
     card.variants,
     card.selectedColor,
     selectedSize
@@ -110,7 +96,7 @@ function PurchaseBar({ product }: { product: CatalogProduct }) {
         : null,
     });
     openCart();
-    void addLine(merchandiseId(product.entityId, variant.id), 1, metadata);
+    void addLine(variant.merchandiseId, 1, metadata);
   }
 
   // The bar reveals itself on hover in pure CSS, so it is in the server HTML

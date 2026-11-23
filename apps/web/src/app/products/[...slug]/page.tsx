@@ -26,13 +26,15 @@ import {
   resolveSeo,
   toSegments,
 } from "@/lib/bigcommerce/catalog";
-import { swatchHex } from "@/lib/bigcommerce/color";
 import { keyMetafields } from "@/lib/bigcommerce/metafields";
 import { toMoney } from "@/lib/bigcommerce/money";
 import { cardRating } from "@/lib/bigcommerce/product-card";
-import { cardVariants } from "@/lib/bigcommerce/variant-utils";
+import {
+  productVariants,
+  toProductOptions,
+} from "@/lib/bigcommerce/product-model";
 import { fetchOrFallback } from "@/lib/build-guard";
-import type { MoneyV2, ProductOption } from "@/lib/cart/types";
+import type { MoneyV2 } from "@/lib/cart/types";
 import { getSEOMetadata } from "@/lib/seo";
 import { getBaseUrl } from "@/utils";
 
@@ -147,28 +149,7 @@ function buildAccordionSections(product: CatalogProduct): AccordionSection[] {
 }
 
 /**
- * Product options as the selectors take them, with the swatch hex read off the
- * option value — BigCommerce carries it there, so there is no name-to-hex table
- * to keep in sync with the catalog.
- */
-function toSelectorOptions(product: CatalogProduct): ProductOption[] {
-  return nodes(product.productOptions).flatMap((option) => {
-    if (option.__typename !== "MultipleChoiceOption") return [];
-    const values = nodes(option.values).map((value) => ({
-      value: value.label,
-      hex:
-        value.__typename === "SwatchOptionValue"
-          ? swatchHex(value.hexColors)
-          : null,
-    }));
-    return values.length > 0
-      ? [{ id: String(option.entityId), name: option.displayName, values }]
-      : [];
-  });
-}
-
-/**
- * The was-price for every variant, keyed by card variant id — computed here
+ * The was-price for every variant, keyed by variant id — computed here
  * so the client selection component gets a serialisable map instead of the
  * raw prices payload.
  *
@@ -216,8 +197,8 @@ export default async function ProductPage({ params }: PageProps) {
   const product = route.node;
   const handle = slug.join("/");
   const images = nodes(product.images);
-  const options = toSelectorOptions(product);
-  const variants = cardVariants(product);
+  const options = toProductOptions(nodes(product.productOptions));
+  const variants = productVariants(product);
   // No purchasable variant is a page that cannot render its buy box — same
   // 404 the selection guard produced when it lived here.
   if (variants.length === 0) notFound();
@@ -306,7 +287,6 @@ export default async function ProductPage({ params }: PageProps) {
                 compareAtByVariantId={compareAtByVariantId(product)}
                 handle={handle}
                 options={options}
-                productEntityId={product.entityId}
                 title={title}
                 variants={variants}
               />

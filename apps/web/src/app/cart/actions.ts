@@ -7,17 +7,17 @@ import {
   type BigCommerceCart,
   fromMerchandiseId,
   toInternalCart,
-  toMerchandiseId,
 } from "@/lib/bigcommerce/cart";
-import {
-  type CatalogProduct,
-  getProductByPath,
-} from "@/lib/bigcommerce/catalog";
+import { getProductByPath } from "@/lib/bigcommerce/catalog";
 import { classifyStorefrontFailure } from "@/lib/bigcommerce/classify";
 import { storefrontQuery } from "@/lib/bigcommerce/client";
-import { swatchHex } from "@/lib/bigcommerce/color";
 import { graphql } from "@/lib/bigcommerce/graphql";
-import { toMoney } from "@/lib/bigcommerce/money";
+import {
+  type ProductOption,
+  type ProductVariant,
+  productVariants,
+  toProductOptions,
+} from "@/lib/bigcommerce/product-model";
 import {
   detectSilentClamps,
   type ExpectedTotal,
@@ -31,8 +31,6 @@ import type {
   CartActionResult,
   CartErrorCode,
   CartLineInput,
-  ProductOption,
-  ProductVariant,
 } from "@/lib/cart/types";
 
 const logger = new Logger("CartActions");
@@ -504,33 +502,6 @@ export type ProductOptions = {
   variants: ProductVariant[];
 };
 
-type CatalogVariant = NonNullable<
-  CatalogProduct["variants"]["edges"]
->[number]["node"];
-
-function toProductVariant(
-  productEntityId: number,
-  variant: CatalogVariant
-): ProductVariant {
-  const selectedOptions = (variant.options.edges ?? []).map(({ node }) => ({
-    name: node.displayName,
-    value: node.values.edges?.[0]?.node.label ?? "",
-  }));
-  return {
-    id: toMerchandiseId({ productEntityId, variantEntityId: variant.entityId }),
-    title: selectedOptions.map((option) => option.value).join(" / "),
-    availableForSale:
-      variant.isPurchasable !== false && variant.inventory?.isInStock !== false,
-    price: variant.prices
-      ? toMoney(variant.prices.price)
-      : { amount: "0.00", currencyCode: "" },
-    // The variant selection carries no image; the cart payload's own line
-    // image stands in after the swap confirms.
-    image: null,
-    selectedOptions,
-  };
-}
-
 /**
  * Fetches a product's options and variants by handle — used to build the
  * in-cart Color/Size variant selectors. Returns null on error or missing
@@ -551,23 +522,10 @@ export async function getProductOptions(
     return null;
   }
 
-  const options: ProductOption[] = (product.productOptions?.edges ?? []).map(
-    ({ node }) => ({
-      id: String(node.entityId),
-      name: node.displayName,
-      values:
-        "values" in node
-          ? (node.values?.edges ?? []).map(({ node: value }) => ({
-              value: value.label,
-              hex: "hexColors" in value ? swatchHex(value.hexColors) : null,
-            }))
-          : [],
-    })
-  );
-
-  const variants = (product.variants?.edges ?? []).map(({ node }) =>
-    toProductVariant(product.entityId, node)
-  );
-
-  return { options, variants };
+  return {
+    options: toProductOptions(
+      (product.productOptions?.edges ?? []).map(({ node }) => node)
+    ),
+    variants: productVariants(product),
+  };
 }

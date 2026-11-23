@@ -1,22 +1,25 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import type { CardVariant } from "@/components/product/product-card";
+import { getCardOptions } from "@/lib/bigcommerce/options";
 import {
   badgeFromTags,
   cardPricing,
   findCardVariant,
-  productToCardProps,
   productTags,
+  productToCardProps,
   resolveCardImages,
   secondaryImageUrl,
 } from "@/lib/bigcommerce/product-card";
-import { getCardOptions } from "@/lib/bigcommerce/options";
-import { toCardVariant } from "@/lib/bigcommerce/variant-utils";
+import {
+  type ProductVariant,
+  productVariants,
+  toProductOptions,
+} from "@/lib/bigcommerce/product-model";
 import byId from "../__fixtures__/product-by-id.json";
 import byPath from "../__fixtures__/product-by-path.json";
-import variantsAndOptions from "../__fixtures__/product-variants-and-options.json";
 import imageOverride from "../__fixtures__/product-variant-image-override.json";
+import variantsAndOptions from "../__fixtures__/product-variants-and-options.json";
 
 // Aster Denim Coach Jacket: Size x Color over two colourways, every variant
 // carrying its own image override. Read from the capture, never rewritten.
@@ -24,7 +27,7 @@ const ASTER = imageOverride.response.data.site.multiColour;
 const WREN = imageOverride.response.data.site.singleVariant;
 
 const GALLERY = ASTER.images.edges.map((edge) => edge.node);
-const VARIANTS = ASTER.variants.edges.map((edge) => toCardVariant(edge.node));
+const VARIANTS = productVariants(ASTER);
 const COLORS = ["Indigo Rinse", "Warm Stone"];
 
 const INDIGO = GALLERY.filter((image) =>
@@ -229,8 +232,10 @@ describe("resolveCardImages", () => {
 
   it("ignores a size whose value collides with the selected color", () => {
     // A size literally named "Warm Stone" must not be read as the colour.
-    const collider: CardVariant = {
+    const collider: ProductVariant = {
       id: "collide",
+      merchandiseId: "183:collide",
+      title: "collide",
       availableForSale: true,
       price: { amount: "133.00", currencyCode: "GBP" },
       selectedOptions: [
@@ -256,8 +261,9 @@ describe("resolveCardImages", () => {
       selectedColor: "Indigo",
       variants: [
         {
-          ...VARIANTS[0],
           id: "indigo",
+          merchandiseId: "183:indigo",
+          title: "Indigo",
           availableForSale: true,
           price: { amount: "133.00", currencyCode: "GBP" },
           selectedOptions: [{ name: "Color", value: "Indigo" }],
@@ -341,14 +347,17 @@ describe("findCardVariant", () => {
   });
 
   it("matches per option type, not on bare values", () => {
-    const collider: CardVariant = {
+    const collider: ProductVariant = {
       id: "collide",
+      merchandiseId: "183:collide",
+      title: "collide",
       availableForSale: true,
       price: { amount: "133.00", currencyCode: "GBP" },
       selectedOptions: [
         { name: "Size", value: "Warm Stone" },
         { name: "Color", value: "M" },
       ],
+      image: null,
     };
     // A value-only match would have returned `collide` here.
     expect(
@@ -435,7 +444,7 @@ describe("getCardOptions", () => {
   it("takes the swatch hex straight off the option value", () => {
     const product = variantsAndOptions.response.data.site.product;
     const { colors, sizes } = getCardOptions(
-      product.productOptions.edges.map((edge) => edge.node)
+      toProductOptions(product.productOptions.edges.map((edge) => edge.node))
     );
     expect(colors).toEqual([
       { name: "Indigo Rinse", hex: "#2C3E5D" },

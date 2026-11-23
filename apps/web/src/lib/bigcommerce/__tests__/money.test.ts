@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { formatMoney, toMoney } from "@/lib/bigcommerce/money";
-import { toCardVariant } from "@/lib/bigcommerce/variant-utils";
+import { toProductVariant } from "@/lib/bigcommerce/product-model";
 import byId from "../__fixtures__/product-by-id.json";
 
 const { price, basePrice } = byId.response.data.site.product.prices;
@@ -30,7 +30,7 @@ describe("formatMoney", () => {
   /**
    * `Intl.NumberFormat(locale, { style: "currency", currency: "" })` throws
    * `RangeError: Invalid currency code`, and the empty code is one this app
-   * mints itself — `toCardVariant` falls back to it for a variant BigCommerce
+   * mints itself — `toProductVariant` falls back to it for a variant BigCommerce
    * returns with no `prices` node. On the PDP that variant is the default one,
    * so the throw took the whole product page down.
    *
@@ -47,7 +47,7 @@ describe("formatMoney", () => {
   });
 
   it("does not price a variant with no prices at zero", () => {
-    const variant = toCardVariant({ entityId: 1, prices: null });
+    const variant = toProductVariant(1, { entityId: 2, prices: null });
 
     expect(formatMoney(variant.price)).toBe("—");
   });

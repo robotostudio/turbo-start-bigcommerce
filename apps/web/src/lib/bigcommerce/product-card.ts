@@ -1,16 +1,18 @@
 import type {
-  CardVariant,
   MerchBadge,
   ProductCardProps,
   StockStatus,
 } from "@/components/product/product-card";
 import { type BigCommerceMoney, formatMoney, toMoney } from "./money";
+import { getCardOptions, getOptionType } from "./options";
 import {
   type BigCommerceProductOption,
-  getCardOptions,
-  getOptionType,
-} from "./options";
-import { type BigCommerceVariant, toCardVariant } from "./variant-utils";
+  type BigCommerceVariant,
+  colorGallery,
+  type ProductVariant,
+  productVariants,
+  toProductOptions,
+} from "./product-model";
 
 /** Units left at which the card starts warning. */
 const LOW_STOCK_THRESHOLD = 5;
@@ -207,7 +209,7 @@ export function cardPricing(
 }
 
 /** The variant's value for the colour- or size-typed option, if it has one. */
-function optionValue(variant: CardVariant, type: "color" | "size") {
+function optionValue(variant: ProductVariant, type: "color" | "size") {
   return variant.selectedOptions.find(
     (option) => getOptionType(option.name) === type
   )?.value;
@@ -219,34 +221,16 @@ function optionValue(variant: CardVariant, type: "color" | "size") {
  * value string can't cross-match.
  */
 export function findCardVariant(
-  variants: CardVariant[] | undefined,
+  variants: ProductVariant[] | undefined,
   color: string | undefined,
   size: string | undefined
-): CardVariant | undefined {
+): ProductVariant | undefined {
   if (!variants || variants.length === 0) return undefined;
   return variants.find(
     (variant) =>
       (!color || optionValue(variant, "color") === color) &&
       (!size || optionValue(variant, "size") === size)
   );
-}
-
-/**
- * The product photos belonging to one colourway.
- *
- * The longest matching label wins, so a product carrying both "Indigo" and
- * "Indigo Rinse" does not hand "Indigo Rinse" photos to the "Indigo" swatch.
- */
-function colorGallery(
-  gallery: readonly BigCommerceCardImage[],
-  color: string,
-  colors: readonly string[]
-): BigCommerceCardImage[] {
-  const ranked = [...colors].sort((a, b) => b.length - a.length);
-  return gallery.filter((image) => {
-    const alt = image.altText?.toLowerCase() ?? "";
-    return ranked.find((label) => alt.includes(label.toLowerCase())) === color;
-  });
 }
 
 /**
@@ -283,7 +267,7 @@ export function resolveCardImages({
   selectedColor: string | undefined;
   /** Every colour label on the product, for the longest-match grouping. */
   colors?: readonly string[];
-  variants: CardVariant[] | undefined;
+  variants: ProductVariant[] | undefined;
   gallery: readonly BigCommerceCardImage[] | undefined;
   imageUrl: string | null;
   secondaryImageUrl?: string | null;
@@ -324,7 +308,7 @@ export function resolveCardImages({
  */
 function cardStockStatus(
   product: BigCommerceCardProduct,
-  variants: CardVariant[]
+  variants: ProductVariant[]
 ): StockStatus {
   const inStock =
     product.inventory?.hasVariantInventory && variants.length > 0
@@ -358,20 +342,17 @@ export function productToCardProps(
     null;
 
   const { colors, sizes, colorOptionName } = getCardOptions(
-    (product.productOptions?.edges ?? []).map((edge) => edge.node)
+    toProductOptions(
+      (product.productOptions?.edges ?? []).map((edge) => edge.node)
+    )
   );
-  const variants = (product.variants?.edges ?? []).map((edge) =>
-    toCardVariant(edge.node)
-  );
+  const variants = productVariants(product);
 
   const prices = product.prices;
   const price = prices?.price.value ?? 0;
 
   return {
     slug: slugFromPath(product.path),
-    // The cart merchandise id needs the product half; call sites spread this
-    // straight into ProductCard.
-    productId: String(product.entityId),
     title: product.name,
     vendor: product.brand?.name ?? null,
     imageUrl,

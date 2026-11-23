@@ -3,16 +3,16 @@
 import { useSearchParams } from "next/navigation";
 
 import { PriceDisplay } from "@/components/product/price-display";
-import type { CardVariant } from "@/components/product/product-card";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductPurchase } from "@/components/product/product-purchase";
 import { VariantSelector } from "@/components/product/variant-selector";
 import {
   findVariantByOptions,
-  merchandiseId,
-} from "@/components/product/variant-utils";
+  type ProductOption,
+  type ProductVariant,
+} from "@/lib/bigcommerce/product-model";
 import { buildLineMetadata } from "@/lib/cart/metadata";
-import type { MoneyV2, ProductOption } from "@/lib/cart/types";
+import type { MoneyV2 } from "@/lib/cart/types";
 
 /**
  * The PDP's `?Color=`-driven half.
@@ -34,7 +34,7 @@ import type { MoneyV2, ProductOption } from "@/lib/cart/types";
  */
 export function resolveSelection(
   options: ProductOption[],
-  variants: CardVariant[],
+  variants: ProductVariant[],
   searchParams: { get(name: string): string | null }
 ) {
   const [defaultVariant] = variants;
@@ -68,19 +68,17 @@ function StockIndicator({ isInStock }: { isInStock: boolean }) {
 
 type ProductSelectionProps = {
   handle: string;
-  productEntityId: number;
   title: string;
   category: string | undefined;
   options: ProductOption[];
-  variants: CardVariant[];
-  /** Keyed by `CardVariant.id`; the strikethrough price when marked down. */
+  variants: ProductVariant[];
+  /** Keyed by `ProductVariant.id`; the strikethrough price when marked down. */
   compareAtByVariantId: Record<string, MoneyV2 | null>;
 };
 
 /** Category + title + price, selectors, and the add-to-cart row. */
 export function ProductSelection({
   handle,
-  productEntityId,
   title,
   category,
   options,
@@ -142,7 +140,7 @@ export function ProductSelection({
           // `aggregated` is null store-wide, so there is no ceiling to clamp
           // the quantity stepper to.
           quantityAvailable={null}
-          variantId={merchandiseId(productEntityId, selectedVariant.id)}
+          variantId={selectedVariant.merchandiseId}
         />
         <StockIndicator isInStock={selectedVariant.availableForSale} />
       </div>
@@ -153,7 +151,7 @@ export function ProductSelection({
 type SelectedVariantGalleryProps = {
   images: { url: string; altText?: string | null; isDefault?: boolean }[];
   options: ProductOption[];
-  variants: CardVariant[];
+  variants: ProductVariant[];
 };
 
 /** The gallery, following the same URL-driven selection as the info column. */

@@ -16,31 +16,16 @@ import {
   findCardVariant,
   resolveCardImages,
 } from "@/lib/bigcommerce/product-card";
+import type { ProductVariant } from "@/lib/bigcommerce/product-model";
 import { buildLineMetadata } from "@/lib/cart/metadata";
-import type { MoneyV2 } from "@/lib/cart/types";
-import { buildVariantUrl, merchandiseId } from "./variant-utils";
+import { buildVariantUrl } from "./variant-utils";
 
 export type MerchBadge = "new" | "exclusive";
 export type StockStatus = "low" | "out" | null;
 export type CardColor = { name: string; hex: string | null };
-export type CardVariant = {
-  id: string;
-  availableForSale: boolean;
-  price: MoneyV2;
-  selectedOptions: { name: string; value: string }[];
-  /** Per-variant photo; drives the card's image swap on color select. */
-  image?: { url: string } | null;
-};
 
 export type ProductCardProps = {
   slug: string;
-  /**
-   * BigCommerce product entityId. The cart's merchandise id is
-   * `productEntityId:variantEntityId` — a variant id alone doesn't identify a
-   * purchasable. Omit it and the hover add-to-cart falls back to the bare
-   * variant id, which the cart rejects rather than mis-adds.
-   */
-  productId?: string;
   title: string;
   priceRange: { minVariantPrice: number; maxVariantPrice: number };
   currencyCode?: string;
@@ -72,7 +57,7 @@ export type ProductCardProps = {
   /** BigCommerce's own name for the color option, used to link into the PDP. */
   colorOptionName?: string;
   /** Variants for resolving the color+size selection to a cart line. */
-  variants?: CardVariant[];
+  variants?: ProductVariant[];
   /**
    * Ordered gallery images. Alt text, not just URLs: BigCommerce names the
    * colourway in each photo's alt text, and that is what groups a colour's
@@ -302,17 +287,15 @@ function AddToCartBar({
   selectedSize,
   sizes,
   onSelectSize,
-  productId,
   productTitle,
   productHandle,
   imageUrl,
 }: {
-  variants: CardVariant[] | undefined;
+  variants: ProductVariant[] | undefined;
   selectedColor: string | undefined;
   selectedSize: string | undefined;
   sizes: string[] | undefined;
   onSelectSize: (size: string) => void;
-  productId: string | undefined;
   productTitle: string;
   productHandle: string;
   imageUrl: string | null;
@@ -334,7 +317,7 @@ function AddToCartBar({
         : null,
     });
     openCart();
-    void addLine(merchandiseId(productId, variant.id), 1, metadata);
+    void addLine(variant.merchandiseId, 1, metadata);
   }
 
   return (
@@ -457,7 +440,6 @@ function CardImage({
 
 export function ProductCard({
   slug,
-  productId,
   title,
   priceRange,
   currencyCode,
@@ -552,7 +534,6 @@ export function ProductCard({
             imageUrl={primary}
             onSelectSize={setSelectedSize}
             productHandle={slug}
-            productId={productId}
             productTitle={title}
             selectedColor={selectedColor}
             selectedSize={selectedSize}

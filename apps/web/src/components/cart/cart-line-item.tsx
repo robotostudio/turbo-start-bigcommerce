@@ -9,12 +9,12 @@ import { QuantitySelector } from "@/components/product/quantity-selector";
 import { StoreImage as Image } from "@/components/product/store-image";
 import { useSavedItems } from "@/components/saved-items/saved-items-context";
 import { getOptionType } from "@/lib/bigcommerce/options";
-import { isSyntheticLineId } from "@/lib/cart/intents";
-import type { CartLine, SelectedOption } from "@/lib/cart/types";
 import {
   findVariantByOptions,
   getOptionAvailability,
-} from "@/lib/cart/variant-match";
+} from "@/lib/bigcommerce/product-model";
+import { isSyntheticLineId } from "@/lib/cart/intents";
+import type { CartLine, SelectedOption } from "@/lib/cart/types";
 import { useCart } from "./cart-context";
 import {
   CartLineVariantSelect,
@@ -75,10 +75,17 @@ export function CartLineItem({ line }: { line: CartLine }) {
     const next = { ...currentSelections, [optionName]: nextValue };
     const target = findVariantByOptions(variants, next);
     if (target?.availableForSale) {
-      swapLineVariant(line.id, target.id, line.quantity, {
+      swapLineVariant(line.id, target.merchandiseId, line.quantity, {
         variantTitle: target.title,
         price: target.price,
-        image: target.image,
+        image: target.image
+          ? {
+              url: target.image.url,
+              altText: line.merchandise.product.title,
+              width: 0,
+              height: 0,
+            }
+          : null,
         selectedOptions: target.selectedOptions,
       });
     }
