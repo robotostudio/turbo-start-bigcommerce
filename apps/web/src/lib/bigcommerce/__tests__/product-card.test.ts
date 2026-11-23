@@ -141,6 +141,45 @@ describe("resolveCardImages", () => {
       });
       expect(result).toEqual({ primary: a.url, secondary: b.url });
     });
+
+    it("skips repeats of the first photo to reach a distinct one", () => {
+      const result = resolveCardImages({
+        ...base,
+        variants: noOverride,
+        selectedColor: "Indigo Rinse",
+        gallery: [a, a, b],
+      });
+      expect(result).toEqual({ primary: a.url, secondary: b.url });
+    });
+  });
+
+  describe("with a variant image override", () => {
+    const [a, b] = INDIGO;
+    if (!(a && b)) throw new Error("fixture needs two Indigo photos");
+
+    it("has no hover partner when the colour repeats the photo the override stands in for", () => {
+      const result = resolveCardImages({
+        ...base,
+        selectedColor: "Indigo Rinse",
+        gallery: [a, a],
+      });
+      expect(result).toEqual({
+        primary: overrideFor("Indigo Rinse"),
+        secondary: null,
+      });
+    });
+
+    it("skips repeats of the first photo to reach a distinct one", () => {
+      const result = resolveCardImages({
+        ...base,
+        selectedColor: "Indigo Rinse",
+        gallery: [a, a, b],
+      });
+      expect(result).toEqual({
+        primary: overrideFor("Indigo Rinse"),
+        secondary: b.url,
+      });
+    });
   });
 
   it("keeps the product-level hover when the photo is outside the gallery window", () => {
@@ -244,6 +283,14 @@ describe("secondaryImageUrl", () => {
 
   it("fades to the first photo that is not the featured one", () => {
     expect(secondaryImageUrl([a, b], a.url)).toBe(b.url);
+  });
+
+  it("skips repeats of the featured photo to reach a distinct one", () => {
+    expect(secondaryImageUrl([a, a, b], a.url)).toBe(b.url);
+  });
+
+  it("fades to the first photo when there is no featured one", () => {
+    expect(secondaryImageUrl([a, b], null)).toBe(a.url);
   });
 });
 
