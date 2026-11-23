@@ -99,7 +99,8 @@ describe("search drawer", () => {
   });
 
   it("drops the message once the query is cleared", () => {
-    // The debounced key still holds the failed query for a moment.
+    // An empty box shows the empty state even while useQuery still reports
+    // the failed read.
     useQuery.mockReturnValue({
       data: undefined,
       isLoading: false,

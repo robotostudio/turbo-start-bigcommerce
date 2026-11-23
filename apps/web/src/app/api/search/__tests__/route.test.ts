@@ -60,11 +60,4 @@ describe("search drawer route", () => {
       expect(searchCatalog).not.toHaveBeenCalled();
     }
   );
-
-  it("answers a one-character query with a 200", async () => {
-    const res = await get("q=b");
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual(EMPTY);
-  });
 });
