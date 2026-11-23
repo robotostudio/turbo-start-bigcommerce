@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  isServer,
+  environmentManager,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
@@ -18,7 +18,7 @@ import { SavedItemsProvider } from "./saved-items/saved-items-context";
 let browserQueryClient: QueryClient | undefined;
 
 function getQueryClient() {
-  if (isServer) {
+  if (environmentManager.isServer()) {
     return new QueryClient();
   }
   browserQueryClient ??= new QueryClient();
