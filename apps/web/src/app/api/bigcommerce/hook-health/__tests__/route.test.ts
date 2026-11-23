@@ -3,9 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { REQUIRED_HOOK_SCOPES } from "@/lib/bigcommerce/hook-health";
 
-// Wrong length is its own case: `timingSafeEqual` throws on a length mismatch,
-// so without the guard it is a 500, not a 401.
-
 const DESTINATION = "https://shop.example.com/api/bigcommerce/webhook";
 
 vi.mock("@workspace/env/server", () => ({
@@ -57,6 +54,8 @@ describe("GET /api/bigcommerce/hook-health", () => {
     expect(timingSafeEqual).toHaveBeenCalledOnce();
   });
 
+  // Wrong length is its own case: `timingSafeEqual` throws on a length
+  // mismatch, so without the guard it is a 500, not a 401.
   it.each([
     ["a wrong secret of the right length", "Bearer best-cron-secret"],
     ["a wrong-length secret", "Bearer short"],
