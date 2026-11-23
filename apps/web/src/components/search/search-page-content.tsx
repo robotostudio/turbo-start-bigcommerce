@@ -121,6 +121,8 @@ export function SearchPageContent({
   }, [trimmed, listingParams]);
 
   const { data, isLoading, isError } = useQuery({
+    // The default 3 retries hold the skeleton for about 7 seconds.
+    retry: 1,
     // Filters and sort are part of the key, or a pick would rewrite the URL and
     // serve the previous result set — in the previous order — out of the cache.
     queryKey: ["search-full", trimmed, listingQs],
