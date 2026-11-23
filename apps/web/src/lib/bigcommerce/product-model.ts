@@ -155,10 +155,13 @@ export function findVariantByOptions(
 /**
  * The variant to render: whatever the URL asks for, falling back per option
  * to the first variant's own value so a bare PDP URL still lands on
- * something buyable.
+ * something buyable. When that mix is not a real variant (`?Color=Stone` where
+ * Stone has no XS), the first buyable variant matching the URL wins instead, and
+ * `selections` shows its values so the selectors agree with the price.
  *
- * `complete` is what gates the CTA — an option the shopper hasn't chosen yet
- * must read "Select Options", not silently add the default.
+ * `complete` is what gates the CTA — an option the shopper hasn't chosen yet,
+ * or a combination that doesn't exist, must read "Select Options", not
+ * silently add the default.
  */
 export function resolveSelection(
   options: ProductOption[],
@@ -166,23 +169,48 @@ export function resolveSelection(
   searchParams: { get(name: string): string | null }
 ) {
   const [defaultVariant] = variants;
-  const selections: Record<string, string> = {};
+  const optionValueOf = (variant: ProductVariant | undefined, name: string) =>
+    variant?.selectedOptions.find((option) => option.name === name)?.value;
 
+  const fromUrl: Record<string, string> = {};
   for (const option of options) {
-    selections[option.name] =
-      searchParams.get(option.name) ??
-      defaultVariant?.selectedOptions.find((s) => s.name === option.name)
-        ?.value ??
-      "";
+    const value = searchParams.get(option.name);
+    if (value !== null) fromUrl[option.name] = value;
   }
+  const withDefaults = Object.fromEntries(
+    options.map((option) => [
+      option.name,
+      fromUrl[option.name] ?? optionValueOf(defaultVariant, option.name) ?? "",
+    ])
+  );
+  const matchingUrl = variants.filter((variant) =>
+    Object.entries(fromUrl).every(
+      ([name, value]) => optionValueOf(variant, name) === value
+    )
+  );
+  const matched =
+    findVariantByOptions(variants, withDefaults) ??
+    matchingUrl.find((variant) => variant.availableForSale) ??
+    matchingUrl[0] ??
+    null;
+  const variant = matched ?? defaultVariant;
+  const selections = Object.fromEntries(
+    options.map((option) => [
+      option.name,
+      fromUrl[option.name] ?? optionValueOf(variant, option.name) ?? "",
+    ])
+  );
 
   return {
-    complete: options
-      .filter((option) => option.values.length > 1)
-      .every((option) =>
-        option.values.some((v) => v.value === selections[option.name])
-      ),
-    variant: findVariantByOptions(variants, selections) ?? defaultVariant,
+    complete:
+      matched !== null &&
+      options
+        .filter((option) => option.values.length > 1)
+        .every((option) =>
+          option.values.some((v) => v.value === selections[option.name])
+        ),
+    selections,
+    variant,
   };
 }
 

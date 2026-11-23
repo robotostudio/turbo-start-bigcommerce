@@ -6,6 +6,7 @@ import {
   findVariantByOptions,
   getOptionAvailability,
   productVariants,
+  resolveSelection,
   toProductOptions,
   toProductVariant,
   variantGalleryImage,
@@ -207,5 +208,70 @@ describe("colorGallery", () => {
   it("reads a colour name with regex characters literally", () => {
     const plus = [{ url: "x", altText: "Shirt in Blue+ (Navy)" }];
     expect(colorGallery(plus, "Blue+ (Navy)", ["Blue+ (Navy)"])).toEqual(plus);
+  });
+});
+
+describe("resolveSelection", () => {
+  const params = (query: string) => new URLSearchParams(query);
+
+  it("lands a bare URL on the default variant", () => {
+    expect(resolveSelection(OPTIONS, VARIANTS, params(""))).toEqual({
+      complete: true,
+      selections: { Size: "XS", Color: "Indigo Rinse" },
+      variant: VARIANTS[0],
+    });
+  });
+
+  it("takes an option missing from the URL from the default variant", () => {
+    const { variant, selections } = resolveSelection(
+      OPTIONS,
+      VARIANTS,
+      params("Color=Warm+Stone")
+    );
+    expect(variant?.id).toBe("186");
+    expect(selections).toEqual({ Size: "XS", Color: "Warm Stone" });
+  });
+
+  it("falls back to the first buyable variant in the URL's colour", () => {
+    // Warm Stone has no XS, and S is sold out.
+    const variants = VARIANTS.filter((variant) => variant.id !== "186").map(
+      (variant) =>
+        variant.id === "188" ? { ...variant, availableForSale: false } : variant
+    );
+    const { complete, variant, selections } = resolveSelection(
+      OPTIONS,
+      variants,
+      params("Color=Warm+Stone")
+    );
+    expect(variant?.id).toBe("189");
+    expect(selections).toEqual({ Size: "M", Color: "Warm Stone" });
+    expect(complete).toBe(true);
+  });
+
+  it("is incomplete when the URL names a combination that doesn't exist", () => {
+    const variants = VARIANTS.filter((variant) => variant.id !== "186");
+    expect(
+      resolveSelection(OPTIONS, variants, params("Color=Warm+Stone&Size=XS"))
+        .complete
+    ).toBe(false);
+  });
+
+  it("is incomplete while a multi-value option has no value", () => {
+    // No variant carries Fit, so nothing can default it.
+    const fit = {
+      id: "fit",
+      name: "Fit",
+      values: [
+        { value: "Regular", hex: null },
+        { value: "Slim", hex: null },
+      ],
+    };
+    const { complete, selections } = resolveSelection(
+      [...OPTIONS, fit],
+      VARIANTS,
+      params("")
+    );
+    expect(selections.Fit).toBe("");
+    expect(complete).toBe(false);
   });
 });

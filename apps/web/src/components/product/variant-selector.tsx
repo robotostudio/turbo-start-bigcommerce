@@ -9,6 +9,7 @@ import {
   getOptionAvailability,
   type ProductOption,
   type ProductVariant,
+  resolveSelection,
 } from "@/lib/bigcommerce/product-model";
 import { ColorSwatch } from "./color-swatch";
 import { SizeSelector } from "./size-selector";
@@ -27,15 +28,11 @@ export function VariantSelector({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const defaultVariant = variants[0];
-  const currentSelections: Record<string, string> = {};
-  for (const option of options) {
-    const fromUrl = searchParams.get(option.name);
-    const fallback =
-      defaultVariant?.selectedOptions.find((o) => o.name === option.name)
-        ?.value ?? "";
-    currentSelections[option.name] = fromUrl ?? fallback;
-  }
+  const { selections: currentSelections } = resolveSelection(
+    options,
+    variants,
+    searchParams
+  );
 
   // Selection is URL state, so `currentSelections` only catches up once the RSC
   // round-trip commits — 200-600ms on a cold cache, during which the swatch you
